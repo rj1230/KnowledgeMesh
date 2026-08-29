@@ -93,14 +93,6 @@ KnowledgeMesh/
 - **True vs Noisy data separation** — semantic reranking (FlashRank) and history-aware planning surface grounded content over noise
 - **Output gate** — responses are checked before being returned to the user
 
----
-
-## 📊 Evaluation
-
-A RAGAS-powered eval suite scores the pipeline across 6 metrics, with results explorable in a dedicated 3-tab Streamlit demo app under `evals/`.
-
----
-
 ## 📄 License
 
 MIT
