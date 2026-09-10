@@ -4,32 +4,51 @@ from langchain_openai import ChatOpenAI
 from app.config import settings
 
 
-# Portkey saved configuration
+# ============================================================
+# Portkey Configuration
+# ============================================================
+
 PORTKEY_CONFIG_SLUG = settings.PORTKEY_CONFIG_SLUG
 
+# Primary model configured in Portkey.
+# Portkey itself handles fallback to the secondary target.
+PORTKEY_PRIMARY_MODEL = "@rag/openai/gpt-oss-120b"
 
-# Native Portkey client
+
+# ============================================================
+# Native Portkey Client
+# ============================================================
+
 portkey_client = Portkey(
     api_key=settings.PORTKEY_API_KEY,
     config=PORTKEY_CONFIG_SLUG,
 )
 
 
+# ============================================================
+# LangChain LLM
+# ============================================================
+
+
 def get_langchain_llm(feature: str = "rag") -> ChatOpenAI:
     """
-    Returns a Portkey-backed ChatOpenAI.
+    Return a Portkey-backed LangChain ChatOpenAI instance.
 
-    Portkey acts as the LLM gateway while exposing an
-    OpenAI-compatible API endpoint to LangChain.
+    Portkey is responsible for:
+        - Provider routing
+        - Fallback
+        - Retry
+        - Caching
+        - Gateway-level observability
 
-    Routing, fallback, retry, and other gateway behavior
-    are controlled by the saved Portkey configuration.
+    The active Portkey configuration is controlled by
+    PORTKEY_CONFIG_SLUG in the application settings.
     """
 
     return ChatOpenAI(
         api_key=settings.PORTKEY_API_KEY,
         base_url=PORTKEY_GATEWAY_URL,
-        model=f"@{settings.GROQ_SLUG}/llama-3.3-70b-versatile",
+        model=PORTKEY_PRIMARY_MODEL,
         temperature=0,
         default_headers=createHeaders(
             api_key=settings.PORTKEY_API_KEY,
@@ -43,17 +62,31 @@ def get_langchain_llm(feature: str = "rag") -> ChatOpenAI:
     )
 
 
+# ============================================================
+# Portkey Cache Status
+# ============================================================
+
+
 def extract_cache_status(response) -> str:
     """
-    Pull x-portkey-cache-status from the Portkey response headers.
-    Returns MISS if the header cannot be found.
+    Extract the Portkey cache status from a response.
+
+    Returns:
+        HIT  -> response served from Portkey cache
+        MISS -> response was not served from cache
     """
 
-    for attr in ("_raw_response", "_response", "_http_response"):
+    for attr in (
+        "_raw_response",
+        "_response",
+        "_http_response",
+    ):
         raw = getattr(response, attr, None)
 
         if raw is not None:
-            status = getattr(raw, "headers", {}).get(
+            headers = getattr(raw, "headers", {})
+
+            status = headers.get(
                 "x-portkey-cache-status",
                 "",
             )
