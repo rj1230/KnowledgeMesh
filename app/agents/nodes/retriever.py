@@ -1,31 +1,57 @@
+from __future__ import annotations
+
 import logfire
+
 from app.agents.state import AgentState
-from app.services.retrieval.qdrant_service import search_enterprise_knowledge
-from app.services.retrieval.ranking_service import rerank_documents
+from app.services.retrieval.qdrant_service import (
+    search_enterprise_knowledge,
+)
+from app.services.retrieval.ranking_service import (
+    rerank_documents,
+)
+
 
 def retrieve_node(state: AgentState):
-    """
-    Performs vector search and semantic reranking for technical queries.
-    """
     query = state["current_query"]
-    
-    
-    # Standard Retrieval Logic
-    with logfire.span("🔍 Knowledge Retrieval"):
-        logfire.info(f"Searching Qdrant for: {query}")
-        raw_results = search_enterprise_knowledge(query, limit=15)
-        logfire.info(f"Retrieved {len(raw_results)} candidates from Vector DB")
-        
-        doc_contents = [doc['content'] for doc in raw_results]
-        
-        with logfire.span("⚖️ Semantic Reranking"):
-            reranked_contents = rerank_documents(query, doc_contents, top_n=5)
-            logfire.info("Reranking complete. Kept top 5 most relevant chunks.")
-            
-        formatted_docs = [f"CONTENT: {doc}" for doc in reranked_contents]
-    
+
+    with logfire.span(
+        "🔍 Internal Knowledge Retrieval",
+        query=query,
+    ):
+        raw_results = search_enterprise_knowledge(
+            query=query,
+            limit=15,
+        )
+
+    with logfire.span(
+        "⚖️ Internal Semantic Reranking",
+        candidate_count=len(raw_results),
+    ):
+        reranked_documents = rerank_documents(
+            query=query,
+            documents=raw_results,
+            top_n=5,
+            text_key="content",
+        )
+
+    documents = [
+        {
+            "id": doc.get("id"),
+            "content": doc.get("content", ""),
+            "source": doc.get("source", "Unknown"),
+            "source_type": doc.get("source_type", "internal"),
+            "score": doc.get("score"),
+            "rerank_score": doc.get("rerank_score"),
+            "url": doc.get("url"),
+        }
+        for doc in reranked_documents
+    ]
+
     return {
-        "documents": formatted_docs,
-        "status": f"Found technical context.",
-        "plan": state["plan"] + ["Context Retrieved"]
+        "documents": documents,
+        "all_documents": documents,
+        "search_query": query,
+        "status": (f"Retrieved and reranked {len(documents)} internal sources."),
+        "plan": state.get("plan", [])
+        + [f"Internal Retrieval: {len(documents)} documents"],
     }

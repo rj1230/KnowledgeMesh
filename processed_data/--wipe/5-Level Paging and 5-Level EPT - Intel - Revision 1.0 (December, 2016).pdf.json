@@ -1,13 +1,9 @@
 {
-  "document_id": "1dc3095f0b172228d5256329",
+  "document_id": "bf79f50883912c519eb47c91",
   "filename": "5-Level Paging and 5-Level EPT - Intel - Revision 1.0 (December, 2016).pdf",
-  "source_type": "noisy",
+  "source_type": "--wipe\\",
   "content_hash": "0cb0e528e98258f729dedfd3fabbbf580ccc45828405afa06519f6be3fee3231",
-  "ingested_at": "2026-09-15T15:28:42.038283+00:00",
-  "embedding": {
-    "model": "huggingface:sentence-transformers:BAAI/bge-small-en-v1.5",
-    "dimension": 384
-  },
+  "ingested_at": "2026-09-15T13:08:05.382891+00:00",
   "chunking": {
     "chunk_size": 1500,
     "chunk_overlap": 150,
