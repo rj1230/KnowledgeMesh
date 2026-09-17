@@ -1,0 +1,225 @@
+{
+  "question": "What are the main capabilities of memory in large language model based agents?",
+  "answer": "**Main memory capabilities of LLM‑based agents**\n\n| Capability | What it enables |\n|------------|-----------------|\n| **Goal decomposition & sub‑goal planning (short‑term operational memory)** – breaks a high‑level objective into a sequence of intermediate steps while the agent is executing a task. | 【chunk_1】 |\n| **Infinite‑length input capacity via self‑controlled memory system** – provides a mechanism that lets the model handle arbitrarily long inputs by managing its own memory. | 【chunk_2】 |\n| **Dynamic memory management** – lets the agent decide when to write new entries, overwrite old ones, or prune irrelevant information. | 【chunk_2】 |\n| **Self‑reflection / meta‑cognition** – enables the agent to review its own past actions and reasoning traces to improve future behavior. | 【chunk_2】 |\n| **Long‑term memory via Memorybank** – supplies an external, queryable store that augments the LLM with scalable long‑term knowledge. | 【chunk_2】 |\n| **Read‑write memory architecture (RET‑LLM)** – supports both retrieval (read) and modification (write) of stored information, facilitating continual learning. | 【chunk_2】 |\n| **Memory‑augmented planning & reasoning** – the “brain” component retains crucial knowledge and uses it for decision‑making, reasoning, and plan generation. | 【chunk_3】 |",
+  "status": "Citation check passed.",
+  "thought_process": [
+    "Intent: Technical",
+    "Search Term: memory capabilities in large language model based agents",
+    "Internal Retrieval: 5 documents",
+    "Retrieval Time: 16434 ms",
+    "Rerank Time: 326 ms",
+    "Document Grade: 3/5 relevant",
+    "Context Quality: strong",
+    "Grader Time: 1413 ms",
+    "Context Quality: strong",
+    "Answer Revision: 1/2",
+    "Answer Revision: 2/2"
+  ],
+  "sources": [
+    {
+      "id": "276f3131-dc50-5fbc-8729-38f82ae332b5",
+      "content": "nces of LLM-based agents [429; 430; 431]. AutoGPT [114] is one of the ongoing popular open-source projects aiming to a Apart from the basic functions of large language models like GPT-4, the AutoGPT framework also incorporates various practical external tools and long/short-term memory management. After users input their customized objectives, they can free their hands and wait for AutoGPT to automatically generate thoughts and perform specific tasks, all without requiring additional user prompts. As shown in Figure 8, we introduce the astonishingly diverse capabilities that the agent exhibits in scenarios where only one single agent is present. 4.1.1 Task-oriented Deployment The LLM-based agents, which can understand human natural language commands and perform everyday tasks [391], are currently among the most favored and practically valuable agents by users. This is because they have the potential to enhance task efficiency, alleviate user workload, and promote access for a broader user base. In task-oriented deployment, the agent follows high-level instructions from users, undertaking tasks such as goal decomposition [182; 258; 388; 394], sequence planning of sub-goals [182; 395], interactive exploration of the environment [256; 391; 390; 392], until the final objective is achieved. To explore whether agents can perform basic tasks, they are first deployed in text-based game scenarios. In this type of game, agents interact with the world purely using natural language [432]",
+      "source": "LLM Based-learning.pdf",
+      "source_type": "true",
+      "score": 0.78530693,
+      "rerank_score": 0.9989385008811951,
+      "url": null,
+      "grader_score": 0.92,
+      "grader_relevant": true,
+      "grader_reason": "Discusses AutoGPT's long/short-term memory management within LLM-based agents, directly addressing memory capabilities."
+    },
+    {
+      "id": "e601c480-e587-5801-9a72-e18b783e79c4",
+      "content": "l. Colt5: Faste Randomized positional encodings boost length generalization of transformers. In A. Rogers, J. L. Boyd-Graber, N. Okazaki, eds.,Proceedings of the 61st Annual Meeting of the Association for Computational Linguistics (Volume 2: Short Papers), ACL 2023, Toronto, Canada, July 9-14, 2023 , pages 1889–1903. Association for Computational Linguistics, 2023. [168] Liang, X., B. Wang, H. Huang, et al. Unleashing infinite-length input capacity for large-scale language models with self-controlled memory system. CoRR, abs/2304.13343, 2023. [169] Shinn, N., B. Labash, A. Gopinath. Reflexion: an autonomous agent with dynamic memory and self-reflection. CoRR, abs/2303.11366, 2023. [170] Zhong, W., L. Guo, Q. Gao, et al. Memorybank: Enhancing large language models with long-term memory. CoRR, abs/2305.10250, 2023. [171] Chan, C., W. Chen, Y . Su, et al. Chateval: Towards better llm-based evaluators through multi-agent debate. CoRR, abs/2308.07201, 2023. [172] Zhu, X., Y . Chen, H. Tian, et al. Ghost in the minecraft: Generally capable agents for open- world environments via large language models with text-based knowledge and memory.CoRR, abs/2305.17144, 2023. [173] Modarressi, A., A. Imani, M. Fayyaz, et al. RET-LLM: towards a general read-write memory for large language models. CoRR, abs/2305.14322, 2023. [174] Lin, J., H. Zhao, A. Zhang, et al. Agentsims: An open-source sandbox for large language model evaluation. CoRR, abs/2308.04026, 2023. [175] Hu, C., J. Fu, C. Du, et al",
+      "source": "LLM Based-learning.pdf",
+      "source_type": "true",
+      "score": 0.7975316,
+      "rerank_score": 0.9933106899261475,
+      "url": null,
+      "grader_score": 0.88,
+      "grader_relevant": true,
+      "grader_reason": "Cites multiple works focused on memory systems for large language models (e.g., self‑controlled memory, long‑term memory, read‑write memory)."
+    },
+    {
+      "id": "238798f4-01c9-5c78-84fb-016bcabb2074",
+      "content": "istics of agents and elucidate why large language models are well-suited to serve as the main component of brains or c Inspired by the definition of the agent, we present a general conceptual framework for the LLM- based agents with three key parts: brain, perception, and action (§ 3), and the framework can be tailored to suit different applications. We first introduce the brain, which is primarily composed of a large language model (§ 3.1). Similar to humans, the brain is the core of an AI agent because it not only stores crucial memories, information, and knowledge but also undertakes essential tasks of information processing, decision-making, reasoning, and planning. It is the key determinant of whether the agent can exhibit intelligent behaviors. Next, we introduce the perception module (§ 3.2). For an agent, this module serves a role similar to that of sensory organs for humans. Its primary function is to expand the agent’s perceptual space from text-only to a multimodal space that includes diverse sensory modalities like text, sound, visuals, touch, smell, and more. This expansion enables the agent to better perceive information from the external environment. Finally, we present the action module for expanding the action space of an agent (§ 3.3). Specifically, we expect the agent to be able to possess textual output, take embodied actions, and use tools so that it can better respond to environmental changes and provide feedback, and even alter and shape the environment",
+      "source": "LLM Based-learning.pdf",
+      "source_type": "true",
+      "score": 0.8118028,
+      "rerank_score": 0.989443838596344,
+      "url": null,
+      "grader_score": 0.78,
+      "grader_relevant": true,
+      "grader_reason": "Describes the agent's brain component as storing crucial memories and knowledge, relevant to memory capabilities in LLM agents."
+    }
+  ],
+  "private_sources": [
+    {
+      "id": "276f3131-dc50-5fbc-8729-38f82ae332b5",
+      "content": "nces of LLM-based agents [429; 430; 431]. AutoGPT [114] is one of the ongoing popular open-source projects aiming to a Apart from the basic functions of large language models like GPT-4, the AutoGPT framework also incorporates various practical external tools and long/short-term memory management. After users input their customized objectives, they can free their hands and wait for AutoGPT to automatically generate thoughts and perform specific tasks, all without requiring additional user prompts. As shown in Figure 8, we introduce the astonishingly diverse capabilities that the agent exhibits in scenarios where only one single agent is present. 4.1.1 Task-oriented Deployment The LLM-based agents, which can understand human natural language commands and perform everyday tasks [391], are currently among the most favored and practically valuable agents by users. This is because they have the potential to enhance task efficiency, alleviate user workload, and promote access for a broader user base. In task-oriented deployment, the agent follows high-level instructions from users, undertaking tasks such as goal decomposition [182; 258; 388; 394], sequence planning of sub-goals [182; 395], interactive exploration of the environment [256; 391; 390; 392], until the final objective is achieved. To explore whether agents can perform basic tasks, they are first deployed in text-based game scenarios. In this type of game, agents interact with the world purely using natural language [432]",
+      "source": "LLM Based-learning.pdf",
+      "source_type": "true",
+      "score": 0.78530693,
+      "rerank_score": 0.9989385008811951,
+      "url": null,
+      "grader_score": 0.92,
+      "grader_relevant": true,
+      "grader_reason": "Discusses AutoGPT's long/short-term memory management within LLM-based agents, directly addressing memory capabilities."
+    },
+    {
+      "id": "e601c480-e587-5801-9a72-e18b783e79c4",
+      "content": "l. Colt5: Faste Randomized positional encodings boost length generalization of transformers. In A. Rogers, J. L. Boyd-Graber, N. Okazaki, eds.,Proceedings of the 61st Annual Meeting of the Association for Computational Linguistics (Volume 2: Short Papers), ACL 2023, Toronto, Canada, July 9-14, 2023 , pages 1889–1903. Association for Computational Linguistics, 2023. [168] Liang, X., B. Wang, H. Huang, et al. Unleashing infinite-length input capacity for large-scale language models with self-controlled memory system. CoRR, abs/2304.13343, 2023. [169] Shinn, N., B. Labash, A. Gopinath. Reflexion: an autonomous agent with dynamic memory and self-reflection. CoRR, abs/2303.11366, 2023. [170] Zhong, W., L. Guo, Q. Gao, et al. Memorybank: Enhancing large language models with long-term memory. CoRR, abs/2305.10250, 2023. [171] Chan, C., W. Chen, Y . Su, et al. Chateval: Towards better llm-based evaluators through multi-agent debate. CoRR, abs/2308.07201, 2023. [172] Zhu, X., Y . Chen, H. Tian, et al. Ghost in the minecraft: Generally capable agents for open- world environments via large language models with text-based knowledge and memory.CoRR, abs/2305.17144, 2023. [173] Modarressi, A., A. Imani, M. Fayyaz, et al. RET-LLM: towards a general read-write memory for large language models. CoRR, abs/2305.14322, 2023. [174] Lin, J., H. Zhao, A. Zhang, et al. Agentsims: An open-source sandbox for large language model evaluation. CoRR, abs/2308.04026, 2023. [175] Hu, C., J. Fu, C. Du, et al",
+      "source": "LLM Based-learning.pdf",
+      "source_type": "true",
+      "score": 0.7975316,
+      "rerank_score": 0.9933106899261475,
+      "url": null,
+      "grader_score": 0.88,
+      "grader_relevant": true,
+      "grader_reason": "Cites multiple works focused on memory systems for large language models (e.g., self‑controlled memory, long‑term memory, read‑write memory)."
+    },
+    {
+      "id": "238798f4-01c9-5c78-84fb-016bcabb2074",
+      "content": "istics of agents and elucidate why large language models are well-suited to serve as the main component of brains or c Inspired by the definition of the agent, we present a general conceptual framework for the LLM- based agents with three key parts: brain, perception, and action (§ 3), and the framework can be tailored to suit different applications. We first introduce the brain, which is primarily composed of a large language model (§ 3.1). Similar to humans, the brain is the core of an AI agent because it not only stores crucial memories, information, and knowledge but also undertakes essential tasks of information processing, decision-making, reasoning, and planning. It is the key determinant of whether the agent can exhibit intelligent behaviors. Next, we introduce the perception module (§ 3.2). For an agent, this module serves a role similar to that of sensory organs for humans. Its primary function is to expand the agent’s perceptual space from text-only to a multimodal space that includes diverse sensory modalities like text, sound, visuals, touch, smell, and more. This expansion enables the agent to better perceive information from the external environment. Finally, we present the action module for expanding the action space of an agent (§ 3.3). Specifically, we expect the agent to be able to possess textual output, take embodied actions, and use tools so that it can better respond to environmental changes and provide feedback, and even alter and shape the environment",
+      "source": "LLM Based-learning.pdf",
+      "source_type": "true",
+      "score": 0.8118028,
+      "rerank_score": 0.989443838596344,
+      "url": null,
+      "grader_score": 0.78,
+      "grader_relevant": true,
+      "grader_reason": "Describes the agent's brain component as storing crucial memories and knowledge, relevant to memory capabilities in LLM agents."
+    }
+  ],
+  "web_sources": [],
+  "search_query": "memory capabilities in large language model based agents",
+  "retrieval_used": true,
+  "web_search_used": false,
+  "context_quality": "strong",
+  "citation_valid": true,
+  "is_grounded": false,
+  "claims": [
+    {
+      "text": "Goal decomposition & sub‑goal planning (short‑term operational memory) – breaks a high‑level objective into a sequence of intermediate steps while the agent is executing a task.",
+      "cited_chunk_id": 1,
+      "line_number": 5,
+      "citation": "【chunk_1】"
+    },
+    {
+      "text": "Infinite‑length input capacity via self‑controlled memory system – provides a mechanism that lets the model handle arbitrarily long inputs by managing its own memory.",
+      "cited_chunk_id": 2,
+      "line_number": 6,
+      "citation": "【chunk_2】"
+    },
+    {
+      "text": "Dynamic memory management – lets the agent decide when to write new entries, overwrite old ones, or prune irrelevant information.",
+      "cited_chunk_id": 2,
+      "line_number": 7,
+      "citation": "【chunk_2】"
+    },
+    {
+      "text": "Self‑reflection / meta‑cognition – enables the agent to review its own past actions and reasoning traces to improve future behavior.",
+      "cited_chunk_id": 2,
+      "line_number": 8,
+      "citation": "【chunk_2】"
+    },
+    {
+      "text": "Long‑term memory via Memorybank – supplies an external, queryable store that augments the LLM with scalable long‑term knowledge.",
+      "cited_chunk_id": 2,
+      "line_number": 9,
+      "citation": "【chunk_2】"
+    },
+    {
+      "text": "Read‑write memory architecture (RET‑LLM) – supports both retrieval (read) and modification (write) of stored information, facilitating continual learning.",
+      "cited_chunk_id": 2,
+      "line_number": 10,
+      "citation": "【chunk_2】"
+    },
+    {
+      "text": "Memory‑augmented planning & reasoning – the “brain” component retains crucial knowledge and uses it for decision‑making, reasoning, and plan generation.",
+      "cited_chunk_id": 3,
+      "line_number": 11,
+      "citation": "【chunk_3】"
+    }
+  ],
+  "grounding_scores": [
+    {
+      "claim": "Goal decomposition & sub‑goal planning (short‑term operational memory) – breaks a high‑level objective into a sequence of intermediate steps while the agent is executing a task.",
+      "cited_chunk_id": 1,
+      "line_number": 5,
+      "score": 0.7043,
+      "supported": true,
+      "reason": "Claim is supported by cited evidence."
+    },
+    {
+      "claim": "Infinite‑length input capacity via self‑controlled memory system – provides a mechanism that lets the model handle arbitrarily long inputs by managing its own memory.",
+      "cited_chunk_id": 2,
+      "line_number": 6,
+      "score": 0.5063,
+      "supported": true,
+      "reason": "Claim is supported by cited evidence."
+    },
+    {
+      "claim": "Dynamic memory management – lets the agent decide when to write new entries, overwrite old ones, or prune irrelevant information.",
+      "cited_chunk_id": 2,
+      "line_number": 7,
+      "score": 0.018,
+      "supported": false,
+      "reason": "Claim is not sufficiently supported by cited evidence."
+    },
+    {
+      "claim": "Self‑reflection / meta‑cognition – enables the agent to review its own past actions and reasoning traces to improve future behavior.",
+      "cited_chunk_id": 2,
+      "line_number": 8,
+      "score": 0.0376,
+      "supported": false,
+      "reason": "Claim is not sufficiently supported by cited evidence."
+    },
+    {
+      "claim": "Long‑term memory via Memorybank – supplies an external, queryable store that augments the LLM with scalable long‑term knowledge.",
+      "cited_chunk_id": 2,
+      "line_number": 9,
+      "score": 0.3631,
+      "supported": false,
+      "reason": "Claim is not sufficiently supported by cited evidence."
+    },
+    {
+      "claim": "Read‑write memory architecture (RET‑LLM) – supports both retrieval (read) and modification (write) of stored information, facilitating continual learning.",
+      "cited_chunk_id": 2,
+      "line_number": 10,
+      "score": 0.0398,
+      "supported": false,
+      "reason": "Claim is not sufficiently supported by cited evidence."
+    },
+    {
+      "claim": "Memory‑augmented planning & reasoning – the “brain” component retains crucial knowledge and uses it for decision‑making, reasoning, and plan generation.",
+      "cited_chunk_id": 3,
+      "line_number": 11,
+      "score": 0.5674,
+      "supported": true,
+      "reason": "Claim is supported by cited evidence."
+    }
+  ],
+  "grounding_feedback": [
+    "Unsupported claim: Dynamic memory management – lets the agent decide when to write new entries, overwrite old ones, or prune irrelevant information. (chunk_2, score=0.018)",
+    "Unsupported claim: Self‑reflection / meta‑cognition – enables the agent to review its own past actions and reasoning traces to improve future behavior. (chunk_2, score=0.038)",
+    "Unsupported claim: Long‑term memory via Memorybank – supplies an external, queryable store that augments the LLM with scalable long‑term knowledge. (chunk_2, score=0.363)",
+    "Unsupported claim: Read‑write memory architecture (RET‑LLM) – supports both retrieval (read) and modification (write) of stored information, facilitating continual learning. (chunk_2, score=0.040)",
+    "Uncited substantive statement: Main memory capabilities of LLM‑based agents"
+  ],
+  "answer_supported": false,
+  "answer_useful": null,
+  "support_score": 0.4286,
+  "usefulness_score": null,
+  "validation_passed": false,
+  "revision_count": 2,
+  "retrieval_rewrite_count": 0,
+  "web_rewrite_count": 0,
+  "support_retry_count": 0,
+  "max_revisions": 2,
+  "retrieval_latency_ms": 16434.4879,
+  "rerank_latency_ms": 326.2766,
+  "grader_latency_ms": 1412.8545,
+  "generation_latency_ms": 2752.5245,
+  "latency_ms": 79769.99
+}

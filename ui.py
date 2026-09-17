@@ -1,34 +1,15 @@
 """
 KnowledgeMesh · Agentic RAG Console
 
-Frontend for the current KnowledgeMesh FastAPI backend.
+Frontend for the KnowledgeMesh FastAPI backend.
 
-Backend request:
+Backend:
     POST http://localhost:8000/query
 
-Payload:
-    {
-        "q": "What is loop engineering?",
-        "thread_id": "..."
-    }
+Request:
+    {"q": "...", "thread_id": "..."}
 
-Expected response:
-    {
-        "question": "...",
-        "answer": "...",
-        "thought_process": [...],
-        "status": "...",
-        "sources": [
-            {
-                "id": "...",
-                "content": "...",
-                "source": "...",
-                "source_type": "true",
-                "score": 0.74,
-                "rerank_score": 0.98
-            }
-        ]
-    }
+Response: see original docstring / API — unchanged from the base app.
 """
 
 from contextlib import nullcontext
@@ -53,42 +34,18 @@ from urllib3.util.retry import Retry
 # ============================================================
 
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
+ENV_PATH = os.path.join(PROJECT_ROOT, ".env")
 
-ENV_PATH = os.path.join(
-    PROJECT_ROOT,
-    ".env",
-)
-
-# Fallback in case ui.py is inside a subdirectory.
 if not os.path.exists(ENV_PATH):
-    parent_env = os.path.join(
-        os.path.dirname(PROJECT_ROOT),
-        ".env",
-    )
-
+    parent_env = os.path.join(os.path.dirname(PROJECT_ROOT), ".env")
     if os.path.exists(parent_env):
         ENV_PATH = parent_env
 
-load_dotenv(
-    dotenv_path=ENV_PATH,
-    override=False,
-)
+load_dotenv(dotenv_path=ENV_PATH, override=False)
 
-BACKEND_URL = os.getenv(
-    "BACKEND_URL",
-    "http://localhost:8000",
-).rstrip("/")
-
-BACKEND_TIMEOUT_SECONDS = int(
-    os.getenv(
-        "BACKEND_TIMEOUT_SECONDS",
-        "180",
-    )
-)
-
-LOGFIRE_PROJECT_URL = os.getenv(
-    "LOGFIRE_PROJECT_URL",
-)
+DEFAULT_BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000").rstrip("/")
+BACKEND_TIMEOUT_SECONDS = int(os.getenv("BACKEND_TIMEOUT_SECONDS", "180"))
+LOGFIRE_PROJECT_URL = os.getenv("LOGFIRE_PROJECT_URL")
 
 
 # ============================================================
@@ -100,19 +57,14 @@ LOGFIRE_ERROR = None
 
 try:
     logfire_token = os.getenv("LOGFIRE_TOKEN")
-
     if logfire_token:
         logfire.configure(token=logfire_token)
-
         LOGFIRE_OK = True
-
     else:
-        print("⚠️ LOGFIRE_TOKEN is not configured for the Streamlit UI.")
-
+        print("Logfire token is not configured for the Streamlit UI.")
 except Exception as exc:
     LOGFIRE_ERROR = str(exc)
-
-    print(f"⚠️ Streamlit Logfire initialization failed: {exc}")
+    print(f"Streamlit Logfire initialization failed: {exc}")
 
 
 # ============================================================
@@ -121,7 +73,7 @@ except Exception as exc:
 
 st.set_page_config(
     page_title="KnowledgeMesh",
-    page_icon="🕸️",
+    page_icon="◈",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -133,163 +85,88 @@ st.set_page_config(
 
 
 def clean_html(markup: str) -> str:
-    """
-    Normalize HTML indentation.
-
-    Important:
-    Do not escape this output because it is intended to be
-    rendered as HTML.
-    """
-
     return textwrap.dedent(markup).strip()
 
 
 def display_html(markup: str):
-    """
-    Centralized HTML renderer.
-
-    Streamlit versions that support st.html() use it directly.
-    The fallback uses st.markdown(..., unsafe_allow_html=True).
-    """
-
     markup = clean_html(markup)
-
-    native_html_renderer = getattr(
-        st,
-        "html",
-        None,
-    )
-
+    native_html_renderer = getattr(st, "html", None)
     if callable(native_html_renderer):
         native_html_renderer(markup)
-
     else:
-        st.markdown(
-            markup,
-            unsafe_allow_html=True,
-        )
+        st.markdown(markup, unsafe_allow_html=True)
 
 
 def esc(value) -> str:
-    """
-    Escape dynamic values before inserting them into HTML.
-    """
-
-    return html.escape(
-        str(value),
-        quote=True,
-    )
+    return html.escape(str(value), quote=True)
 
 
 def safe_url(value) -> str:
-    """
-    Allow only HTTP and HTTPS URLs.
-    """
-
     value = str(value or "")
-
-    if value.startswith("http://"):
+    if value.startswith("http://") or value.startswith("https://"):
         return value
-
-    if value.startswith("https://"):
-        return value
-
     return ""
 
 
 def format_score(value) -> str:
-    """
-    Format numeric scores safely.
-    """
-
     if isinstance(value, (int, float)):
         return f"{value:.3f}"
-
     return "—"
 
 
-def _trace_context():
-    """
-    Return a Logfire context when available.
-    """
+def format_ms(value) -> str:
+    if value is None:
+        return "—"
+    try:
+        value = float(value)
+        if value >= 1000:
+            return f"{value / 1000:.2f}s"
+        return f"{value:.0f}ms"
+    except (TypeError, ValueError):
+        return "—"
 
+
+def _trace_context():
     if LOGFIRE_OK:
         return logfire.span("KnowledgeMesh UI operation")
-
     return nullcontext()
 
 
 # ============================================================
-# PIPELINE CONFIGURATION
+# PIPELINE
 # ============================================================
 
 PIPELINE_STAGES = [
-    (
-        "guardrails",
-        "Guardrails",
-        "Safety and policy check",
-    ),
-    (
-        "planner",
-        "Planner",
-        "Intent and search planning",
-    ),
-    (
-        "retrieval",
-        "Qdrant",
-        "Vector knowledge retrieval",
-    ),
-    (
-        "reranking",
-        "FlashRank",
-        "Context relevance ranking",
-    ),
-    (
-        "responder",
-        "LLM",
-        "Grounded response synthesis",
-    ),
+    ("guardrails", "Guardrails", "Safety and policy check"),
+    ("planner", "Planner", "Intent and search planning"),
+    ("retrieval", "Qdrant", "Vector knowledge retrieval"),
+    ("reranking", "FlashRank", "Semantic reranking"),
+    ("grader", "Grader", "Evidence relevance evaluation"),
+    ("responder", "LLM", "Grounded response synthesis"),
 ]
 
-
 TRACE_PATTERNS = [
+    (re.compile(r"guardrail", re.IGNORECASE), "guardrails", "GRD"),
+    (re.compile(r"intent|planner|planning", re.IGNORECASE), "planner", "PLN"),
     (
         re.compile(
-            r"guardrail",
-            re.IGNORECASE,
-        ),
-        "guardrails",
-        "GRD",
-    ),
-    (
-        re.compile(
-            r"intent|planner|planning",
-            re.IGNORECASE,
-        ),
-        "planner",
-        "PLN",
-    ),
-    (
-        re.compile(
-            r"retriev|qdrant|context retrieved|knowledge retrieval",
-            re.IGNORECASE,
+            r"retriev|qdrant|context retrieved|knowledge retrieval", re.IGNORECASE
         ),
         "retrieval",
         "RET",
     ),
     (
-        re.compile(
-            r"rerank|flashrank|semantic reranking",
-            re.IGNORECASE,
-        ),
+        re.compile(r"rerank|flashrank|semantic reranking", re.IGNORECASE),
         "reranking",
         "RER",
     ),
     (
-        re.compile(
-            r"respond|response|synthes|answer|llm",
-            re.IGNORECASE,
-        ),
+        re.compile(r"grader|document grade|context quality|relevance", re.IGNORECASE),
+        "grader",
+        "GRD",
+    ),
+    (
+        re.compile(r"respond|response|synthes|answer|llm", re.IGNORECASE),
         "responder",
         "LLM",
     ),
@@ -297,105 +174,56 @@ TRACE_PATTERNS = [
 
 
 def classify_step(step):
-    """
-    Convert a backend thought_process entry into a UI stage.
-    """
-
     if isinstance(step, dict):
         stage = step.get("stage") or step.get("node") or ""
-
         detail = step.get("detail") or step.get("message") or str(step)
-
         searchable_text = f"{stage} {detail}"
-
     else:
         detail = str(step)
-
         searchable_text = detail
 
     for pattern, stage_key, code in TRACE_PATTERNS:
         if pattern.search(searchable_text):
-            return (
-                stage_key,
-                code,
-                detail,
-            )
+            return (stage_key, code, detail)
 
-    return (
-        "",
-        "STEP",
-        detail,
-    )
+    return ("", "STEP", detail)
 
 
 def infer_query_type(thought_process):
-    """
-    Infer whether the backend handled the turn as conversational
-    or technical.
-    """
-
     text = " ".join(str(step) for step in (thought_process or [])).lower()
-
     if "conversational" in text:
         return "conversational"
-
     if "retrieval: skipped" in text:
         return "conversational"
-
     if "intent: technical" in text:
         return "technical"
-
     return "technical"
 
 
 def extract_search_query(thought_process):
-    """
-    Extract the planner-generated search term.
-    """
-
     for step in thought_process or []:
         text = str(step)
-
         if text.lower().startswith("search term:"):
-            return text.split(
-                ":",
-                1,
-            )[1].strip()
-
+            return text.split(":", 1)[1].strip()
     return None
 
 
 def infer_visited_nodes(
-    thought_process,
-    sources,
-    status,
+    thought_process, sources, status, context_quality=None, web_search_used=False
 ):
-    """
-    Derive active pipeline stages from the actual backend response.
-
-    The current backend returns thought_process rather than explicit
-    node telemetry, so this function derives the visual state.
-    """
-
     visited = set()
-
     steps = thought_process or []
-
     status_text = str(status or "").lower()
-
     combined_text = " ".join(str(step) for step in steps).lower()
 
     for step in steps:
         stage_key, _, _ = classify_step(step)
-
         if stage_key:
             visited.add(stage_key)
 
-    # A successful request always passed through the guardrail check.
     if "guardrail" in combined_text or "guardrail" in status_text or steps:
         visited.add("guardrails")
 
-    # Planner is present when an intent/search decision exists.
     if (
         "intent:" in combined_text
         or "search term:" in combined_text
@@ -403,12 +231,17 @@ def infer_visited_nodes(
     ):
         visited.add("planner")
 
-    # Sources indicate retrieval and reranking occurred.
     if sources:
         visited.add("retrieval")
         visited.add("reranking")
 
-    # A response status indicates the responder completed.
+    if (
+        "document grade" in combined_text
+        or "context quality" in combined_text
+        or context_quality
+    ):
+        visited.add("grader")
+
     if status:
         visited.add("responder")
 
@@ -420,51 +253,33 @@ def infer_visited_nodes(
 # ============================================================
 
 
-def normalize_source(
-    source,
-    index,
-):
-    """
-    Normalize the current structured source response.
-
-    Supports:
-    - Current dictionary sources
-    - Legacy string sources
-    """
-
+def normalize_source(source, index):
     if isinstance(source, dict):
         content = source.get("content") or source.get("text") or ""
-
         name = (
             source.get("source")
             or source.get("filename")
             or source.get("title")
             or "Unknown document"
         )
-
         source_type = source.get("source_type") or "unknown"
-
         document_id = source.get("id")
-
         vector_score = source.get("score")
-
         rerank_score = source.get("rerank_score")
-
+        grader_score = source.get("grader_score")
+        grader_relevant = source.get("grader_relevant")
+        grader_reason = source.get("grader_reason")
         url = source.get("url")
-
     else:
         content = str(source)
-
         name = "Unknown document"
-
         source_type = "unknown"
-
         document_id = None
-
         vector_score = None
-
         rerank_score = None
-
+        grader_score = None
+        grader_relevant = None
+        grader_reason = None
         url = None
 
     return {
@@ -475,139 +290,89 @@ def normalize_source(
         "id": document_id,
         "score": vector_score,
         "rerank_score": rerank_score,
+        "grader_score": grader_score,
+        "grader_relevant": grader_relevant,
+        "grader_reason": grader_reason,
         "url": url,
     }
 
 
 def source_type_label(value):
-    """
-    Human-friendly source type.
-    """
-
     normalized = str(value or "").strip().lower()
-
     if normalized == "true":
         return "Trusted"
-
-    if normalized in {
-        "false",
-        "noisy",
-    }:
+    if normalized in {"false", "noisy"}:
         return "Noisy"
-
     if not normalized:
         return "Unknown"
-
     return normalized.title()
 
 
 # ============================================================
-# PIPELINE HTML
+# PIPELINE RAIL
 # ============================================================
 
 
 def render_pipeline_rail(trace=None):
-    """
-    Build the pipeline HTML.
-    """
-
     trace = trace or {}
-
-    visited = set(
-        trace.get(
-            "visited",
-            [],
-        )
-    )
-
-    query_type = trace.get(
-        "query_type",
-        "technical",
-    )
-
-    sources = trace.get(
-        "sources",
-        [],
-    )
-
+    visited = set(trace.get("visited", []))
+    query_type = trace.get("query_type", "technical")
+    sources = trace.get("sources", [])
     source_count = len(sources)
+    context_quality = trace.get("context_quality")
 
     nodes = []
+    total = len(PIPELINE_STAGES)
 
-    for index, (
-        key,
-        title,
-        subtitle,
-    ) in enumerate(
-        PIPELINE_STAGES,
-        start=1,
-    ):
+    for index, (key, title, subtitle) in enumerate(PIPELINE_STAGES, start=1):
         active = key in visited
-
         current_subtitle = subtitle
 
         if trace:
             if key == "planner" and query_type == "conversational":
                 current_subtitle = "Conversation memory path"
-
             elif key == "retrieval" and source_count:
-                current_subtitle = (
-                    f"{source_count} document"
-                    f"{'s' if source_count != 1 else ''} retrieved"
-                )
-
+                current_subtitle = f"{source_count} document{'s' if source_count != 1 else ''} retrieved"
             elif key == "reranking" and source_count:
                 current_subtitle = f"Top {source_count} context chunks"
-
+            elif key == "grader":
+                current_subtitle = (
+                    f"Context: {str(context_quality).title()}"
+                    if context_quality
+                    else "Evidence relevance evaluation"
+                )
             elif key == "responder" and query_type == "conversational":
                 current_subtitle = "Memory-based response"
-
             elif key == "responder" and source_count:
                 current_subtitle = "Grounded synthesis"
 
-        active_class = " active" if active else ""
+        state_class = " active" if active else ""
+        line_class = " active" if (active and index < total) else ""
 
         nodes.append(
             f"""
-            <div class="km-pipeline-node{active_class}">
-
-                <div class="km-node-index">
-                    {index}
+            <div class="km-step{state_class}">
+                <div class="km-step-marker">
+                    <div class="km-step-dot">{index}</div>
+                    {"" if index == total else f'<div class="km-step-line{line_class}"></div>'}
                 </div>
-
-                <div class="km-node-content">
-
-                    <strong>
-                        {esc(title)}
-                    </strong>
-
-                    <span>
-                        {esc(current_subtitle)}
-                    </span>
-
+                <div class="km-step-body">
+                    <strong>{esc(title)}</strong>
+                    <span>{esc(current_subtitle)}</span>
                 </div>
-
             </div>
             """
         )
 
-    return f"""
-    <div class="km-pipeline">
-        {"".join(nodes)}
-    </div>
-    """
+    return f'<div class="km-pipeline">{"".join(nodes)}</div>'
 
 
 # ============================================================
-# TRANSCRIPT EXPORT
+# TRANSCRIPT
 # ============================================================
 
 
 def transcript_markdown(messages):
-    """
-    Export conversation and retrieved source metadata.
-    """
-
     lines = [
         "# KnowledgeMesh transcript",
         "",
@@ -616,85 +381,68 @@ def transcript_markdown(messages):
     ]
 
     for message in messages:
-        role = message.get(
-            "role",
-            "assistant",
-        )
-
+        role = message.get("role", "assistant")
         speaker = "You" if role == "user" else "KnowledgeMesh"
+        lines.extend([f"## {speaker}", "", str(message.get("content", "")), ""])
+
+        trace = message.get("trace")
+        if not trace:
+            continue
 
         lines.extend(
             [
-                f"## {speaker}",
+                "### Pipeline metrics",
                 "",
-                str(
-                    message.get(
-                        "content",
-                        "",
-                    )
-                ),
+                f"- Total latency: {format_ms(trace.get('backend_latency_ms'))}",
+                f"- Retrieval: {format_ms(trace.get('retrieval_latency_ms'))}",
+                f"- Reranking: {format_ms(trace.get('rerank_latency_ms'))}",
+                f"- Grader: {format_ms(trace.get('grader_latency_ms'))}",
+                f"- Generation: {format_ms(trace.get('generation_latency_ms'))}",
                 "",
             ]
         )
 
-        trace = message.get("trace")
+        context_quality = trace.get("context_quality")
+        if context_quality:
+            lines.append(f"- Context quality: {context_quality}")
 
-        if not trace:
-            continue
+        support_score = trace.get("support_score")
+        if support_score is not None:
+            lines.append(f"- Support score: {support_score}")
+
+        usefulness_score = trace.get("usefulness_score")
+        if usefulness_score is not None:
+            lines.append(f"- Usefulness score: {usefulness_score}")
+
+        lines.append("")
 
         search_query = trace.get("search_query")
-
         if search_query:
-            lines.extend(
-                [
-                    f"**Planner search query:** `{search_query}`",
-                    "",
-                ]
-            )
+            lines.extend([f"**Planner search query:** `{search_query}`", ""])
 
-        sources = trace.get(
-            "sources",
-            [],
-        )
-
+        sources = trace.get("sources", [])
         if sources:
-            lines.extend(
-                [
-                    "### Retrieved sources",
-                    "",
-                ]
-            )
-
+            lines.extend(["### Retrieved sources", ""])
             for source in sources:
                 lines.extend(
                     [
-                        (f"**[{source['n']}] {source['name']}**"),
+                        f"**[{source['n']}] {source['name']}**",
                         "",
-                        (f"- Source type: {source_type_label(source['source_type'])}"),
-                        (f"- Vector score: {format_score(source['score'])}"),
-                        (f"- Rerank score: {format_score(source['rerank_score'])}"),
+                        f"- Source type: {source_type_label(source['source_type'])}",
+                        f"- Vector score: {format_score(source['score'])}",
+                        f"- Rerank score: {format_score(source['rerank_score'])}",
+                        f"- Grader score: {format_score(source.get('grader_score'))}",
                         "",
                         source["text"],
                         "",
                     ]
                 )
 
-        steps = trace.get(
-            "steps",
-            [],
-        )
-
+        steps = trace.get("steps", [])
         if steps:
-            lines.extend(
-                [
-                    "### Reasoning trace",
-                    "",
-                ]
-            )
-
+            lines.extend(["### Reasoning trace", ""])
             for step in steps:
                 lines.append(f"- {step}")
-
             lines.append("")
 
     return "\n".join(lines)
@@ -705,47 +453,24 @@ def transcript_markdown(messages):
 # ============================================================
 
 
-@st.cache_data(
-    ttl=10,
-    show_spinner=False,
-)
-def check_backend_health():
-
+@st.cache_data(ttl=10, show_spinner=False)
+def check_backend_health(backend_url):
     try:
-        response = requests.get(
-            f"{BACKEND_URL}/health",
-            timeout=4,
-        )
-
+        response = requests.get(f"{backend_url}/health", timeout=4)
         return response.ok
-
     except requests.RequestException:
         return False
 
 
-@st.cache_data(
-    ttl=10,
-    show_spinner=False,
-)
-def check_backend_ready():
-
+@st.cache_data(ttl=10, show_spinner=False)
+def check_backend_ready(backend_url):
     try:
-        response = requests.get(
-            f"{BACKEND_URL}/ready",
-            timeout=4,
-        )
-
+        response = requests.get(f"{backend_url}/ready", timeout=4)
         if not response.ok:
             return False
-
         payload = response.json()
-
         return payload.get("status") == "ready"
-
-    except (
-        requests.RequestException,
-        ValueError,
-    ):
+    except (requests.RequestException, ValueError):
         return False
 
 
@@ -756,48 +481,29 @@ def check_backend_ready():
 if "session_id" not in st.session_state:
     st.session_state.session_id = str(uuid.uuid4())
 
-
 if "messages" not in st.session_state:
     st.session_state.messages = []
-
 
 if "latencies" not in st.session_state:
     st.session_state.latencies = []
 
-
 if "session_started_at" not in st.session_state:
     st.session_state.session_started_at = time.strftime("%H:%M:%S")
 
+if "backend_url" not in st.session_state:
+    st.session_state.backend_url = DEFAULT_BACKEND_URL
 
 if "http_session" not in st.session_state:
     http_session = requests.Session()
-
     retry_strategy = Retry(
         total=2,
         backoff_factor=0.5,
-        status_forcelist=[
-            502,
-            503,
-            504,
-        ],
-        allowed_methods=[
-            "GET",
-            "POST",
-        ],
+        status_forcelist=[502, 503, 504],
+        allowed_methods=["GET", "POST"],
     )
-
     adapter = HTTPAdapter(max_retries=retry_strategy)
-
-    http_session.mount(
-        "http://",
-        adapter,
-    )
-
-    http_session.mount(
-        "https://",
-        adapter,
-    )
-
+    http_session.mount("http://", adapter)
+    http_session.mount("https://", adapter)
     st.session_state.http_session = http_session
 
 
@@ -809,65 +515,59 @@ CUSTOM_CSS = """
 <style>
 
 :root {
-    --km-bg: #0d0f14;
-    --km-panel: #14171f;
-    --km-panel-alt: #191d27;
-    --km-border: #282d39;
-    --km-border-soft: #20242e;
+    --km-bg: #0b0d12;
+    --km-panel: #12141b;
+    --km-panel-alt: #171a23;
+    --km-panel-raised: #1c1f2a;
+    --km-border: #262a37;
+    --km-border-soft: #1d2029;
 
-    --km-text: #e8eaf0;
-    --km-muted: #8a90a3;
-    --km-muted-soft: #656c7e;
+    --km-text: #edeef3;
+    --km-muted: #9297a8;
+    --km-muted-soft: #666c7d;
 
-    --km-accent: #818cf8;
-    --km-accent-strong: #a5b4fc;
-    --km-accent-soft: rgba(129, 140, 248, .14);
+    --km-accent: #7c86f5;
+    --km-accent-strong: #a8b1ff;
+    --km-accent-soft: rgba(124, 134, 245, .13);
+    --km-accent-border: rgba(124, 134, 245, .35);
 
-    --km-success: #6ee7b7;
-    --km-success-soft: rgba(110, 231, 183, .14);
+    --km-success: #5fd9a4;
+    --km-success-soft: rgba(95, 217, 164, .13);
 
     --km-warning: #e0a95c;
-    --km-warning-soft: rgba(224, 169, 92, .14);
+    --km-warning-soft: rgba(224, 169, 92, .13);
 
     --km-danger: #f0707a;
-    --km-danger-soft: rgba(240, 112, 122, .14);
+    --km-danger-soft: rgba(240, 112, 122, .13);
+
+    --km-radius-sm: 8px;
+    --km-radius-md: 12px;
+    --km-radius-lg: 16px;
+
+    --km-shadow: 0 1px 2px rgba(0, 0, 0, .35), 0 8px 24px -12px rgba(0, 0, 0, .5);
 }
 
-html,
-body,
-[class*="css"] {
-    font-family: Inter, sans-serif;
+html, body, [class*="css"] {
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 .stApp {
-    background: var(--km-bg);
+    background:
+        radial-gradient(1100px 480px at 12% -8%, rgba(124,134,245,.06), transparent 60%),
+        var(--km-bg);
     color: var(--km-text);
 }
 
-header[data-testid="stHeader"] {
-    background: transparent;
-}
-
-#MainMenu {
-    visibility: hidden;
-}
-
-footer {
-    visibility: hidden;
-}
+header[data-testid="stHeader"] { background: transparent; }
+#MainMenu { visibility: hidden; }
+footer { visibility: hidden; }
 
 @keyframes kmFadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(4px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
+::selection { background: var(--km-accent-soft); }
 
 /* ============================================================
    SIDEBAR
@@ -875,93 +575,89 @@ footer {
 
 section[data-testid="stSidebar"] {
     background: var(--km-panel);
-    border-right: 1px solid var(--km-border);
+    border-right: 1px solid var(--km-border-soft);
 }
 
-section[data-testid="stSidebar"] > div {
-    padding-top: .6rem;
-}
-
-section[data-testid="stSidebar"] * {
-    color: var(--km-text);
-}
+section[data-testid="stSidebar"] > div { padding-top: .5rem; }
+section[data-testid="stSidebar"] * { color: var(--km-text); }
 
 .km-brand {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 11px;
+    padding: 6px 0 18px;
+    margin-bottom: 18px;
+    border-bottom: 1px solid var(--km-border-soft);
+}
 
-    padding: 4px 0 17px;
-    margin-bottom: 16px;
-
-    border-bottom: 1px solid var(--km-border);
+.km-brand-mark {
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    flex: none;
+    border-radius: 9px;
+    background: linear-gradient(155deg, var(--km-accent), #5b63c7);
+    box-shadow: 0 4px 14px -4px rgba(124,134,245,.55);
+    color: #0b0d12;
+    font-weight: 800;
+    font-size: 15px;
 }
 
 .km-brand strong {
     display: block;
-
     color: #ffffff;
-
-    font-family: monospace;
-    font-size: 15px;
+    font-size: 14.5px;
     font-weight: 700;
+    letter-spacing: -.01em;
 }
 
 .km-brand small {
     display: block;
-
-    margin-top: 3px;
-
-    color: var(--km-muted);
-
+    margin-top: 2px;
+    color: var(--km-muted-soft);
     font-size: 10.5px;
+    letter-spacing: .01em;
 }
 
 .km-rail-label {
     display: flex;
     align-items: center;
     gap: 7px;
-
-    margin: 18px 0 8px 2px;
-
-    color: var(--km-muted);
-
-    font-size: 11px;
-    font-weight: 600;
+    margin: 20px 0 9px 1px;
+    color: var(--km-muted-soft);
+    font-size: 10.5px;
+    font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: .06em;
-}
-
-.km-rail-label::before {
-    content: "";
-
-    width: 3px;
-    height: 12px;
-
-    border-radius: 3px;
-
-    background: var(--km-accent);
+    letter-spacing: .08em;
 }
 
 .km-status-card {
     padding: 13px 14px;
-
-    border: 1px solid var(--km-border);
-    border-radius: 10px;
-
+    border: 1px solid var(--km-border-soft);
+    border-radius: var(--km-radius-md);
     background: var(--km-panel-alt);
 }
 
-.km-status-card .kv {
-    color: var(--km-muted);
-
-    font-family: monospace;
-    font-size: 11px;
-    line-height: 2;
+.km-status-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 0;
+    font-size: 11.5px;
 }
 
-.km-status-card .kv b {
+.km-status-row + .km-status-row { border-top: 1px solid var(--km-border-soft); }
+
+.km-status-row .label {
+    color: var(--km-muted-soft);
+    font-weight: 500;
+}
+
+.km-status-row .value {
     color: var(--km-text);
+    font-family: "SF Mono", "JetBrains Mono", monospace;
+    font-size: 11px;
     font-weight: 500;
 }
 
@@ -969,248 +665,197 @@ section[data-testid="stSidebar"] * {
     display: flex;
     align-items: center;
     gap: 10px;
-
     margin-top: 22px;
     padding-top: 16px;
-
-    border-top: 1px solid var(--km-border);
+    border-top: 1px solid var(--km-border-soft);
 }
 
 .km-rail-footer strong {
     display: block;
-
     color: var(--km-text);
-
     font-size: 11.5px;
     font-weight: 600;
 }
 
 .km-rail-footer small {
     display: block;
-
     margin-top: 3px;
-
     color: var(--km-muted-soft);
-
-    font-size: 10px;
+    font-size: 9.5px;
+    line-height: 1.5;
 }
 
 .km-dot {
     display: inline-block;
-
     width: 7px;
     height: 7px;
-
     flex: none;
-
     border-radius: 50%;
     background: var(--km-muted-soft);
 }
 
-.km-dot.success {
-    background: var(--km-success);
-    box-shadow: 0 0 12px var(--km-success-soft);
-}
-
-.km-dot.warning {
-    background: var(--km-warning);
-    box-shadow: 0 0 12px var(--km-warning-soft);
-}
-
-.km-dot.danger {
-    background: var(--km-danger);
-    box-shadow: 0 0 12px var(--km-danger-soft);
-}
+.km-dot.success { background: var(--km-success); box-shadow: 0 0 10px var(--km-success-soft); }
+.km-dot.warning { background: var(--km-warning); box-shadow: 0 0 10px var(--km-warning-soft); }
+.km-dot.danger  { background: var(--km-danger);  box-shadow: 0 0 10px var(--km-danger-soft); }
 
 section[data-testid="stSidebar"] button {
-    background: var(--km-panel-alt) !important;
-
+    background: var(--km-panel-raised) !important;
     border: 1px solid var(--km-border) !important;
-
     color: var(--km-text) !important;
-
     font-size: 12px !important;
+    border-radius: 8px !important;
+    transition: border-color .15s ease, transform .1s ease;
 }
 
 section[data-testid="stSidebar"] button:hover {
-    border-color: var(--km-accent) !important;
+    border-color: var(--km-accent-border) !important;
 }
 
+section[data-testid="stSidebar"] input,
+section[data-testid="stSidebar"] div[data-baseweb="input"] {
+    background: var(--km-panel-raised) !important;
+    border-color: var(--km-border) !important;
+    color: var(--km-text) !important;
+    font-family: "SF Mono", "JetBrains Mono", monospace !important;
+    font-size: 11.5px !important;
+}
 
 /* ============================================================
    TOPBAR
    ============================================================ */
 
-.km-topbar {
-    padding-top: 4px;
-}
+.km-topbar { padding-top: 2px; }
 
 .km-kicker {
-    margin-bottom: 7px;
-
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    margin-bottom: 10px;
     color: var(--km-accent-strong);
-
-    font-family: monospace;
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: .04em;
+    font-family: "SF Mono", "JetBrains Mono", monospace;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: .07em;
     text-transform: uppercase;
 }
 
+.km-kicker::before {
+    content: "";
+    width: 14px;
+    height: 1px;
+    background: var(--km-accent);
+}
+
 .km-topbar h1 {
-    margin: 0 0 8px;
-
-    color: var(--km-text);
-
-    font-size: 28px;
-    font-weight: 700;
-    letter-spacing: -.02em;
+    margin: 0 0 9px;
+    color: #ffffff;
+    font-size: 26px;
+    font-weight: 750;
+    letter-spacing: -.025em;
 }
 
 .km-topbar p {
-    max-width: 800px;
-
+    max-width: 760px;
     margin: 0;
-
     color: var(--km-muted);
-
     font-size: 13px;
-    line-height: 1.6;
+    line-height: 1.65;
 }
 
 .km-engine-pill {
     display: inline-flex;
     align-items: center;
     gap: 9px;
-
-    margin-top: 13px;
-    padding: 8px 13px;
-
+    margin-top: 14px;
+    padding: 7px 13px;
     border: 1px solid var(--km-border);
     border-radius: 999px;
-
-    background: var(--km-panel);
-
+    background: var(--km-panel-alt);
     color: var(--km-muted);
-
-    font-family: monospace;
-    font-size: 11px;
+    font-family: "SF Mono", "JetBrains Mono", monospace;
+    font-size: 10.5px;
 }
-
-.km-signal-divider {
-    margin: 15px 0 7px;
-
-    color: var(--km-border);
-}
-
-.km-signal-divider svg {
-    display: block;
-
-    width: 100%;
-    height: 18px;
-}
-
 
 /* ============================================================
-   PIPELINE
+   PIPELINE STEPPER
    ============================================================ */
 
 .km-pipeline {
     display: flex;
-    gap: 0;
-
     width: 100%;
-
-    margin: 10px 0 22px;
+    margin: 22px 0 24px;
+    padding: 16px 18px;
+    border: 1px solid var(--km-border-soft);
+    border-radius: var(--km-radius-lg);
+    background: var(--km-panel);
+    box-shadow: var(--km-shadow);
 }
 
-.km-pipeline-node {
-    position: relative;
-
+.km-step {
     display: flex;
+    flex-direction: column;
     align-items: flex-start;
-    gap: 9px;
-
+    gap: 8px;
     flex: 1;
-
     min-width: 0;
-    padding-right: 15px;
-
-    opacity: .35;
+    opacity: .4;
+    transition: opacity .2s ease;
 }
 
-.km-pipeline-node.active {
-    opacity: 1;
+.km-step.active { opacity: 1; }
+
+.km-step-marker {
+    display: flex;
+    align-items: center;
+    width: 100%;
 }
 
-.km-pipeline-node:not(:last-child)::after {
-    content: "";
+.km-step-dot {
+    display: grid;
+    place-items: center;
+    width: 26px;
+    height: 26px;
+    flex: none;
+    border: 1px solid var(--km-border);
+    border-radius: 50%;
+    background: var(--km-panel-alt);
+    color: var(--km-accent-strong);
+    font-family: "SF Mono", "JetBrains Mono", monospace;
+    font-size: 10.5px;
+    font-weight: 700;
+    transition: all .2s ease;
+}
 
-    position: absolute;
-    top: 14px;
-    left: calc(100% - 7px);
+.km-step.active .km-step-dot {
+    border-color: var(--km-accent);
+    background: var(--km-accent);
+    color: #0b0d12;
+    box-shadow: 0 0 0 4px var(--km-accent-soft);
+}
 
-    width: calc(100% - 20px);
+.km-step-line {
+    flex: 1;
     height: 1px;
-
+    margin: 0 6px;
     background: var(--km-border);
 }
 
-.km-node-index {
-    display: grid;
-    place-items: center;
+.km-step-line.active { background: var(--km-accent-border); }
 
-    width: 28px;
-    height: 28px;
-
-    flex: none;
-
-    border: 1px solid var(--km-border);
-    border-radius: 50%;
-
-    background: var(--km-panel);
-
-    color: var(--km-accent-strong);
-
-    font-family: monospace;
-    font-size: 11px;
-    font-weight: 700;
-}
-
-.km-pipeline-node.active .km-node-index {
-    border-color: var(--km-accent);
-
-    background: var(--km-accent);
-
-    color: #111321;
-
-    box-shadow: 0 0 0 3px var(--km-accent-soft);
-}
-
-.km-node-content {
-    min-width: 0;
-}
-
-.km-node-content strong {
+.km-step-body strong {
     display: block;
-
     color: var(--km-text);
-
-    font-size: 12px;
+    font-size: 11.5px;
     font-weight: 700;
 }
 
-.km-node-content span {
+.km-step-body span {
     display: block;
-
-    margin-top: 3px;
-
+    margin-top: 2px;
     color: var(--km-muted-soft);
-
-    font-size: 10px;
-    line-height: 1.35;
+    font-size: 9.5px;
+    line-height: 1.4;
 }
-
 
 /* ============================================================
    CONSOLE
@@ -1220,10 +865,8 @@ section[data-testid="stSidebar"] button:hover {
     display: flex;
     align-items: center;
     justify-content: space-between;
-
-    padding: 0 2px 11px;
-    margin-bottom: 15px;
-
+    padding: 0 2px 12px;
+    margin-bottom: 16px;
     border-bottom: 1px solid var(--km-border-soft);
 }
 
@@ -1231,17 +874,14 @@ section[data-testid="stSidebar"] button:hover {
     display: flex;
     align-items: center;
     gap: 8px;
-
     color: var(--km-text);
-
     font-size: 12.5px;
-    font-weight: 600;
+    font-weight: 650;
 }
 
 .km-session-id {
     color: var(--km-muted-soft);
-
-    font-family: monospace;
+    font-family: "SF Mono", "JetBrains Mono", monospace;
     font-size: 10px;
 }
 
@@ -1249,91 +889,66 @@ section[data-testid="stSidebar"] button:hover {
     display: flex;
     align-items: center;
     gap: 10px;
-
-    margin-bottom: 5px;
+    margin-bottom: 6px;
 }
 
-.km-msg-row.user {
-    justify-content: flex-end;
-}
+.km-msg-row.user { justify-content: flex-end; }
 
 .km-msg-avatar {
     display: grid;
     place-items: center;
-
-    width: 28px;
-    height: 28px;
-
-    border: 1px solid var(--km-border);
-    border-radius: 8px;
-
-    background: var(--km-panel-alt);
-
-    color: var(--km-accent-strong);
-
-    font-family: monospace;
-    font-size: 12px;
-    font-weight: 700;
+    width: 26px;
+    height: 26px;
+    border-radius: 7px;
+    background: linear-gradient(155deg, var(--km-accent), #5b63c7);
+    color: #0b0d12;
+    font-family: "SF Mono", "JetBrains Mono", monospace;
+    font-size: 11px;
+    font-weight: 800;
 }
 
 .km-msg-label {
     color: var(--km-muted-soft);
-
-    font-size: 11px;
-    font-weight: 600;
+    font-size: 10.5px;
+    font-weight: 650;
+    text-transform: uppercase;
+    letter-spacing: .04em;
 }
 
-.km-msg-label.user {
-    text-align: right;
-}
+.km-msg-label.user { text-align: right; }
 
 [class*="st-key-km_bubble_"] {
-    max-width: min(850px, 90%);
-
-    padding: 14px 16px;
-
+    max-width: min(850px, 92%);
+    padding: 14px 17px;
     border: 1px solid var(--km-border-soft);
-    border-radius: 4px 12px 12px 12px;
-
+    border-radius: 4px 14px 14px 14px;
     background: var(--km-panel-alt);
-
     color: var(--km-text);
-
     font-size: 13.5px;
-    line-height: 1.65;
-
+    line-height: 1.7;
+    box-shadow: var(--km-shadow);
     animation: kmFadeIn .25s ease both;
 }
 
 [class*="st-key-km_user_bubble_"] {
     margin-left: auto;
-
-    border-radius: 12px 4px 12px 12px;
-
-    background: var(--km-panel);
+    border-radius: 14px 4px 14px 14px;
+    background: var(--km-panel-raised);
 }
 
 [class*="st-key-km_bubble_intro"] {
     border-left: 2px solid var(--km-accent);
+    background: linear-gradient(180deg, var(--km-accent-soft), var(--km-panel-alt) 60%);
 }
 
-[class*="st-key-km_bubble_"] p {
-    margin-bottom: 9px;
-}
-
-[class*="st-key-km_bubble_"] p:last-child {
-    margin-bottom: 0;
-}
+[class*="st-key-km_bubble_"] p { margin-bottom: 9px; }
+[class*="st-key-km_bubble_"] p:last-child { margin-bottom: 0; }
 
 [class*="st-key-km_bubble_"] code {
     padding: 2px 5px;
-
     border: 1px solid var(--km-border);
-
     border-radius: 4px;
-
     background: var(--km-panel);
-
     font-size: 12px;
 }
 
@@ -1342,236 +957,186 @@ section[data-testid="stSidebar"] button:hover {
     border-radius: 8px !important;
 }
 
-
 /* ============================================================
    SIGNAL READOUT
    ============================================================ */
 
 .km-signal-readout {
-    max-width: min(850px, 90%);
-
-    padding: 10px 13px;
-    margin: -5px 0 18px;
-
+    max-width: min(850px, 92%);
+    padding: 12px 14px;
+    margin: -6px 0 20px;
     border: 1px solid var(--km-border-soft);
     border-top: 0;
-    border-radius: 0 0 12px 12px;
-
+    border-radius: 0 0 14px 14px;
     background: var(--km-panel);
 }
 
-.km-signal-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-}
+.km-signal-row { display: flex; flex-wrap: wrap; gap: 6px; }
 
 .km-chip {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-
-    padding: 5px 9px;
-
+    padding: 5px 10px;
     border: 1px solid var(--km-border);
     border-radius: 999px;
-
-    background: var(--km-panel-alt);
-
+    background: var(--km-panel-raised);
     color: var(--km-muted);
-
     font-size: 10.5px;
+    font-weight: 500;
 }
 
 .km-chip::before {
     content: "";
-
-    width: 6px;
-    height: 6px;
-
+    width: 5px;
+    height: 5px;
     border-radius: 50%;
-
     background: var(--km-muted-soft);
 }
 
-.km-chip.ok {
-    border-color: var(--km-accent-soft);
+.km-chip.ok      { border-color: var(--km-accent-border); background: var(--km-accent-soft); color: var(--km-accent-strong); }
+.km-chip.ok::before { background: var(--km-accent); }
 
-    background: var(--km-accent-soft);
+.km-chip.success { border-color: rgba(95,217,164,.35); background: var(--km-success-soft); color: var(--km-success); }
+.km-chip.success::before { background: var(--km-success); }
 
-    color: var(--km-accent-strong);
-}
+.km-chip.danger  { border-color: rgba(240,112,122,.35); background: var(--km-danger-soft); color: var(--km-danger); }
+.km-chip.danger::before { background: var(--km-danger); }
 
-.km-chip.ok::before {
-    background: var(--km-accent);
-}
-
-.km-chip.success {
-    border-color: var(--km-success-soft);
-
-    background: var(--km-success-soft);
-
-    color: var(--km-success);
-}
-
-.km-chip.success::before {
-    background: var(--km-success);
-}
-
-.km-chip.danger {
-    border-color: var(--km-danger-soft);
-
-    background: var(--km-danger-soft);
-
-    color: var(--km-danger);
-}
-
-.km-chip.danger::before {
-    background: var(--km-danger);
-}
-
-.km-chip .num {
-    font-family: monospace;
-    font-weight: 700;
-}
-
+.km-chip .num { font-family: "SF Mono", "JetBrains Mono", monospace; font-weight: 700; }
 
 /* ============================================================
    SOURCES
    ============================================================ */
 
-.km-details {
-    margin-top: 10px;
-}
+.km-details { margin-top: 10px; }
 
 .km-details summary {
     cursor: pointer;
-
     color: var(--km-muted);
-
     font-size: 11.5px;
+    font-weight: 500;
+    padding: 2px 0;
 }
 
-.km-sources {
-    display: grid;
-    gap: 8px;
+.km-details summary:hover { color: var(--km-accent-strong); }
 
-    margin-top: 10px;
-}
+.km-sources { display: grid; gap: 8px; margin-top: 10px; }
 
 .km-source {
-    padding: 11px 12px;
-
+    padding: 12px 13px;
     border: 1px solid var(--km-border-soft);
-    border-radius: 8px;
-
-    background: var(--km-panel-alt);
+    border-radius: var(--km-radius-sm);
+    background: var(--km-panel-raised);
+    transition: border-color .15s ease;
 }
+
+.km-source:hover { border-color: var(--km-border); }
 
 .km-source-meta {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: 8px;
-
     margin-bottom: 8px;
-
     color: var(--km-muted);
-
-    font-family: monospace;
+    font-family: "SF Mono", "JetBrains Mono", monospace;
     font-size: 10px;
 }
 
-.km-source-number {
-    color: var(--km-accent-strong);
-    font-weight: 700;
-}
-
-.km-source-name {
-    color: var(--km-text);
-    font-weight: 700;
-}
+.km-source-number { color: var(--km-accent-strong); font-weight: 700; }
+.km-source-name { color: var(--km-text); font-weight: 700; font-family: inherit; }
 
 .km-source-type {
     padding: 2px 7px;
-
     border: 1px solid var(--km-border);
     border-radius: 999px;
-
     background: var(--km-panel);
-
     color: var(--km-muted);
 }
 
-.km-source-score {
-    color: var(--km-muted-soft);
-}
+.km-source-score { color: var(--km-muted-soft); }
 
 .km-source-body {
     max-height: 190px;
-
     overflow-y: auto;
-
     color: var(--km-muted);
-
     font-size: 11.5px;
     line-height: 1.6;
 }
 
 .km-source-id {
     margin-top: 8px;
-
     color: var(--km-muted-soft);
-
-    font-family: monospace;
+    font-family: "SF Mono", "JetBrains Mono", monospace;
     font-size: 9px;
-
     word-break: break-all;
 }
 
 .km-source-link {
     color: var(--km-accent-strong);
     text-decoration: none;
+    font-weight: 600;
 }
 
+.km-source-link:hover { text-decoration: underline; }
 
 /* ============================================================
-   REASONING TRACE
+   TRACE
    ============================================================ */
 
 .km-trace-list {
     margin: 9px 0 0;
     padding-left: 20px;
-
     color: var(--km-muted);
-
     font-size: 11.5px;
-    line-height: 1.7;
+    line-height: 1.75;
 }
 
-.km-trace-list b {
-    color: var(--km-accent-strong);
-}
-
+.km-trace-list b { color: var(--km-accent-strong); }
 
 /* ============================================================
-   INPUTS AND BUTTONS
+   EMPTY STATE
+   ============================================================ */
+
+.km-starter-card {
+    padding: 14px 15px;
+    border: 1px solid var(--km-border-soft);
+    border-radius: var(--km-radius-md);
+    background: var(--km-panel-alt);
+    height: 100%;
+}
+
+.km-starter-card .icon { font-size: 17px; margin-bottom: 6px; }
+
+.km-starter-card .title {
+    color: var(--km-text);
+    font-size: 12px;
+    font-weight: 650;
+    margin-bottom: 3px;
+}
+
+.km-starter-card .desc {
+    color: var(--km-muted-soft);
+    font-size: 10.5px;
+    line-height: 1.5;
+}
+
+/* ============================================================
+   INPUTS
    ============================================================ */
 
 .stButton > button {
     border: 1px solid var(--km-border) !important;
     border-radius: 8px !important;
-
-    background: var(--km-panel-alt) !important;
-
+    background: var(--km-panel-raised) !important;
     color: var(--km-text) !important;
-
     font-size: 12px !important;
+    font-weight: 500 !important;
+    transition: border-color .15s ease !important;
 }
 
-.stButton > button:hover {
-    border-color: var(--km-accent) !important;
-}
+.stButton > button:hover { border-color: var(--km-accent-border) !important; }
 
 div[data-testid="stChatInput"] {
     border-top: 1px solid var(--km-border-soft);
@@ -1581,8 +1146,7 @@ div[data-testid="stChatInput"] {
 div[data-testid="stChatInput"] textarea {
     border: 1px solid var(--km-border) !important;
     border-radius: 10px !important;
-
-    background: var(--km-panel) !important;
+    background: var(--km-panel-raised) !important;
     color: var(--km-text) !important;
 }
 
@@ -1592,48 +1156,29 @@ div[data-testid="stChatInput"] textarea:focus {
 }
 
 div[data-testid="stExpander"] {
-    border: 1px solid var(--km-border);
-    border-radius: 9px;
-
+    border: 1px solid var(--km-border-soft);
+    border-radius: var(--km-radius-sm);
     background: var(--km-panel);
 }
-
 
 /* ============================================================
    MOBILE
    ============================================================ */
 
 @media (max-width: 900px) {
+    .km-topbar h1 { font-size: 21px; }
 
-    .km-topbar h1 {
-        font-size: 23px;
-    }
-
-    .km-pipeline {
-        overflow-x: auto;
-        padding-bottom: 8px;
-    }
-
-    .km-pipeline-node {
-        min-width: 155px;
-    }
+    .km-pipeline { overflow-x: auto; padding: 14px; }
+    .km-step { min-width: 145px; }
 
     [class*="st-key-km_bubble_"],
-    .km-signal-readout {
-        max-width: 100%;
-    }
-
+    .km-signal-readout { max-width: 100%; }
 }
 
 </style>
 """
 
-# CSS is the only place where st.markdown is intentionally used
-# with unsafe_allow_html=True.
-st.markdown(
-    CUSTOM_CSS,
-    unsafe_allow_html=True,
-)
+st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
 
 
 # ============================================================
@@ -1642,21 +1187,14 @@ st.markdown(
 
 
 def start_new_session():
-
     old_session_id = st.session_state.session_id
 
     if LOGFIRE_OK:
-        logfire.info(
-            "KnowledgeMesh session reset",
-            old_session_id=old_session_id,
-        )
+        logfire.info("KnowledgeMesh session reset", old_session_id=old_session_id)
 
     st.session_state.session_id = str(uuid.uuid4())
-
     st.session_state.messages = []
-
     st.session_state.latencies = []
-
     st.session_state.session_started_at = time.strftime("%H:%M:%S")
 
     check_backend_health.clear()
@@ -1664,40 +1202,27 @@ def start_new_session():
 
 
 def ask(question: str):
-    """
-    Send a question to the KnowledgeMesh backend.
-    """
-
     question = (question or "").strip()
-
     if not question:
         return
 
-    # Add the user message immediately.
-    st.session_state.messages.append(
-        {
-            "role": "user",
-            "content": question,
-        }
-    )
+    backend_url = st.session_state.backend_url
+
+    st.session_state.messages.append({"role": "user", "content": question})
 
     try:
         with st.status(
-            "Running Guardrails → Planner → Qdrant → FlashRank → LLM…",
+            "Running Guardrails → Planner → Qdrant → FlashRank → Grader → LLM…",
             expanded=True,
         ) as status:
             start_time = time.perf_counter()
-
             st.write("Connecting to KnowledgeMesh backend…")
 
-            payload = {
-                "q": question,
-                "thread_id": (st.session_state.session_id),
-            }
+            payload = {"q": question, "thread_id": st.session_state.session_id}
 
             with _trace_context():
                 response = st.session_state.http_session.post(
-                    f"{BACKEND_URL}/query",
+                    f"{backend_url}/query",
                     json=payload,
                     timeout=BACKEND_TIMEOUT_SECONDS,
                 )
@@ -1706,50 +1231,48 @@ def ask(question: str):
 
             if response.status_code != 200:
                 raise RuntimeError(
-                    f"Backend returned HTTP "
-                    f"{response.status_code}: "
-                    f"{response.text[:500]}"
+                    f"Backend returned HTTP {response.status_code}: {response.text[:500]}"
                 )
 
             data = response.json()
 
-            thought_process = (
-                data.get(
-                    "thought_process",
-                    [],
-                )
-                or []
-            )
+            backend_latency_ms = data.get("latency_ms")
+            retrieval_latency_ms = data.get("retrieval_latency_ms")
+            rerank_latency_ms = data.get("rerank_latency_ms")
+            grader_latency_ms = data.get("grader_latency_ms")
+            generation_latency_ms = data.get("generation_latency_ms")
+            context_quality = data.get("context_quality")
+            answer_supported = data.get("answer_supported")
+            answer_useful = data.get("answer_useful")
+            support_score = data.get("support_score")
+            usefulness_score = data.get("usefulness_score")
+            revision_count = data.get("revision_count", 0)
+            web_search_used = bool(data.get("web_search_used", False))
+            retrieval_used = bool(data.get("retrieval_used", False))
 
-            raw_sources = (
-                data.get(
-                    "sources",
-                    [],
-                )
-                or []
-            )
+            thought_process = data.get("thought_process", []) or []
+
+            raw_sources = data.get("sources", []) or []
+            if not raw_sources:
+                raw_sources = data.get("private_sources", []) or []
 
             sources = [
-                normalize_source(
-                    source,
-                    index + 1,
-                )
+                normalize_source(source, index + 1)
                 for index, source in enumerate(raw_sources)
             ]
 
-            status_text = data.get(
-                "status",
-                "Response generated.",
-            )
-
+            status_text = data.get("status", "Response generated.")
             query_type = infer_query_type(thought_process)
-
-            search_query = extract_search_query(thought_process)
+            search_query = data.get("search_query") or extract_search_query(
+                thought_process
+            )
 
             visited_nodes = infer_visited_nodes(
                 thought_process,
                 sources,
                 status_text,
+                context_quality=context_quality,
+                web_search_used=web_search_used,
             )
 
             st.write(f"Intent: **{query_type.title()}**")
@@ -1757,70 +1280,70 @@ def ask(question: str):
             if search_query:
                 st.write(f"Planner query: `{search_query}`")
 
-            if sources:
+            if retrieval_used:
                 st.write(f"Retrieved and reranked **{len(sources)}** documents.")
-
             else:
                 st.write("Retrieval was not required for this turn.")
 
+            if context_quality:
+                st.write(f"Context quality: **{context_quality}**")
+
+            if web_search_used:
+                st.write("External web search was used.")
+
+            if grader_latency_ms is not None:
+                st.write(f"Document grading: **{format_ms(grader_latency_ms)}**")
+
+            if generation_latency_ms is not None:
+                st.write(f"LLM generation: **{format_ms(generation_latency_ms)}**")
+
             status.update(
-                label=f"Completed in {elapsed:.2f}s",
-                state="complete",
-                expanded=False,
+                label=f"Completed in {elapsed:.2f}s", state="complete", expanded=False
             )
 
-        # ----------------------------------------------------
-        # Verdict
-        # ----------------------------------------------------
-
         if query_type == "conversational":
-            verdict = {
-                "kind": "memory",
-                "label": "💬 Conversation memory",
-            }
-
+            verdict = {"kind": "memory", "label": "Conversation memory"}
+        elif answer_supported is True and answer_useful is True:
+            verdict = {"kind": "grounded", "label": "Supported & useful"}
+        elif answer_supported is True:
+            verdict = {"kind": "grounded", "label": "Answer supported"}
+        elif context_quality == "strong":
+            verdict = {"kind": "grounded", "label": "Strong retrieved context"}
         elif sources:
-            verdict = {
-                "kind": "grounded",
-                "label": "✓ Grounded in knowledge base",
-            }
-
+            verdict = {"kind": "grounded", "label": "Retrieved context"}
         else:
-            verdict = {
-                "kind": "no_context",
-                "label": "No retrieved context",
-            }
-
-        # ----------------------------------------------------
-        # Trace
-        # ----------------------------------------------------
+            verdict = {"kind": "no_context", "label": "No retrieved context"}
 
         trace = {
             "steps": thought_process,
-            "sources": sources,
-            "verdict": verdict,
-            "latency": elapsed,
             "visited": list(visited_nodes),
             "query_type": query_type,
             "search_query": search_query,
+            "sources": sources,
+            "context_quality": context_quality,
+            "answer_supported": answer_supported,
+            "answer_useful": answer_useful,
+            "support_score": support_score,
+            "usefulness_score": usefulness_score,
+            "revision_count": revision_count,
+            "web_search_used": web_search_used,
+            "latency": elapsed,
+            "backend_latency_ms": backend_latency_ms,
+            "retrieval_latency_ms": retrieval_latency_ms,
+            "rerank_latency_ms": rerank_latency_ms,
+            "grader_latency_ms": grader_latency_ms,
+            "generation_latency_ms": generation_latency_ms,
             "status": status_text,
+            "verdict": verdict,
         }
-
-        # ----------------------------------------------------
-        # Assistant response
-        # ----------------------------------------------------
 
         assistant_message = {
             "role": "assistant",
-            "content": data.get(
-                "answer",
-                "No response was returned.",
-            ),
+            "content": data.get("answer", "No response was returned."),
             "trace": trace,
         }
 
         st.session_state.messages.append(assistant_message)
-
         st.session_state.latencies.append(elapsed)
 
         if LOGFIRE_OK:
@@ -1829,6 +1352,10 @@ def ask(question: str):
                 query_type=query_type,
                 source_count=len(sources),
                 latency_seconds=elapsed,
+                retrieval_latency_ms=retrieval_latency_ms,
+                rerank_latency_ms=rerank_latency_ms,
+                grader_latency_ms=grader_latency_ms,
+                generation_latency_ms=generation_latency_ms,
             )
 
     except requests.exceptions.ConnectionError:
@@ -1836,12 +1363,11 @@ def ask(question: str):
             {
                 "role": "assistant",
                 "content": (
-                    "⚠️ **Backend unavailable**\n\n"
-                    f"I could not connect to `{BACKEND_URL}`.\n\n"
+                    "**Backend unavailable**\n\n"
+                    f"I could not connect to `{backend_url}`.\n\n"
                     "Start FastAPI with:\n\n"
                     "```powershell\n"
-                    "uvicorn app.main:app --reload "
-                    "--host 0.0.0.0 --port 8000\n"
+                    "uvicorn app.main:app --reload --host 0.0.0.0 --port 8000\n"
                     "```"
                 ),
             }
@@ -1852,11 +1378,10 @@ def ask(question: str):
             {
                 "role": "assistant",
                 "content": (
-                    "⏳ **Request timed out.**\n\n"
-                    "The backend may still be loading the "
-                    "embedding model or processing the request.\n\n"
-                    f"Current UI timeout: "
-                    f"`{BACKEND_TIMEOUT_SECONDS}` seconds."
+                    "**Request timed out.**\n\n"
+                    "The backend may still be loading the embedding model or "
+                    "processing the request.\n\n"
+                    f"Current UI timeout: `{BACKEND_TIMEOUT_SECONDS}` seconds."
                 ),
             }
         )
@@ -1865,7 +1390,7 @@ def ask(question: str):
         st.session_state.messages.append(
             {
                 "role": "assistant",
-                "content": (f"⚠️ **Network request failed**\n\n`{str(exc)}`"),
+                "content": f"**Network request failed**\n\n`{str(exc)}`",
             }
         )
 
@@ -1873,25 +1398,18 @@ def ask(question: str):
         st.session_state.messages.append(
             {
                 "role": "assistant",
-                "content": (
-                    "⚠️ **Invalid backend response**\n\n"
-                    "The backend did not return valid JSON."
-                ),
+                "content": "**Invalid backend response**\n\nThe backend did not return valid JSON.",
             }
         )
 
     except Exception as exc:
         if LOGFIRE_OK:
             logfire.exception(
-                "KnowledgeMesh UI request failed",
-                error_type=type(exc).__name__,
+                "KnowledgeMesh UI request failed", error_type=type(exc).__name__
             )
 
         st.session_state.messages.append(
-            {
-                "role": "assistant",
-                "content": (f"⚠️ **Request failed**\n\n`{str(exc)}`"),
-            }
+            {"role": "assistant", "content": f"**Request failed**\n\n`{str(exc)}`"}
         )
 
 
@@ -1899,17 +1417,15 @@ def ask(question: str):
 # BACKEND STATE
 # ============================================================
 
-backend_online = check_backend_health()
-backend_ready = check_backend_ready()
+backend_online = check_backend_health(st.session_state.backend_url)
+backend_ready = check_backend_ready(st.session_state.backend_url)
 
 if backend_ready:
     system_dot_class = "success"
     system_text = "KnowledgeMesh ready"
-
 elif backend_online:
     system_dot_class = "warning"
     system_text = "Backend online"
-
 else:
     system_dot_class = "danger"
     system_text = "Backend unreachable"
@@ -1923,81 +1439,13 @@ with st.sidebar:
     display_html(
         """
         <div class="km-brand">
-
-            <svg
-                width="30"
-                height="30"
-                viewBox="0 0 34 34"
-                fill="none"
-            >
-
-                <circle
-                    cx="8"
-                    cy="9"
-                    r="2.4"
-                    fill="#818cf8"
-                />
-
-                <circle
-                    cx="26"
-                    cy="7"
-                    r="2.4"
-                    fill="#818cf8"
-                />
-
-                <circle
-                    cx="17"
-                    cy="18"
-                    r="2.6"
-                    fill="#818cf8"
-                />
-
-                <circle
-                    cx="7"
-                    cy="27"
-                    r="2.4"
-                    fill="#818cf8"
-                />
-
-                <circle
-                    cx="27"
-                    cy="26"
-                    r="2.4"
-                    fill="#818cf8"
-                />
-
-                <path
-                    d="
-                    M8 9L17 18
-                    M26 7L17 18
-                    M17 18L7 27
-                    M17 18L27 26
-                    M8 9L26 7
-                    "
-                    stroke="#818cf8"
-                    stroke-width="1.3"
-                    stroke-opacity="0.55"
-                />
-
-            </svg>
-
+            <div class="km-brand-mark">◈</div>
             <div>
-
-                <strong>
-                    KnowledgeMesh
-                </strong>
-
-                <small>
-                    Agentic RAG console
-                </small>
-
+                <strong>KnowledgeMesh</strong>
+                <small>Agentic RAG console</small>
             </div>
-
         </div>
-
-        <div class="km-rail-label">
-            Session
-        </div>
+        <div class="km-rail-label">Session</div>
         """
     )
 
@@ -2005,9 +1453,7 @@ with st.sidebar:
         average_latency = sum(st.session_state.latencies) / len(
             st.session_state.latencies
         )
-
         average_latency_text = f"{average_latency:.2f}s"
-
     else:
         average_latency_text = "—"
 
@@ -2016,99 +1462,77 @@ with st.sidebar:
     display_html(
         f"""
         <div class="km-status-card">
-
-            <div class="kv">
-
-                <b>Session</b>
-                &nbsp;
-                {esc(st.session_state.session_id[:8])}
-
-                <br/>
-
-                <b>Started</b>
-                &nbsp;
-                {esc(st.session_state.session_started_at)}
-
-                <br/>
-
-                <b>Turns</b>
-                &nbsp;
-                {len(st.session_state.messages) // 2}
-
-                <br/>
-
-                <b>Avg latency</b>
-                &nbsp;
-                {average_latency_text}
-
-                <br/>
-
-                <b>Backend</b>
-                &nbsp;
-                {esc(system_text)}
-
-                <br/>
-
-                <b>Tracing</b>
-                &nbsp;
-                {esc(tracing_text)}
-
+            <div class="km-status-row">
+                <span class="label">Session</span>
+                <span class="value">{esc(st.session_state.session_id[:8])}</span>
             </div>
-
+            <div class="km-status-row">
+                <span class="label">Started</span>
+                <span class="value">{esc(st.session_state.session_started_at)}</span>
+            </div>
+            <div class="km-status-row">
+                <span class="label">Turns</span>
+                <span class="value">{len(st.session_state.messages) // 2}</span>
+            </div>
+            <div class="km-status-row">
+                <span class="label">Avg latency</span>
+                <span class="value">{average_latency_text}</span>
+            </div>
+            <div class="km-status-row">
+                <span class="label">Backend</span>
+                <span class="value">{esc(system_text)}</span>
+            </div>
+            <div class="km-status-row">
+                <span class="label">Tracing</span>
+                <span class="value">{esc(tracing_text)}</span>
+            </div>
         </div>
         """
     )
 
-    display_html(
-        """
-        <div class="km-rail-label">
-            Actions
-        </div>
-        """
-    )
+    display_html('<div class="km-rail-label">Actions</div>')
 
     if st.session_state.messages:
         st.download_button(
-            "⬇️ Export transcript",
+            "Export transcript",
             data=transcript_markdown(st.session_state.messages),
-            file_name=(f"knowledgemesh_{st.session_state.session_id[:8]}.md"),
+            file_name=f"knowledgemesh_{st.session_state.session_id[:8]}.md",
             mime="text/markdown",
             width="stretch",
         )
 
-    if st.button(
-        "🗑️ New session",
-        width="stretch",
-    ):
+    if st.button("New session", width="stretch"):
         start_new_session()
-
         st.rerun()
 
     if LOGFIRE_PROJECT_URL:
-        st.link_button(
-            "↗ Open Logfire dashboard",
-            LOGFIRE_PROJECT_URL,
-            width="stretch",
-        )
+        st.link_button("Open Logfire dashboard", LOGFIRE_PROJECT_URL, width="stretch")
+
+    display_html('<div class="km-rail-label">Settings</div>')
+
+    with st.expander("Backend connection", expanded=False):
+        new_backend_url = st.text_input(
+            "Backend URL",
+            value=st.session_state.backend_url,
+            label_visibility="collapsed",
+        ).rstrip("/")
+
+        if new_backend_url and new_backend_url != st.session_state.backend_url:
+            st.session_state.backend_url = new_backend_url
+            check_backend_health.clear()
+            check_backend_ready.clear()
+            st.rerun()
+
+        st.caption(f"Request timeout: {BACKEND_TIMEOUT_SECONDS}s")
 
     display_html(
         f"""
         <div class="km-rail-footer">
-
             <span class="km-dot {system_dot_class}"></span>
-
             <div>
-
-                <strong>
-                    {esc(system_text)}
-                </strong>
-
-                <small>
-                    FastAPI · Qdrant · FlashRank · Portkey
-                </small>
-
+                <strong>{esc(system_text)}</strong>
+                <small>FastAPI · Qdrant · FlashRank · Grader · Portkey</small>
             </div>
-
         </div>
         """
     )
@@ -2121,56 +1545,19 @@ with st.sidebar:
 display_html(
     f"""
     <div class="km-topbar">
-
-        <div class="km-kicker">
-            Enterprise knowledge system
-        </div>
-
-        <h1>
-            ✦ KnowledgeMesh
-        </h1>
-
+        <div class="km-kicker">Enterprise knowledge system</div>
+        <h1>KnowledgeMesh</h1>
         <p>
-            Agentic RAG over your internal documentation.
-            The planner decides whether retrieval is needed,
-            Qdrant finds relevant context, FlashRank reranks
-            the strongest chunks, and the LLM synthesizes
-            a grounded response.
+            Agentic RAG over your internal documentation. The planner decides
+            whether retrieval is needed, Qdrant retrieves candidate context,
+            FlashRank reranks the strongest chunks, the document grader
+            evaluates evidence quality, and the LLM synthesizes a grounded
+            response.
         </p>
-
         <div class="km-engine-pill">
-
             <span class="km-dot {system_dot_class}"></span>
-
             {esc(system_text)}
-
         </div>
-
-    </div>
-
-    <div class="km-signal-divider">
-
-        <svg
-            viewBox="0 0 1200 20"
-            preserveAspectRatio="none"
-        >
-
-            <path
-                d="
-                M0,10
-                L360,10
-                L380,2
-                L400,18
-                L420,10
-                L1200,10
-                "
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.5"
-            />
-
-        </svg>
-
     </div>
     """
 )
@@ -2181,13 +1568,10 @@ display_html(
 # ============================================================
 
 last_trace = None
-
 for message in reversed(st.session_state.messages):
     if message.get("role") == "assistant" and message.get("trace"):
         last_trace = message["trace"]
-
         break
-
 
 display_html(render_pipeline_rail(last_trace))
 
@@ -2202,32 +1586,18 @@ with console_left:
     display_html(
         f"""
         <div class="km-console-head">
-
             <div class="km-console-live">
-
                 <span class="km-dot {system_dot_class}"></span>
-
                 Console
-
             </div>
-
-            <span class="km-session-id">
-
-                {esc(st.session_state.session_id[:8].upper())}
-
-            </span>
-
+            <span class="km-session-id">{esc(st.session_state.session_id[:8].upper())}</span>
         </div>
         """
     )
 
 with console_right:
-    if st.button(
-        "New session",
-        width="stretch",
-    ):
+    if st.button("New session", width="stretch", key="km_new_session_top"):
         start_new_session()
-
         st.rerun()
 
 
@@ -2239,15 +1609,8 @@ if not st.session_state.messages:
     display_html(
         """
         <div class="km-msg-row">
-
-            <div class="km-msg-avatar">
-                K
-            </div>
-
-            <div class="km-msg-label">
-                KnowledgeMesh
-            </div>
-
+            <div class="km-msg-avatar">K</div>
+            <div class="km-msg-label">KnowledgeMesh</div>
         </div>
         """
     )
@@ -2257,48 +1620,41 @@ if not st.session_state.messages:
             """
             Welcome to **KnowledgeMesh**.
 
-            Ask a question about your enterprise
-            documentation. The system will:
+            Ask a question about your enterprise documentation. The system
+            will **Plan → Retrieve → Rerank → Grade → Answer**.
 
-            **Plan → Retrieve → Rerank → Answer**
-
-            You can inspect retrieved documents, vector
-            similarity scores, reranking scores, and the
-            planner reasoning trace.
+            You can inspect retrieved documents, retrieval scores, reranking
+            scores, document relevance grades, latency, and the planner
+            reasoning trace for every response.
             """
         )
 
     starter_prompts = [
+        ("🔎", "Explain a concept", "What is loop engineering?"),
         (
-            "🔎 Explain a concept",
-            "What is loop engineering?",
-        ),
-        (
-            "📚 Summarize documentation",
+            "📚",
+            "Summarize documentation",
             "Summarize the key points from our documentation.",
         ),
-        (
-            "🛠️ Troubleshoot",
-            "What does the documentation say about rate limiting?",
-        ),
+        ("🛠️", "Troubleshoot", "What does the documentation say about rate limiting?"),
     ]
 
     starter_columns = st.columns(len(starter_prompts))
 
-    for column, (
-        label,
-        question,
-    ) in zip(
-        starter_columns,
-        starter_prompts,
-    ):
+    for column, (icon, label, question) in zip(starter_columns, starter_prompts):
         with column:
-            if st.button(
-                label,
-                width="stretch",
-            ):
+            display_html(
+                f"""
+                <div class="km-starter-card">
+                    <div class="icon">{icon}</div>
+                    <div class="title">{esc(label)}</div>
+                    <div class="desc">{esc(question)}</div>
+                </div>
+                """
+            )
+            st.write("")
+            if st.button("Ask", key=f"km_starter_{label}", width="stretch"):
                 ask(question)
-
                 st.rerun()
 
 
@@ -2308,162 +1664,98 @@ if not st.session_state.messages:
 
 else:
     for index, message in enumerate(st.session_state.messages):
-        role = message.get(
-            "role",
-            "assistant",
-        )
-
-        # ----------------------------------------------------
-        # USER MESSAGE
-        # ----------------------------------------------------
+        role = message.get("role", "assistant")
 
         if role == "user":
             display_html(
                 """
                 <div class="km-msg-row user">
-
-                    <div class="km-msg-label user">
-                        You
-                    </div>
-
+                    <div class="km-msg-label user">You</div>
                 </div>
                 """
             )
-
             with st.container(key=f"km_user_bubble_{index}"):
-                st.markdown(
-                    message.get(
-                        "content",
-                        "",
-                    )
-                )
-
+                st.markdown(message.get("content", ""))
             continue
-
-        # ----------------------------------------------------
-        # ASSISTANT MESSAGE
-        # ----------------------------------------------------
 
         display_html(
             """
             <div class="km-msg-row">
-
-                <div class="km-msg-avatar">
-                    K
-                </div>
-
-                <div class="km-msg-label">
-                    KnowledgeMesh
-                </div>
-
+                <div class="km-msg-avatar">K</div>
+                <div class="km-msg-label">KnowledgeMesh</div>
             </div>
             """
         )
 
         with st.container(key=f"km_bubble_{index}"):
-            st.markdown(
-                message.get(
-                    "content",
-                    "No response.",
-                )
-            )
+            st.markdown(message.get("content", "No response."))
 
         trace = message.get("trace")
-
         if not trace:
             continue
 
-        # ----------------------------------------------------
-        # TRACE DATA
-        # ----------------------------------------------------
-
-        verdict = trace.get(
-            "verdict",
-            {},
-        )
-
+        verdict = trace.get("verdict", {})
         verdict_kind = verdict.get("kind")
-
-        verdict_label = verdict.get(
-            "label",
-            "",
-        )
-
-        query_type = trace.get(
-            "query_type",
-            "technical",
-        )
-
-        source_list = trace.get(
-            "sources",
-            [],
-        )
-
+        verdict_label = verdict.get("label", "")
+        query_type = trace.get("query_type", "technical")
+        source_list = trace.get("sources", [])
         source_count = len(source_list)
-
         latency = trace.get("latency")
-
         search_query = trace.get("search_query")
-
         status_text = trace.get("status")
-
-        # ----------------------------------------------------
-        # SIGNAL READOUT
-        # ----------------------------------------------------
+        context_quality = trace.get("context_quality")
+        answer_supported = trace.get("answer_supported")
+        answer_useful = trace.get("answer_useful")
+        support_score = trace.get("support_score")
+        usefulness_score = trace.get("usefulness_score")
+        revision_count = trace.get("revision_count", 0)
+        web_search_used = trace.get("web_search_used", False)
 
         verdict_class = {
             "grounded": "ok",
             "memory": "success",
             "no_context": "danger",
-        }.get(
-            verdict_kind,
-            "",
-        )
+        }.get(verdict_kind, "")
 
         readout_parts = []
 
         if verdict_label:
             readout_parts.append(
-                f"""
-                <span class="km-chip {verdict_class}">
-                    {esc(verdict_label)}
-                </span>
-                """
+                f'<span class="km-chip {verdict_class}">{esc(verdict_label)}</span>'
             )
 
         readout_parts.append(
-            f"""
-            <span class="km-chip">
-
-                Mode
-                <span class="num">
-                    {esc(query_type.title())}
-                </span>
-
-            </span>
-            """
+            f'<span class="km-chip">Mode <span class="num">{esc(query_type.title())}</span></span>'
         )
-
         readout_parts.append(
-            f"""
-            <span class="km-chip">
-
-                Sources
-                <span class="num">
-                    {source_count}
-                </span>
-
-            </span>
-            """
+            f'<span class="km-chip">Sources <span class="num">{source_count}</span></span>'
         )
+
+        if context_quality:
+            readout_parts.append(
+                f'<span class="km-chip">Context <span class="num">{esc(str(context_quality).title())}</span></span>'
+            )
+
+        if web_search_used:
+            readout_parts.append('<span class="km-chip ok">Web fallback</span>')
 
         if latency is not None:
             readout_parts.append(
-                f"""
-                <span class="km-chip">
-                    {float(latency):.2f}s round trip
-                </span>
-                """
+                f'<span class="km-chip">Total <span class="num">{float(latency):.2f}s</span></span>'
+            )
+
+        latency_items = [
+            ("Retrieval", trace.get("retrieval_latency_ms")),
+            ("Rerank", trace.get("rerank_latency_ms")),
+            ("Grader", trace.get("grader_latency_ms")),
+            ("LLM", trace.get("generation_latency_ms")),
+        ]
+
+        for label, value in latency_items:
+            if value is None:
+                continue
+            readout_parts.append(
+                f'<span class="km-chip">{esc(label)} <span class="num">{esc(format_ms(value))}</span></span>'
             )
 
         readout_html = (
@@ -2471,186 +1763,135 @@ else:
             '<div class="km-signal-row">' + "".join(readout_parts) + "</div>"
         )
 
-        # ----------------------------------------------------
-        # SEARCH QUERY
-        # ----------------------------------------------------
+        if (
+            context_quality is not None
+            or answer_supported is not None
+            or answer_useful is not None
+        ):
+            evaluation_parts = []
 
-        if search_query:
-            readout_html += (
-                """
-                <details class="km-details">
+            if answer_supported is not None:
+                supported_class = "success" if answer_supported else "danger"
+                supported_label = "Supported" if answer_supported else "Not supported"
+                evaluation_parts.append(
+                    f'<span class="km-chip {supported_class}">{supported_label}</span>'
+                )
 
-                    <summary>
-                        Planner search query
-                    </summary>
+            if answer_useful is not None:
+                useful_class = "success" if answer_useful else "danger"
+                useful_label = "Useful" if answer_useful else "Not useful"
+                evaluation_parts.append(
+                    f'<span class="km-chip {useful_class}">{useful_label}</span>'
+                )
 
-                    <div
-                        style="
-                            padding-top: 9px;
-                            color: var(--km-muted);
-                            font-size: 11.5px;
-                        "
-                    >
-                """
-                f"""
-                        <code>
-                            {esc(search_query)}
-                        </code>
-                """
-                """
-                    </div>
+            if support_score is not None:
+                evaluation_parts.append(
+                    f'<span class="km-chip">Support <span class="num">{float(support_score):.2f}</span></span>'
+                )
 
-                </details>
-                """
+            if usefulness_score is not None:
+                evaluation_parts.append(
+                    f'<span class="km-chip">Usefulness <span class="num">{float(usefulness_score):.2f}</span></span>'
+                )
+
+            evaluation_parts.append(
+                f'<span class="km-chip">Revisions <span class="num">{int(revision_count or 0)}</span></span>'
             )
 
-        # ----------------------------------------------------
-        # SOURCES
-        # ----------------------------------------------------
+            readout_html += (
+                '<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;">'
+                + "".join(evaluation_parts)
+                + "</div>"
+            )
+
+        if search_query:
+            readout_html += f"""
+                <details class="km-details">
+                    <summary>Planner search query</summary>
+                    <div style="padding-top:9px;color:var(--km-muted);font-size:11.5px;">
+                        <code>{esc(search_query)}</code>
+                    </div>
+                </details>
+            """
 
         if source_list:
             source_cards = []
 
             for source in source_list:
-                source_name = source.get(
-                    "name",
-                    "Unknown document",
-                )
-
+                source_name = source.get("name", "Unknown document")
                 source_type = source_type_label(source.get("source_type"))
-
                 vector_score = format_score(source.get("score"))
-
                 rerank_score = format_score(source.get("rerank_score"))
-
+                grader_score = format_score(source.get("grader_score"))
+                grader_relevant = source.get("grader_relevant")
+                grader_reason = source.get("grader_reason")
                 document_id = source.get("id") or "Unknown"
-
                 source_url = safe_url(source.get("url"))
 
                 link_html = ""
-
                 if source_url:
-                    link_html = f"""
-                        <a
-                            class="km-source-link"
-                            href="{esc(source_url)}"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                        >
-                            Open source
-                        </a>
-                        """
+                    link_html = (
+                        f'<a class="km-source-link" href="{esc(source_url)}" '
+                        f'target="_blank" rel="noopener noreferrer">Open source</a>'
+                    )
+
+                grader_html = ""
+                if grader_score != "—":
+                    grader_label = "relevant" if grader_relevant else "rejected"
+                    grader_html = f'<span class="km-source-score">grader {esc(grader_score)} · {esc(grader_label)}</span>'
+
+                reason_html = ""
+                if grader_reason:
+                    reason_html = (
+                        f'<div style="margin-top:7px;color:var(--km-muted-soft);font-size:10px;">'
+                        f"Grader: {esc(grader_reason)}</div>"
+                    )
 
                 source_cards.append(
                     f"""
                     <div class="km-source">
-
                         <div class="km-source-meta">
-
-                            <span class="km-source-number">
-                                [{source["n"]}]
-                            </span>
-
-                            <span class="km-source-name">
-                                {esc(source_name)}
-                            </span>
-
-                            <span class="km-source-type">
-                                {esc(source_type)}
-                            </span>
-
-                            <span class="km-source-score">
-                                vector {esc(vector_score)}
-                            </span>
-
-                            <span class="km-source-score">
-                                rerank {esc(rerank_score)}
-                            </span>
-
+                            <span class="km-source-number">[{source["n"]}]</span>
+                            <span class="km-source-name">{esc(source_name)}</span>
+                            <span class="km-source-type">{esc(source_type)}</span>
+                            <span class="km-source-score">vector {esc(vector_score)}</span>
+                            <span class="km-source-score">rerank {esc(rerank_score)}</span>
+                            {grader_html}
                             {link_html}
-
                         </div>
-
-                        <div class="km-source-body">
-                            {esc(source.get("text", ""))}
-                        </div>
-
-                        <div class="km-source-id">
-                            ID: {esc(document_id)}
-                        </div>
-
+                        <div class="km-source-body">{esc(source.get("text", ""))}</div>
+                        {reason_html}
+                        <div class="km-source-id">ID: {esc(document_id)}</div>
                     </div>
                     """
                 )
 
             readout_html += f"""
                 <details class="km-details">
-
-                    <summary>
-                        View retrieved context · {source_count}
-                    </summary>
-
-                    <div class="km-sources">
-                        {"".join(source_cards)}
-                    </div>
-
+                    <summary>View retrieved context · {source_count}</summary>
+                    <div class="km-sources">{"".join(source_cards)}</div>
                 </details>
-                """
+            """
 
-        # ----------------------------------------------------
-        # REASONING TRACE
-        # ----------------------------------------------------
-
-        steps = trace.get(
-            "steps",
-            [],
-        )
-
+        steps = trace.get("steps", [])
         if steps:
             trace_items = []
-
             for step in steps:
                 _, code, detail = classify_step(step)
-
-                trace_items.append(
-                    f"""
-                    <li>
-                        <b>{esc(code)}</b>
-                        — {esc(detail)}
-                    </li>
-                    """
-                )
+                trace_items.append(f"<li><b>{esc(code)}</b> — {esc(detail)}</li>")
 
             readout_html += f"""
                 <details class="km-details">
-
-                    <summary>
-                        Inspect reasoning trace
-                    </summary>
-
-                    <ol class="km-trace-list">
-                        {"".join(trace_items)}
-                    </ol>
-
+                    <summary>Inspect reasoning trace</summary>
+                    <ol class="km-trace-list">{"".join(trace_items)}</ol>
                 </details>
-                """
-
-        # ----------------------------------------------------
-        # BACKEND STATUS
-        # ----------------------------------------------------
+            """
 
         if status_text:
-            readout_html += f"""
-                <div
-                    style="
-                        margin-top: 10px;
-                        color: var(--km-muted-soft);
-                        font-size: 10.5px;
-                    "
-                >
-                    Status: {esc(status_text)}
-                </div>
-                """
+            readout_html += (
+                f'<div style="margin-top:10px;color:var(--km-muted-soft);font-size:10.5px;">'
+                f"Status: {esc(status_text)}</div>"
+            )
 
         readout_html += "</div>"
 
@@ -2665,7 +1906,6 @@ prompt = st.chat_input("Ask about your documentation...")
 
 if prompt:
     ask(prompt)
-
     st.rerun()
 
 
@@ -2675,45 +1915,16 @@ if prompt:
 
 display_html(
     """
-    <div
-        style="
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            margin-top: 8px;
-            color: var(--km-muted-soft);
-            font-size: 10.5px;
-        "
-    >
-
-        <span>
-            KnowledgeMesh Agentic RAG
-        </span>
-
-        <span>·</span>
-
-        <span>
-            Qdrant retrieval
-        </span>
-
-        <span>·</span>
-
-        <span>
-            FlashRank reranking
-        </span>
-
-        <span>·</span>
-
-        <span>
-            Portkey synthesis
-        </span>
-
-        <span>·</span>
-
-        <span>
-            Logfire observability
-        </span>
-
+    <div style="
+        display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;
+        color:var(--km-muted-soft);font-size:10px;
+    ">
+        <span>KnowledgeMesh Agentic RAG</span>
+        <span>·</span><span>Qdrant retrieval</span>
+        <span>·</span><span>FlashRank reranking</span>
+        <span>·</span><span>Document grading</span>
+        <span>·</span><span>Portkey synthesis</span>
+        <span>·</span><span>Logfire observability</span>
     </div>
     """
 )
