@@ -4,9 +4,19 @@ Batch document relevance grader.
 Grades all retrieved documents in a single LLM call instead of
 making one LLM request per document.
 
-Also records LLM grading latency for performance diagnostics.
+Pipeline:
 
-Evidence quality is evaluated after relevance grading so that:
+    Dense Retrieval TOP-50
+            ↓
+    FlashRank TOP-15
+            ↓
+    LLM Relevance Grader
+            ↓
+    Evidence Quality Classification
+            ↓
+    Deterministic Generation Selection TOP-5
+
+Important distinction:
 
     semantic relevance != evidentiary quality
 
@@ -47,6 +57,18 @@ from app.services.evidence_quality import rank_evidence
 
 MIN_RELEVANT_DOCS = 2
 MIN_CONTEXT_SCORE = 0.60
+
+# Maximum number of documents passed to downstream generation.
+#
+# Retrieval deliberately keeps a larger candidate pool:
+#
+#     Qdrant     -> 50
+#     FlashRank  -> 15
+#     Grader     -> 15
+#     Generation -> 5
+#
+# This separates retrieval recall from generation context size.
+MAX_GENERATION_DOCUMENTS = 5
 
 # Keep grading prompts smaller than the final generation context.
 MAX_GRADER_DOCUMENT_CHARS = 2500
@@ -147,7 +169,10 @@ def _build_document_payload(documents):
 # ================================================================
 
 
-def _batch_grade_documents(query: str, documents):
+def _batch_grade_documents(
+    query: str,
+    documents,
+):
     """Grade all documents in one LLM call."""
 
     payload = _build_document_payload(documents)
@@ -160,7 +185,13 @@ User query:
 
 Below are retrieved documents.
 
-{json.dumps(payload, ensure_ascii=False, indent=2)}
+{
+        json.dumps(
+            payload,
+            ensure_ascii=False,
+            indent=2,
+        )
+    }
 
 For EACH document, determine whether it is relevant to answering
 the user's query.
@@ -273,25 +304,34 @@ def _select_generation_documents(documents):
        are excluded from the generation context.
     5. If CONTENT evidence is insufficient, relevant REFERENCE
        chunks may be retained rather than failing unnecessarily.
+    6. Generation context is deterministically capped at
+       MAX_GENERATION_DOCUMENTS.
 
-    This prevents bibliography chunks such as chunk 171 from
-    dominating explanatory questions while preserving their
-    usefulness for queries such as:
-
-        "Which paper introduced Memorybank?"
+    The complete graded document set remains available separately
+    through `graded_documents` for observability and diagnostics.
     """
 
     relevant_documents = [
         doc
         for doc in documents
         if doc.get("grader_relevant")
-        and float(doc.get("grader_score", 0.0)) >= MIN_CONTEXT_SCORE
+        and float(
+            doc.get(
+                "grader_score",
+                0.0,
+            )
+        )
+        >= MIN_CONTEXT_SCORE
     ]
 
     content_documents = [
         doc
         for doc in relevant_documents
-        if doc.get("evidence_type", "CONTENT") == "CONTENT"
+        if doc.get(
+            "evidence_type",
+            "CONTENT",
+        )
+        == "CONTENT"
     ]
 
     reference_documents = [
@@ -309,14 +349,18 @@ def _select_generation_documents(documents):
     # ------------------------------------------------------------
 
     if content_documents:
-        selected = content_documents
-
-        # Keep a small number of strong reference documents only
-        # when they add genuine supporting metadata.
+        # CONTENT is already ordered by rank_evidence():
         #
-        # We intentionally do not add them automatically here.
-        # This is the critical protection against bibliography
-        # chunks being promoted into answer evidence.
+        #     evidence priority
+        #         ↓
+        #     grader score
+        #         ↓
+        #     rerank score
+        #
+        # Apply the generation budget only after relevance and
+        # evidence classification have been performed.
+        selected = content_documents[:MAX_GENERATION_DOCUMENTS]
+
         fallback_reference_count = 0
 
         return (
@@ -335,8 +379,10 @@ def _select_generation_documents(documents):
     # ------------------------------------------------------------
 
     if reference_documents:
+        selected = reference_documents[:MAX_GENERATION_DOCUMENTS]
+
         return (
-            reference_documents,
+            selected,
             len(reference_documents),
             len(navigation_documents),
         )
@@ -370,10 +416,23 @@ def grade_documents_node(state):
 
         CONTENT > REFERENCE > NAVIGATION
 
+    Important pipeline separation:
+
+        retrieved documents
+            ↓
+        graded_documents
+            ↓
+        evidence classification
+            ↓
+        generation documents MAX-5
+
     The full graded document set is preserved for observability.
     """
 
-    documents = state.get("documents", [])
+    documents = state.get(
+        "documents",
+        [],
+    )
 
     query = (
         state.get("current_query")
@@ -389,10 +448,17 @@ def grade_documents_node(state):
     if not documents:
         return {
             "documents": [],
+            "generation_documents": [],
             "graded_documents": [],
+            "grader_status": "skipped",
+            "grader_error_type": None,
+            "grading_mode": "no_documents",
             "context_quality": "empty",
             "grader_latency_ms": 0.0,
-            "plan": state.get("plan", [])
+            "plan": state.get(
+                "plan",
+                [],
+            )
             + [
                 "Document Grade: 0/0 relevant",
                 "Evidence Quality: no documents",
@@ -417,11 +483,19 @@ def grade_documents_node(state):
             try:
                 index = int(item["index"])
 
-                score = float(item.get("score", 0.0))
+                score = float(
+                    item.get(
+                        "score",
+                        0.0,
+                    )
+                )
 
                 score = max(
                     0.0,
-                    min(1.0, score),
+                    min(
+                        1.0,
+                        score,
+                    ),
                 )
 
                 grade_map[index] = {
@@ -510,11 +584,27 @@ def grade_documents_node(state):
         ) = _select_generation_documents(graded_documents)
 
         # ========================================================
-        # SORT GENERATION DOCUMENTS
+        # FINAL GENERATION ORDER
+        # ========================================================
+        #
+        # `_select_generation_documents()` already receives
+        # documents ordered by rank_evidence().
+        #
+        # Keep an explicit deterministic sort here so this
+        # contract remains stable even if the selector changes.
         # ========================================================
 
         relevant_documents.sort(
             key=lambda d: (
+                (
+                    1
+                    if d.get(
+                        "evidence_type",
+                        "CONTENT",
+                    )
+                    == "CONTENT"
+                    else 0
+                ),
                 float(
                     d.get(
                         "grader_score",
@@ -531,6 +621,13 @@ def grade_documents_node(state):
             ),
             reverse=True,
         )
+
+        # Defensive final budget.
+        #
+        # This guarantees that downstream generation can never
+        # receive more than MAX_GENERATION_DOCUMENTS even if the
+        # selector is modified later.
+        relevant_documents = relevant_documents[:MAX_GENERATION_DOCUMENTS]
 
         relevant_count = len(relevant_documents)
 
@@ -577,6 +674,7 @@ def grade_documents_node(state):
             reference_documents=reference_count,
             navigation_documents=navigation_count,
             generation_documents=relevant_count,
+            generation_document_limit=(MAX_GENERATION_DOCUMENTS),
             generation_content_documents=(generation_content_count),
             generation_reference_documents=(generation_reference_count),
             excluded_navigation_documents=(excluded_navigation_count),
@@ -586,7 +684,12 @@ def grade_documents_node(state):
         # PLAN
         # ========================================================
 
-        plan = list(state.get("plan", []))
+        plan = list(
+            state.get(
+                "plan",
+                [],
+            )
+        )
 
         plan.extend(
             [
@@ -602,6 +705,7 @@ def grade_documents_node(state):
                     f"{generation_content_count} content / "
                     f"{generation_reference_count} reference"
                 ),
+                (f"Generation Context: {relevant_count}/{MAX_GENERATION_DOCUMENTS}"),
                 (f"Context Quality: {context_quality}"),
                 (f"Grader Time: {grading_ms:.0f} ms"),
             ]
@@ -616,10 +720,17 @@ def grade_documents_node(state):
             #
             # CONTENT is preferred over bibliography/reference
             # chunks when actual explanatory evidence exists.
-            "documents": relevant_documents,
+            #
+            # IMPORTANT:
+            # This list is capped at MAX_GENERATION_DOCUMENTS.
+            "documents": documents,
             # Preserve EVERY graded and classified document for
             # observability, diagnostics, and future policies.
             "graded_documents": graded_documents,
+            "generation_documents": relevant_documents,
+            "grader_status": "success",
+            "grader_error_type": None,
+            "grading_mode": "graded",
             "context_quality": context_quality,
             "grader_latency_ms": grading_ms,
             "plan": plan,
@@ -628,29 +739,100 @@ def grade_documents_node(state):
 
     except Exception as exc:
         # ========================================================
-        # FAIL CLOSED
+        # SAFE DEGRADED MODE
+        # ========================================================
+        #
+        # IMPORTANT:
+        #
+        # The grader failed, but retrieval itself succeeded.
+        #
+        # Therefore:
+        #
+        #     documents
+        #         -> PRESERVE
+        #
+        #     graded_documents
+        #         -> EMPTY
+        #
+        #     generation_documents
+        #         -> EMPTY
+        #
+        # The retrieved documents are NOT considered validated
+        # generation evidence.
+        #
+        # This allows downstream routing and observability to
+        # distinguish:
+        #
+        #     "no evidence exists"
+        #
+        # from:
+        #
+        #     "evidence exists but could not be verified because
+        #      the grading provider failed."
         # ========================================================
 
-        plan = list(state.get("plan", []))
+        error_type = type(exc).__name__
+
+        plan = list(
+            state.get(
+                "plan",
+                [],
+            )
+        )
 
         plan.extend(
             [
-                (f"Document Grade: failed ({type(exc).__name__})"),
-                "Evidence Quality: skipped",
-                "Context Quality: empty",
+                f"Document Grade: failed ({error_type})",
+                "Evidence Quality: unavailable",
+                "Context Quality: unverified",
+                f"Private Evidence Preserved: {len(documents)}",
             ]
         )
 
         logfire.exception(
-            "❌ Document grading failed safely",
-            error_type=type(exc).__name__,
+            "❌ Document grading failed; private evidence preserved "
+            "but marked unverified.",
+            error_type=error_type,
+            retrieved_documents=len(documents),
+            generation_documents=0,
         )
 
         return {
-            "documents": [],
+            # ----------------------------------------------------
+            # IMPORTANT:
+            # Preserve the retrieved private evidence for:
+            #
+            # - auditability
+            # - observability
+            # - provenance diagnostics
+            # - fallback analysis
+            #
+            # BUT do not treat it as generation-approved evidence.
+            # ----------------------------------------------------
+            "documents": documents,
+            # ----------------------------------------------------
+            # No grading result exists.
+            # ----------------------------------------------------
             "graded_documents": [],
-            "context_quality": "empty",
+            # ----------------------------------------------------
+            # Never send ungraded evidence directly to generation.
+            # ----------------------------------------------------
+            "generation_documents": [],
+            # ----------------------------------------------------
+            # Explicit failure state.
+            # ----------------------------------------------------
+            "grader_status": "failed",
+            "grader_error_type": error_type,
+            "grading_mode": "unavailable",
+            # ----------------------------------------------------
+            # The private context cannot be declared strong,
+            # weak, or empty because its relevance was not evaluated.
+            # ----------------------------------------------------
+            "context_quality": "unverified",
             "grader_latency_ms": 0.0,
             "plan": plan,
-            "status": ("Document grading failed safely."),
+            "status": (
+                "Document grading unavailable; "
+                "private evidence preserved but unverified."
+            ),
         }

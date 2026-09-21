@@ -1,947 +1,1731 @@
 """
-KnowledgeMesh — Grounding Critic
+KnowledgeMesh — Strict Grounding Critic
 
-Validates whether factual claims in the generated answer are supported
-by the evidence chunks used to generate the answer.
+Responsibilities
+----------------
+1. Validate every substantive claim in the final answer.
+2. Validate atomic claims rather than trusting whole paragraphs.
+3. Validate citation IDs against actual generation evidence.
+4. Use strict entailment scoring.
+5. Evaluate claims against bounded evidence windows rather than isolated
+   sentences, preserving local context from the exact cited chunk.
+6. Allow only conservative exact/near-exact evidence matches as a
+   deterministic support path.
+7. Produce a stable grounding_scores schema for downstream graph nodes.
+8. Export unsupported_atomic_claims for the revision node/UI.
+9. Export revision_prompt when grounding fails.
+10. Keep answer_supported strictly boolean.
+11. Never weaken grounding simply because a citation exists.
 
-Supported citation formats:
-    [chunk_1]
-    【chunk_1】
-    (chunk_1)
+Evidence architecture
+---------------------
+The responder preserves the complete evidence text for every citation.
 
-The critic is intentionally strict about factual grounding while
-avoiding false failures caused by:
+The grounding critic therefore uses:
 
-    - Markdown headings
-    - standalone bold/italic titles
-    - Markdown tables
-    - table separators
-    - repeated citations
-    - formatting-only lines
+    citation
+        ↓
+    full cited chunk
+        ↓
+    bounded evidence windows
+        ↓
+    relevant candidate windows
+        ↓
+    HHEMv2 entailment
+        ↓
+    best supported window
 
-Pipeline:
-
-    Generated Answer
-          ↓
-    Claim Extraction
-          ↓
-    Citation Resolution
-          ↓
-    Evidence Resolution
-          ↓
-    Entailment Evaluation
-          ↓
-    Grounding Score
-          ↓
-    Revision Feedback
+This avoids the previous failure mode where a multi-fact claim was
+compared against only one isolated sentence from an otherwise strongly
+supporting chunk.
 """
 
 from __future__ import annotations
 
 import re
-from typing import Any
-
-import logfire
-
-from app.agents.state import AgentState
-from app.tools.entailment_tool import score_entailment
+from difflib import SequenceMatcher
+from typing import Any, Dict, Iterable, List, Sequence, Tuple
 
 
-# =====================================================================
-# CONFIGURATION
-# =====================================================================
+# ---------------------------------------------------------------------------
+# Configuration
+# ---------------------------------------------------------------------------
 
-CITATION_PATTERN = re.compile(
-    r"(?P<citation>"
-    r"\[chunk_(?P<bracket>\d+)\]"
-    r"|【chunk_(?P<fullwidth>\d+)】"
-    r"|\(chunk_(?P<paren>\d+)\)"
-    r")",
-    re.IGNORECASE,
-)
-
-# Markdown headings:
-#
-#   # Heading
-#   ## Heading
-#   ### Heading
-#
-HEADING_PATTERN = re.compile(r"^\s{0,3}#{1,6}\s+")
-
-# Standalone bold/italic title lines:
-#
-#   **Main memory-related capabilities**
-#   *Main memory-related capabilities*
-#   __Main memory-related capabilities__
-#
-# These are presentation elements, not factual claims.
-STANDALONE_EMPHASIS_PATTERN = re.compile(
-    r"^\s*"
-    r"(?:"
-    r"\*\*(?P<bold>.+?)\*\*"
-    r"|"
-    r"__(?P<underscore>.+?)__"
-    r"|"
-    r"\*(?P<italic>[^*].*?)\*"
-    r"|"
-    r"_(?P<italic_underscore>[^_].*?)_"
-    r")"
-    r"\s*$"
-)
-
-# Markdown table separators.
-TABLE_SEPARATOR_PATTERN = re.compile(
-    r"^\s*\|?\s*:?-{3,}:?\s*"
-    r"(?:\|\s*:?-{3,}:?\s*)+"
-    r"\|?\s*$"
-)
-
-# Markdown table headers.
-TABLE_HEADER_PATTERN = re.compile(
-    r"^\s*\|?\s*"
-    r"(?:"
-    r"capability|"
-    r"description|"
-    r"evidence|"
-    r"source|"
-    r"claim|"
-    r"answer|"
-    r"explanation|"
-    r"topic|"
-    r"information|"
-    r"feature|"
-    r"details"
-    r")"
-    r"\s*"
-    r"(?:\|\s*"
-    r"(?:"
-    r"capability|"
-    r"description|"
-    r"evidence|"
-    r"source|"
-    r"claim|"
-    r"answer|"
-    r"explanation|"
-    r"topic|"
-    r"information|"
-    r"feature|"
-    r"details"
-    r")"
-    r"\s*)+"
-    r"\|?\s*$",
-    re.IGNORECASE,
-)
-
-MARKDOWN_PREFIX_PATTERN = re.compile(r"^\s*(?:[-*•]\s+|\d+[.)]\s+)")
-
-MIN_CLAIM_LENGTH = 8
-
-# HHEMv2 / entailment threshold.
-#
-# IMPORTANT:
-# Do not lower this simply to make answers pass.
 ENTAILMENT_THRESHOLD = 0.50
 
+# Conservative deterministic evidence matching.
+#
+# This does NOT lower the entailment threshold.
+# It is only used when the generated claim is essentially a textual
+# restatement of a single evidence window.
+EXACT_MATCH_MIN_TOKENS = 6
+EXACT_MATCH_TOKEN_COVERAGE = 0.94
+EXACT_MATCH_SEQUENCE_RATIO = 0.90
 
-# =====================================================================
-# CITATION HELPERS
-# =====================================================================
+# ---------------------------------------------------------------------------
+# Evidence-window configuration
+# ---------------------------------------------------------------------------
+
+# Number of neighboring sentences retained around a candidate sentence.
+#
+# Example:
+#
+#     sentence[i-1] + sentence[i] + sentence[i+1]
+#
+# This gives HHEMv2 enough local context for claims that combine facts
+# distributed across adjacent sentences.
+EVIDENCE_WINDOW_RADIUS = 1
+
+# Also evaluate slightly larger windows for multi-fact technical claims.
+EVIDENCE_LARGE_WINDOW_RADIUS = 2
+
+# Maximum number of candidate windows sent to HHEMv2 for one atomic claim.
+#
+# This prevents the critic from exploding computational cost while still
+# evaluating several plausible evidence contexts.
+MAX_ENTAILMENT_CANDIDATES = 8
+
+# Minimum lexical overlap used only to rank candidate evidence windows.
+#
+# This is NOT a grounding threshold.
+# HHEMv2 remains the actual semantic support decision.
+MIN_WINDOW_OVERLAP = 1
+
+# If lexical candidate selection finds nothing useful, retain a small
+# fallback set of windows so that HHEMv2 still gets an opportunity to
+# detect semantic support.
+FALLBACK_WINDOW_COUNT = 3
 
 
-def _extract_chunk_id(
-    match: re.Match[str],
-) -> int:
-    """Extract the numeric chunk ID from a citation."""
-
-    for group_name in (
-        "bracket",
-        "fullwidth",
-        "paren",
-    ):
-        value = match.group(group_name)
-
-        if value is not None:
-            return int(value)
-
-    raise ValueError("Citation match did not contain a chunk ID.")
+# ---------------------------------------------------------------------------
+# Generic helpers
+# ---------------------------------------------------------------------------
 
 
-# =====================================================================
-# TEXT NORMALIZATION
-# =====================================================================
-
-
-def _clean_claim(
-    text: str,
-) -> str:
-    """
-    Normalize Markdown and whitespace so the entailment model receives
-    a clean semantic claim.
-    """
-
-    text = text.strip()
-
-    if not text:
+def _safe_text(value: Any) -> str:
+    if value is None:
         return ""
 
-    text = MARKDOWN_PREFIX_PATTERN.sub(
-        "",
-        text,
-    )
+    if isinstance(value, str):
+        return value.strip()
 
-    text = text.strip().strip("|").strip()
-
-    text = CITATION_PATTERN.sub(
-        "",
-        text,
-    )
-
-    # Remove common Markdown emphasis.
-    text = re.sub(
-        r"\*\*(.*?)\*\*",
-        r"\1",
-        text,
-    )
-
-    text = re.sub(
-        r"__(.*?)__",
-        r"\1",
-        text,
-    )
-
-    text = re.sub(
-        r"`([^`]*)`",
-        r"\1",
-        text,
-    )
-
-    text = re.sub(
-        r"\s+",
-        " ",
-        text,
-    ).strip()
-
-    return text
+    try:
+        return str(value).strip()
+    except Exception:
+        return ""
 
 
-# =====================================================================
-# LINE CLASSIFICATION
-# =====================================================================
+def _safe_list(value: Any) -> List[Any]:
+    if value is None:
+        return []
+
+    if isinstance(value, list):
+        return value
+
+    if isinstance(value, tuple):
+        return list(value)
+
+    return [value]
 
 
-def _is_standalone_emphasis(
-    text: str,
-) -> bool:
+def _dedupe_preserve_order(values: Iterable[str]) -> List[str]:
+    seen = set()
+    output: List[str] = []
+
+    for value in values:
+        value = _safe_text(value)
+
+        if not value:
+            continue
+
+        if value not in seen:
+            seen.add(value)
+            output.append(value)
+
+    return output
+
+
+# ---------------------------------------------------------------------------
+# Markdown / claim extraction
+# ---------------------------------------------------------------------------
+
+
+CITATION_PATTERN = re.compile(r"\[([A-Za-z0-9_.:/-]+)\]")
+
+BULLET_PATTERN = re.compile(r"^\s*(?:[-*•]|\d+[.)])\s*")
+
+HEADING_PATTERN = re.compile(r"^\s{0,3}#{1,6}\s+")
+
+TABLE_SEPARATOR_PATTERN = re.compile(
+    r"^\s*\|?\s*:?-{3,}:?\s*(?:\|\s*:?-{3,}:?\s*)+\|?\s*$"
+)
+
+
+def _strip_citations(text: str) -> str:
+    return CITATION_PATTERN.sub("", text)
+
+
+def _strip_markdown_prefix(text: str) -> str:
+    text = HEADING_PATTERN.sub("", text)
+    text = BULLET_PATTERN.sub("", text)
+    return text.strip()
+
+
+def _is_heading(text: str) -> bool:
+    return bool(HEADING_PATTERN.match(text))
+
+
+def _is_table_separator(text: str) -> bool:
+    return bool(TABLE_SEPARATOR_PATTERN.match(text))
+
+
+def _is_non_claim_line(text: str) -> bool:
     """
-    Detect lines that consist entirely of Markdown emphasis.
-
-    Example:
-
-        **Main memory-related capabilities of LLM-based agents**
-
-    This is a title/heading and should not be treated as an uncited
-    factual claim.
+    Returns True for markdown-only / structural lines that should not
+    be treated as factual claims.
     """
 
     stripped = text.strip()
 
     if not stripped:
-        return False
-
-    return bool(STANDALONE_EMPHASIS_PATTERN.fullmatch(stripped))
-
-
-def _is_non_claim_line(
-    text: str,
-) -> bool:
-    """
-    Return True for Markdown/formatting lines that should not be
-    evaluated as factual claims.
-    """
-
-    stripped = text.strip()
-
-    if not stripped:
         return True
 
-    # ---------------------------------------------------------------
-    # Markdown headings
-    # ---------------------------------------------------------------
-
-    if HEADING_PATTERN.match(stripped):
+    if _is_heading(stripped):
         return True
 
-    # ---------------------------------------------------------------
-    # Standalone bold / italic titles
-    # ---------------------------------------------------------------
-
-    if _is_standalone_emphasis(stripped):
+    if _is_table_separator(stripped):
         return True
 
-    # ---------------------------------------------------------------
-    # Markdown table separators
-    # ---------------------------------------------------------------
-
-    if TABLE_SEPARATOR_PATTERN.match(stripped):
+    if stripped in {"---", "***", "___"}:
         return True
 
-    # ---------------------------------------------------------------
-    # Markdown table headers
-    # ---------------------------------------------------------------
-
-    if TABLE_HEADER_PATTERN.match(stripped):
-        return True
-
-    # ---------------------------------------------------------------
-    # A line containing only a citation
-    # ---------------------------------------------------------------
-
-    if CITATION_PATTERN.fullmatch(stripped):
+    if (
+        len(stripped) >= 2
+        and stripped.startswith("**")
+        and stripped.endswith("**")
+        and stripped.count("**") == 2
+    ):
         return True
 
     return False
 
 
-# =====================================================================
-# PROSE CLAIM EXTRACTION
-# =====================================================================
+def _extract_citations(text: str) -> List[str]:
+    return _dedupe_preserve_order(
+        match.group(1) for match in CITATION_PATTERN.finditer(text)
+    )
 
 
-def _split_prose_into_claims(
-    text: str,
-) -> list[str]:
+def _clean_claim_text(text: str) -> str:
+    text = _strip_citations(text)
+    text = _strip_markdown_prefix(text)
+
+    text = text.strip(" `*_")
+
+    text = re.sub(r"\s+", " ", text)
+
+    return text.strip()
+
+
+def _split_compound_claim(text: str) -> List[str]:
     """
-    Split prose into reasonably small factual claims.
+    Conservative atomic-claim splitter.
+
+    We intentionally avoid aggressive splitting because over-splitting
+    can turn one supported technical statement into several artificial
+    unsupported claims.
     """
 
-    text = text.strip()
+    text = _clean_claim_text(text)
 
     if not text:
         return []
 
-    parts = re.split(
-        r"(?<=[.!?])\s+(?=[A-Z0-9])",
-        text,
-    )
+    pieces = re.split(r";\s+", text)
 
-    if not parts:
-        parts = [text]
+    cleaned: List[str] = []
 
-    claims: list[str] = []
+    for piece in pieces:
+        piece = piece.strip(" -•")
 
-    for part in parts:
-        cleaned = _clean_claim(part)
-
-        if len(cleaned) >= MIN_CLAIM_LENGTH:
-            claims.append(cleaned)
-
-    return claims
-
-
-# =====================================================================
-# MARKDOWN TABLE HELPERS
-# =====================================================================
-
-
-def _split_table_cells(
-    line: str,
-) -> list[str]:
-    """
-    Split a Markdown table row into cells.
-    """
-
-    stripped = line.strip()
-
-    if stripped.startswith("|"):
-        stripped = stripped[1:]
-
-    if stripped.endswith("|"):
-        stripped = stripped[:-1]
-
-    return [cell.strip() for cell in stripped.split("|")]
-
-
-def _extract_table_claim(
-    line: str,
-    citation_match: re.Match[str],
-) -> str:
-    """
-    Extract the semantic description cell from a Markdown table.
-
-    Typical structure:
-
-        | Capability | What it enables | [chunk_1] |
-
-    The second cell is treated as the factual description.
-    """
-
-    cells = _split_table_cells(line)
-
-    if len(cells) >= 2:
-        description = _clean_claim(cells[1])
-
-        if len(description) >= MIN_CLAIM_LENGTH:
-            return description
-
-    # Fallback for unusual tables.
-    before_citation = line[: citation_match.start()]
-
-    fallback_cells = _split_table_cells(before_citation)
-
-    if len(fallback_cells) >= 2:
-        fallback = _clean_claim(fallback_cells[-1])
-
-        if len(fallback) >= MIN_CLAIM_LENGTH:
-            return fallback
-
-    return _clean_claim(before_citation)
-
-
-# =====================================================================
-# CLAIM DEDUPLICATION
-# =====================================================================
-
-
-def _deduplicate_claims(
-    claims: list[dict[str, Any]],
-) -> list[dict[str, Any]]:
-    """
-    Remove duplicate semantic claims referring to the same evidence
-    chunk.
-
-    This prevents repeated table citations from causing duplicate
-    entailment evaluations.
-    """
-
-    unique_claims: list[dict[str, Any]] = []
-
-    seen: set[tuple[str, int]] = set()
-
-    for claim in claims:
-        normalized_text = re.sub(
-            r"\s+",
-            " ",
-            str(
-                claim.get(
-                    "text",
-                    "",
-                )
-            )
-            .strip()
-            .lower(),
-        )
-
-        chunk_id = int(
-            claim.get(
-                "cited_chunk_id",
-                -1,
-            )
-        )
-
-        key = (
-            normalized_text,
-            chunk_id,
-        )
-
-        if key in seen:
+        if not piece:
             continue
 
-        seen.add(key)
-        unique_claims.append(claim)
+        words = piece.split()
 
-    return unique_claims
+        if len(words) < 18:
+            cleaned.append(piece)
+            continue
+
+        if " and " in piece.lower():
+            candidates = re.split(
+                r"\s+\band\b\s+",
+                piece,
+                flags=re.IGNORECASE,
+            )
+
+            if (
+                len(candidates) == 2
+                and len(candidates[0].split()) >= 6
+                and len(candidates[1].split()) >= 6
+            ):
+                cleaned.extend(
+                    candidate.strip(" -•")
+                    for candidate in candidates
+                    if candidate.strip()
+                )
+                continue
+
+        cleaned.append(piece)
+
+    return _dedupe_preserve_order(cleaned)
 
 
-# =====================================================================
-# CLAIM EXTRACTION
-# =====================================================================
-
-
-def _extract_claims(
-    answer: str,
-) -> list[dict[str, Any]]:
+def _extract_claim_records(answer: str) -> List[Dict[str, Any]]:
     """
-    Extract individual claims and their cited chunks.
+    Convert the final answer into top-level claim records.
+
+    A record represents one citation-bearing / factual answer unit.
     """
 
-    if not answer or not answer.strip():
-        return []
+    lines = answer.splitlines()
 
-    claims: list[dict[str, Any]] = []
+    records: List[Dict[str, Any]] = []
 
-    for line_number, line in enumerate(
-        answer.splitlines(),
-        start=1,
-    ):
+    for raw_line in lines:
+        line = raw_line.strip()
+
         if _is_non_claim_line(line):
             continue
 
-        citations = list(CITATION_PATTERN.finditer(line))
+        claim = _clean_claim_text(line)
 
-        if not citations:
+        if not claim:
             continue
 
-        is_table_row = "|" in line
+        citations = _extract_citations(line)
 
-        for citation_match in citations:
-            chunk_id = _extract_chunk_id(citation_match)
+        atomic_claims = _split_compound_claim(claim)
 
-            if is_table_row:
-                claim_text = _extract_table_claim(
-                    line=line,
-                    citation_match=citation_match,
-                )
+        if not atomic_claims:
+            atomic_claims = [claim]
 
-            else:
-                before_citation = line[: citation_match.start()]
+        records.append(
+            {
+                "text": claim,
+                "raw_text": line,
+                "citations": citations,
+                "atomic_claims": atomic_claims,
+            }
+        )
 
-                candidate_claims = _split_prose_into_claims(before_citation)
-
-                if not candidate_claims:
-                    continue
-
-                claim_text = candidate_claims[-1]
-
-            claim_text = _clean_claim(claim_text)
-
-            if len(claim_text) < MIN_CLAIM_LENGTH:
-                continue
-
-            claims.append(
-                {
-                    "text": claim_text,
-                    "cited_chunk_id": chunk_id,
-                    "line_number": line_number,
-                    "citation": citation_match.group("citation"),
-                }
-            )
-
-    return _deduplicate_claims(claims)
+    return records
 
 
-# =====================================================================
-# UNCITED CONTENT
-# =====================================================================
+# ---------------------------------------------------------------------------
+# Evidence extraction
+# ---------------------------------------------------------------------------
 
 
-def _extract_substantive_uncited_lines(
-    answer: str,
-) -> list[str]:
+def _extract_text_from_document(document: Any) -> str:
     """
-    Find substantive answer lines without citations.
-
-    Formatting-only Markdown is ignored.
-
-    In particular, standalone bold/italic titles such as:
-
-        **Main memory-related capabilities of LLM-based agents**
-
-    are not factual claims and are therefore ignored.
+    Extract usable evidence text from a retrieved document-like object.
     """
 
-    if not answer:
+    if document is None:
+        return ""
+
+    if isinstance(document, str):
+        return document.strip()
+
+    if isinstance(document, dict):
+        for key in (
+            "text",
+            "page_content",
+            "content",
+            "evidence",
+            "snippet",
+            "document",
+            "body",
+        ):
+            value = document.get(key)
+
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+
+            if isinstance(value, dict):
+                nested = _extract_text_from_document(value)
+
+                if nested:
+                    return nested
+
+        return ""
+
+    for attr in (
+        "text",
+        "page_content",
+        "content",
+        "evidence",
+        "snippet",
+    ):
+        value = getattr(document, attr, None)
+
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+
+    return ""
+
+
+def _extract_citation_id(document: Any) -> str:
+    if isinstance(document, dict):
+        for key in (
+            "citation_id",
+            "citation",
+            "chunk_id",
+            "id",
+        ):
+            value = document.get(key)
+
+            if value:
+                return _safe_text(value)
+
+    for attr in (
+        "citation_id",
+        "citation",
+        "chunk_id",
+        "id",
+    ):
+        value = getattr(document, attr, None)
+
+        if value:
+            return _safe_text(value)
+
+    return ""
+
+
+# ---------------------------------------------------------------------------
+# Evidence normalization / sentence extraction
+# ---------------------------------------------------------------------------
+
+
+def _split_evidence_sentences(text: str) -> List[str]:
+    """
+    Extract sentence-like units from one cited chunk.
+
+    Unlike the previous implementation, these sentences are NOT treated
+    as independent evidence documents. They are the building blocks for
+    bounded contextual windows.
+    """
+
+    text = _safe_text(text)
+
+    if not text:
         return []
 
-    uncited: list[str] = []
+    sentences: List[str] = []
 
-    for line in answer.splitlines():
-        stripped = line.strip()
+    # Preserve paragraph structure first.
+    blocks = re.split(r"\n{2,}", text)
 
-        # ------------------------------------------------------------
-        # Formatting / heading lines
-        # ------------------------------------------------------------
+    for block in blocks:
+        block = block.strip()
 
-        if _is_non_claim_line(stripped):
+        if not block:
             continue
 
-        # ------------------------------------------------------------
-        # Citation-bearing lines
-        # ------------------------------------------------------------
+        lines = [line.strip() for line in block.splitlines() if line.strip()]
 
-        if CITATION_PATTERN.search(stripped):
+        if not lines:
             continue
 
-        cleaned = _clean_claim(stripped)
+        # Markdown bullets are often semantically self-contained.
+        for line in lines:
+            if BULLET_PATTERN.match(line):
+                cleaned = line.strip()
 
-        if len(cleaned) < MIN_CLAIM_LENGTH:
-            continue
+                if cleaned:
+                    sentences.append(cleaned)
 
-        # ------------------------------------------------------------
-        # Markdown table protection
-        # ------------------------------------------------------------
+                continue
 
-        if "|" in stripped:
-            cells = _split_table_cells(stripped)
+            # Table-like lines should remain intact.
+            if "|" in line:
+                sentences.append(line)
+                continue
 
-            if len(cells) >= 2:
-                normalized_cells = {cell.lower().strip() for cell in cells}
-
-                common_header_terms = {
-                    "capability",
-                    "description",
-                    "evidence",
-                    "source",
-                    "claim",
-                    "answer",
-                    "explanation",
-                    "topic",
-                    "information",
-                    "feature",
-                    "details",
-                }
-
-                if normalized_cells & common_header_terms:
-                    continue
-
-        uncited.append(cleaned)
-
-    return uncited
-
-
-# =====================================================================
-# CONTEXT EXTRACTION
-# =====================================================================
-
-
-def _get_chunk_text(
-    merged_context: str,
-    chunk_id: int,
-) -> str:
-    """
-    Extract canonical evidence for [chunk_N].
-    """
-
-    if not merged_context:
-        return ""
-
-    marker = f"[chunk_{chunk_id}]"
-
-    start_marker = merged_context.find(marker)
-
-    if start_marker == -1:
-        return ""
-
-    content_start = start_marker + len(marker)
-
-    next_marker = re.search(
-        r"\[chunk_\d+\]",
-        merged_context[content_start:],
-    )
-
-    if next_marker:
-        content_end = content_start + next_marker.start()
-    else:
-        content_end = len(merged_context)
-
-    return merged_context[content_start:content_end].strip()
-
-
-# =====================================================================
-# CLAIM EVALUATION
-# =====================================================================
-
-
-def _evaluate_claim(
-    claim: dict[str, Any],
-    merged_context: str,
-) -> dict[str, Any]:
-    """
-    Evaluate one claim against its cited evidence.
-    """
-
-    chunk_id = int(claim["cited_chunk_id"])
-
-    claim_text = str(claim["text"])
-
-    chunk_text = _get_chunk_text(
-        merged_context=merged_context,
-        chunk_id=chunk_id,
-    )
-
-    if not chunk_text:
-        return {
-            "claim": claim_text,
-            "cited_chunk_id": chunk_id,
-            "line_number": claim.get("line_number"),
-            "score": 0.0,
-            "supported": False,
-            "reason": ("Cited chunk does not exist in merged context."),
-        }
-
-    try:
-        score = float(
-            score_entailment(
-                premise=chunk_text,
-                hypothesis=claim_text,
+            # Normal prose sentence splitting.
+            parts = re.split(
+                r"(?<=[.!?])\s+(?=[A-Z0-9`\"'(\[])",
+                line,
             )
+
+            sentences.extend(part.strip() for part in parts if part.strip())
+
+    return _dedupe_preserve_order(sentences)
+
+
+def _split_evidence_units(text: str) -> List[str]:
+    """
+    Backward-compatible helper.
+
+    It now returns bounded evidence windows rather than isolated
+    sentence fragments.
+    """
+
+    return _build_evidence_windows(text)
+
+
+def _build_evidence_windows(text: str) -> List[str]:
+    """
+    Build bounded contextual evidence windows from a complete cited chunk.
+
+    Windows are intentionally local rather than whole-document.
+
+    For example, with sentences:
+
+        S1
+        S2
+        S3
+        S4
+        S5
+
+    we generate windows such as:
+
+        S1 + S2
+        S1 + S2 + S3
+        S2 + S3 + S4
+        S3 + S4 + S5
+        S4 + S5
+
+    This preserves neighboring context while preventing every claim from
+    being compared against an arbitrarily large chunk.
+    """
+
+    text = _safe_text(text)
+
+    if not text:
+        return []
+
+    sentences = _split_evidence_sentences(text)
+
+    if not sentences:
+        return []
+
+    windows: List[str] = []
+
+    # ---------------------------------------------------------------
+    # Single-sentence windows.
+    #
+    # These are useful for exact support and concise claims.
+    # ---------------------------------------------------------------
+
+    for sentence in sentences:
+        windows.append(sentence)
+
+    # ---------------------------------------------------------------
+    # Local contextual windows.
+    # ---------------------------------------------------------------
+
+    for radius in (
+        EVIDENCE_WINDOW_RADIUS,
+        EVIDENCE_LARGE_WINDOW_RADIUS,
+    ):
+        width = (radius * 2) + 1
+
+        if len(sentences) <= width:
+            windows.append(" ".join(sentences))
+            continue
+
+        for center in range(len(sentences)):
+            start = max(0, center - radius)
+            end = min(len(sentences), center + radius + 1)
+
+            window = " ".join(sentences[start:end]).strip()
+
+            if window:
+                windows.append(window)
+
+    # ---------------------------------------------------------------
+    # Paragraph-level fallback.
+    #
+    # Useful for structured bullets/tables where sentence splitting
+    # may destroy the semantic relationship between adjacent lines.
+    # ---------------------------------------------------------------
+
+    for block in re.split(r"\n{2,}", text):
+        block = re.sub(r"\s+", " ", block).strip()
+
+        if block:
+            windows.append(block)
+
+    return _dedupe_preserve_order(windows)
+
+
+# ---------------------------------------------------------------------------
+# Citation provenance resolution
+# ---------------------------------------------------------------------------
+
+
+def _resolve_citation_provenance(
+    citation_provenance: Any,
+) -> Dict[str, List[str]]:
+    """
+    Build citation_id -> bounded evidence-window mapping.
+
+    The complete provenance text is first recovered and then converted
+    into contextual windows.
+
+    The full raw text remains available in state['citation_provenance']
+    for audit/debugging. This function only creates the evaluation view.
+    """
+
+    result: Dict[str, List[str]] = {}
+
+    if not citation_provenance:
+        return result
+
+    if isinstance(citation_provenance, dict):
+        iterable = []
+
+        for key, value in citation_provenance.items():
+            if isinstance(value, dict):
+                item = dict(value)
+
+                if not item.get("citation_id"):
+                    item["citation_id"] = key
+
+                iterable.append(item)
+            else:
+                iterable.append(
+                    {
+                        "citation_id": key,
+                        "evidence": value,
+                    }
+                )
+
+    else:
+        iterable = _safe_list(citation_provenance)
+
+    for item in iterable:
+        if not isinstance(item, dict):
+            continue
+
+        citation_id = _safe_text(
+            item.get("citation_id") or item.get("citation") or item.get("id")
         )
 
-    except Exception as exc:
-        logfire.exception(
-            "Entailment evaluation failed",
-            error_type=type(exc).__name__,
-            chunk_id=chunk_id,
-        )
+        if not citation_id:
+            continue
 
-        return {
-            "claim": claim_text,
-            "cited_chunk_id": chunk_id,
-            "line_number": claim.get("line_number"),
-            "score": 0.0,
-            "supported": False,
-            "reason": (f"Entailment evaluation failed: {type(exc).__name__}"),
-        }
+        evidence_text = ""
 
-    supported = score >= ENTAILMENT_THRESHOLD
+        for key in (
+            "text",
+            "page_content",
+            "content",
+            "evidence",
+            "snippet",
+        ):
+            value = item.get(key)
+
+            if isinstance(value, str) and value.strip():
+                evidence_text = value.strip()
+                break
+
+        if not evidence_text:
+            nested = item.get("document")
+
+            if nested is not None:
+                evidence_text = _extract_text_from_document(nested)
+
+        if not evidence_text:
+            continue
+
+        windows = _build_evidence_windows(evidence_text)
+
+        if windows:
+            result.setdefault(
+                citation_id,
+                [],
+            ).extend(windows)
 
     return {
-        "claim": claim_text,
-        "cited_chunk_id": chunk_id,
-        "line_number": claim.get("line_number"),
-        "score": round(
-            score,
-            4,
-        ),
-        "supported": supported,
-        "reason": (
-            "Claim is supported by cited evidence."
-            if supported
-            else ("Claim is not sufficiently supported by cited evidence.")
-        ),
+        citation_id: _dedupe_preserve_order(windows)
+        for citation_id, windows in result.items()
     }
 
 
-# =====================================================================
-# REVISION FEEDBACK
-# =====================================================================
-
-
-def _build_revision_feedback(
-    scores: list[dict[str, Any]],
-    uncited_lines: list[str],
-) -> list[str]:
+def _resolve_documents_by_citation(
+    documents: Sequence[Any],
+) -> Dict[str, List[str]]:
     """
-    Build compact actionable feedback for responder revisions.
+    Build citation -> bounded evidence-window mapping from generation
+    documents.
 
-    The feedback deliberately tells the generator to remove
-    unsupported elaboration rather than merely asking it to
-    "improve" the answer.
+    Also supports positional chunk IDs such as chunk_1, chunk_2, etc.
     """
 
-    feedback: list[str] = []
+    result: Dict[str, List[str]] = {}
 
-    for item in scores:
-        if item["supported"]:
+    for index, document in enumerate(
+        documents,
+        start=1,
+    ):
+        text = _extract_text_from_document(document)
+
+        if not text:
             continue
 
-        feedback.append(
-            "Unsupported claim: "
-            f"{item['claim']} "
-            f"(chunk_{item['cited_chunk_id']}, "
-            f"score={item['score']:.3f}). "
-            "On revision, remove this claim or rewrite it "
-            "using only information explicitly supported by "
-            f"chunk_{item['cited_chunk_id']}."
+        citation_id = _extract_citation_id(document)
+
+        if not citation_id:
+            citation_id = f"chunk_{index}"
+
+        windows = _build_evidence_windows(text)
+
+        if windows:
+            result.setdefault(
+                citation_id,
+                [],
+            ).extend(windows)
+
+    return {
+        citation_id: _dedupe_preserve_order(windows)
+        for citation_id, windows in result.items()
+    }
+
+
+def _build_evidence_map(
+    state: Dict[str, Any],
+) -> Dict[str, List[str]]:
+    """
+    Resolve the exact evidence used during answer generation.
+
+    Priority:
+      1. citation_provenance
+      2. generation_documents
+      3. web_documents
+      4. documents
+
+    Important:
+        citation_provenance wins because it is the responder's canonical
+        mapping between [chunk_N] and the exact generation evidence.
+    """
+
+    evidence_map: Dict[str, List[str]] = {}
+
+    provenance = state.get("citation_provenance")
+
+    provenance_map = _resolve_citation_provenance(provenance)
+
+    for citation_id, windows in provenance_map.items():
+        evidence_map.setdefault(
+            citation_id,
+            [],
+        ).extend(windows)
+
+    generation_documents = _safe_list(state.get("generation_documents"))
+
+    web_documents = _safe_list(state.get("web_documents"))
+
+    documents = _safe_list(state.get("documents"))
+
+    fallback_documents: List[Any] = []
+
+    if generation_documents:
+        fallback_documents.extend(generation_documents)
+
+    if web_documents:
+        fallback_documents.extend(web_documents)
+
+    if documents:
+        fallback_documents.extend(documents)
+
+    document_map = _resolve_documents_by_citation(fallback_documents)
+
+    for citation_id, windows in document_map.items():
+        if citation_id not in evidence_map:
+            evidence_map[citation_id] = list(windows)
+
+    return {
+        citation_id: _dedupe_preserve_order(windows)
+        for citation_id, windows in evidence_map.items()
+    }
+
+
+# ---------------------------------------------------------------------------
+# Evidence-window relevance ranking
+# ---------------------------------------------------------------------------
+
+
+_WINDOW_STOPWORDS = {
+    "the",
+    "a",
+    "an",
+    "and",
+    "or",
+    "but",
+    "if",
+    "then",
+    "than",
+    "that",
+    "this",
+    "these",
+    "those",
+    "with",
+    "from",
+    "into",
+    "onto",
+    "for",
+    "of",
+    "to",
+    "in",
+    "on",
+    "by",
+    "as",
+    "is",
+    "are",
+    "was",
+    "were",
+    "be",
+    "been",
+    "being",
+    "it",
+    "its",
+    "they",
+    "their",
+    "them",
+    "we",
+    "our",
+    "you",
+    "your",
+    "can",
+    "may",
+    "might",
+    "must",
+    "will",
+    "would",
+    "should",
+    "do",
+    "does",
+    "did",
+    "has",
+    "have",
+    "had",
+    "also",
+    "very",
+    "more",
+    "most",
+    "some",
+    "such",
+    "not",
+    "only",
+    "when",
+    "where",
+    "which",
+    "who",
+    "how",
+    "what",
+    "why",
+    "via",
+    "per",
+    "within",
+    "through",
+    "over",
+    "under",
+    "during",
+    "while",
+    "both",
+    "each",
+    "other",
+    "another",
+    "there",
+    "here",
+}
+
+
+def _normalize_window_token(token: str) -> str:
+    token = str(token).lower().strip()
+
+    if not token:
+        return ""
+
+    token = re.sub(
+        r"[^a-z0-9_-]",
+        "",
+        token,
+    )
+
+    if len(token) < 3:
+        return ""
+
+    return token
+
+
+def _window_tokens(text: str) -> set[str]:
+    raw_tokens = re.findall(
+        r"[A-Za-z0-9][A-Za-z0-9_-]*",
+        _strip_citations(text).lower(),
+    )
+
+    tokens = set()
+
+    for raw_token in raw_tokens:
+        token = _normalize_window_token(raw_token)
+
+        if not token:
+            continue
+
+        if token in _WINDOW_STOPWORDS:
+            continue
+
+        tokens.add(token)
+
+    return tokens
+
+
+def _window_relevance_score(
+    claim: str,
+    evidence_window: str,
+) -> Tuple[float, int, float]:
+    """
+    Rank evidence windows for HHEMv2 candidate selection.
+
+    This is retrieval/ranking only.
+
+    It does NOT determine grounding support.
+    """
+
+    claim_tokens = _window_tokens(claim)
+    evidence_tokens = _window_tokens(evidence_window)
+
+    if not claim_tokens or not evidence_tokens:
+        return 0.0, 0, 0.0
+
+    overlap = claim_tokens.intersection(evidence_tokens)
+
+    overlap_count = len(overlap)
+
+    density = overlap_count / max(
+        len(claim_tokens),
+        1,
+    )
+
+    # Small phrase bonus helps choose the correct local window when
+    # several windows contain generic vocabulary.
+    claim_words = [
+        token
+        for token in re.findall(
+            r"[A-Za-z0-9][A-Za-z0-9_-]*",
+            claim.lower(),
+        )
+        if token not in _WINDOW_STOPWORDS
+    ]
+
+    evidence_words = [
+        token
+        for token in re.findall(
+            r"[A-Za-z0-9][A-Za-z0-9_-]*",
+            evidence_window.lower(),
+        )
+        if token not in _WINDOW_STOPWORDS
+    ]
+
+    claim_bigrams = {
+        tuple(claim_words[i : i + 2]) for i in range(max(0, len(claim_words) - 1))
+    }
+
+    evidence_bigrams = {
+        tuple(evidence_words[i : i + 2]) for i in range(max(0, len(evidence_words) - 1))
+    }
+
+    phrase_bonus = len(claim_bigrams.intersection(evidence_bigrams))
+
+    score = overlap_count * 2.0 + density * 4.0 + phrase_bonus * 1.5
+
+    return (
+        score,
+        overlap_count,
+        density,
+    )
+
+
+def _select_entailment_candidates(
+    claim: str,
+    evidence_windows: Sequence[str],
+) -> List[str]:
+    """
+    Select a bounded set of likely evidence windows.
+
+    HHEMv2 is only run on these candidates.
+
+    If lexical ranking cannot identify a useful candidate, a small
+    deterministic fallback set is retained.
+    """
+
+    unique_windows = _dedupe_preserve_order(evidence_windows)
+
+    if not unique_windows:
+        return []
+
+    scored: List[
+        Tuple[
+            str,
+            float,
+            int,
+            float,
+            int,
+        ]
+    ] = []
+
+    for index, window in enumerate(unique_windows):
+        (
+            relevance,
+            overlap,
+            density,
+        ) = _window_relevance_score(
+            claim,
+            window,
         )
 
-    for line in uncited_lines:
-        feedback.append(
-            "Uncited substantive statement: "
-            f"{line}. "
-            "On revision, either cite supporting evidence "
-            "or remove the statement."
+        scored.append(
+            (
+                window,
+                relevance,
+                overlap,
+                density,
+                index,
+            )
         )
 
-    if feedback:
-        feedback.append(
-            "Grounding rule: do not add details, mechanisms, "
-            "examples, or interpretations that are not "
-            "explicitly supported by the cited evidence."
+    relevant = [item for item in scored if item[2] >= MIN_WINDOW_OVERLAP]
+
+    if relevant:
+        relevant.sort(
+            key=lambda item: (
+                item[1],
+                item[2],
+                item[3],
+                -item[4],
+            ),
+            reverse=True,
         )
 
-    return feedback
+        return [item[0] for item in relevant[:MAX_ENTAILMENT_CANDIDATES]]
+
+    # ---------------------------------------------------------------
+    # Semantic fallback.
+    #
+    # If lexical overlap is poor, still allow HHEMv2 to inspect a few
+    # evidence windows. This matters for paraphrases.
+    # ---------------------------------------------------------------
+
+    fallback = sorted(
+        scored,
+        key=lambda item: item[4],
+    )
+
+    return [item[0] for item in fallback[:FALLBACK_WINDOW_COUNT]]
 
 
-# =====================================================================
-# MAIN NODE
-# =====================================================================
+# ---------------------------------------------------------------------------
+# Conservative deterministic textual support
+# ---------------------------------------------------------------------------
+
+
+def _normalize_for_exact_match(text: str) -> str:
+    text = _safe_text(text)
+
+    if not text:
+        return ""
+
+    text = text.lower()
+
+    replacements = {
+        "\u2018": "'",
+        "\u2019": "'",
+        "\u201c": '"',
+        "\u201d": '"',
+        "\u2013": "-",
+        "\u2014": "-",
+        "\u2212": "-",
+        "\u00a0": " ",
+    }
+
+    for old, new in replacements.items():
+        text = text.replace(old, new)
+
+    text = _strip_citations(text)
+    text = _strip_markdown_prefix(text)
+
+    text = re.sub(
+        r"[^a-z0-9]+",
+        " ",
+        text,
+    )
+
+    return re.sub(
+        r"\s+",
+        " ",
+        text,
+    ).strip()
+
+
+def _content_tokens(text: str) -> List[str]:
+    normalized = _normalize_for_exact_match(text)
+
+    if not normalized:
+        return []
+
+    return normalized.split()
+
+
+def _deterministic_exact_support(
+    claim: str,
+    evidence: str,
+) -> Tuple[bool, float]:
+    """
+    Conservative support path.
+
+    This only succeeds when the claim is essentially a textual
+    restatement of one evidence window.
+    """
+
+    claim_normalized = _normalize_for_exact_match(claim)
+
+    evidence_normalized = _normalize_for_exact_match(evidence)
+
+    if not claim_normalized or not evidence_normalized:
+        return False, 0.0
+
+    claim_tokens = claim_normalized.split()
+
+    if len(claim_tokens) < EXACT_MATCH_MIN_TOKENS:
+        return False, 0.0
+
+    if claim_normalized in evidence_normalized:
+        return True, 1.0
+
+    evidence_tokens = evidence_normalized.split()
+
+    if not evidence_tokens:
+        return False, 0.0
+
+    evidence_set = set(evidence_tokens)
+
+    overlap = sum(1 for token in claim_tokens if token in evidence_set) / max(
+        len(claim_tokens),
+        1,
+    )
+
+    if overlap < EXACT_MATCH_TOKEN_COVERAGE:
+        return False, 0.0
+
+    ratio = SequenceMatcher(
+        None,
+        claim_normalized,
+        evidence_normalized,
+    ).ratio()
+
+    if ratio >= EXACT_MATCH_SEQUENCE_RATIO:
+        return True, min(
+            1.0,
+            max(
+                overlap,
+                ratio,
+            ),
+        )
+
+    return False, 0.0
+
+
+# ---------------------------------------------------------------------------
+# Entailment
+# ---------------------------------------------------------------------------
+
+
+def _get_entailment_scorer():
+    """
+    Return the project's canonical HHEMv2 entailment scorer.
+    """
+
+    try:
+        from app.tools.entailment_tool import score_entailment
+
+        return score_entailment
+
+    except ImportError as exc:
+        raise ImportError(
+            "Could not import KnowledgeMesh entailment scorer from "
+            "app.tools.entailment_tool."
+        ) from exc
+
+
+def _score_claim_against_evidence(
+    claim: str,
+    evidence_units: Sequence[str],
+) -> Tuple[float, str]:
+    """
+    Score one atomic claim against bounded evidence windows.
+
+    HHEMv2 contract:
+
+        premise    = trusted evidence window
+        hypothesis = generated claim
+
+    Candidate windows are selected before HHEMv2 to preserve local
+    context without evaluating every possible evidence fragment.
+    """
+
+    claim = _clean_claim_text(claim)
+
+    if not claim:
+        return 0.0, ""
+
+    candidates = _select_entailment_candidates(
+        claim,
+        evidence_units,
+    )
+
+    if not candidates:
+        return 0.0, ""
+
+    scorer = _get_entailment_scorer()
+
+    best_score = 0.0
+    best_evidence_unit = ""
+
+    for evidence_unit in candidates:
+        evidence_unit = _safe_text(evidence_unit)
+
+        if not evidence_unit:
+            continue
+
+        try:
+            # HHEMv2 contract:
+            # premise    = evidence
+            # hypothesis = generated claim
+            score = scorer(
+                premise=evidence_unit,
+                hypothesis=claim,
+            )
+
+            score = max(
+                0.0,
+                min(
+                    1.0,
+                    float(score),
+                ),
+            )
+
+        except Exception:
+            # A failure on one candidate must not prevent evaluation
+            # against the remaining candidates.
+            continue
+
+        if score > best_score:
+            best_score = score
+            best_evidence_unit = evidence_unit
+
+    return (
+        best_score,
+        best_evidence_unit,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Atomic claim validation
+# ---------------------------------------------------------------------------
+
+
+def _validate_atomic_claim(
+    claim: str,
+    citations: Sequence[str],
+    evidence_map: Dict[str, List[str]],
+) -> Dict[str, Any]:
+
+    claim = _clean_claim_text(claim)
+
+    citations = _dedupe_preserve_order(citations)
+
+    if not claim:
+        return {
+            "claim": claim,
+            "score": 0.0,
+            "supported": False,
+            "best_evidence_unit": "",
+            "best_citation": "",
+            "citations": citations,
+            "support_method": "empty_claim",
+        }
+
+    if not citations:
+        return {
+            "claim": claim,
+            "score": 0.0,
+            "supported": False,
+            "best_evidence_unit": "",
+            "best_citation": "",
+            "citations": [],
+            "support_method": "uncited",
+        }
+
+    best_score = 0.0
+    best_evidence_unit = ""
+    best_citation = ""
+    best_method = "entailment"
+
+    for citation_id in citations:
+        evidence_windows = evidence_map.get(
+            citation_id,
+            [],
+        )
+
+        if not evidence_windows:
+            continue
+
+        # -----------------------------------------------------------
+        # Conservative exact textual support.
+        # -----------------------------------------------------------
+
+        for evidence_window in evidence_windows:
+            (
+                exact_supported,
+                exact_score,
+            ) = _deterministic_exact_support(
+                claim,
+                evidence_window,
+            )
+
+            if exact_supported and exact_score > best_score:
+                best_score = exact_score
+                best_evidence_unit = evidence_window
+                best_citation = citation_id
+                best_method = "deterministic_exact_match"
+
+        # -----------------------------------------------------------
+        # Strict semantic entailment.
+        # -----------------------------------------------------------
+
+        try:
+            (
+                score,
+                evidence_window,
+            ) = _score_claim_against_evidence(
+                claim,
+                evidence_windows,
+            )
+
+        except Exception:
+            score = 0.0
+            evidence_window = ""
+
+        if score > best_score:
+            best_score = score
+            best_evidence_unit = evidence_window
+            best_citation = citation_id
+            best_method = "entailment"
+
+    supported = bool(
+        best_score >= ENTAILMENT_THRESHOLD or best_method == "deterministic_exact_match"
+    )
+
+    return {
+        "claim": claim,
+        "score": round(
+            best_score,
+            4,
+        ),
+        "supported": supported,
+        "best_evidence_unit": best_evidence_unit,
+        "best_citation": best_citation,
+        "citations": citations,
+        "support_method": best_method,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Revision prompt
+# ---------------------------------------------------------------------------
+
+
+def _build_revision_prompt(
+    unsupported_atomic_claims: Sequence[Dict[str, Any]],
+) -> str:
+
+    if not unsupported_atomic_claims:
+        return ""
+
+    lines = [
+        "STRICT GROUNDING REVISION REQUIRED.",
+        "",
+        "Rewrite the answer using ONLY claims that are directly supported "
+        "by the supplied generation evidence.",
+        "",
+        "Rules:",
+        "1. Remove unsupported claims rather than guessing.",
+        "2. Do not introduce new facts.",
+        "3. Preserve supported claims when possible.",
+        "4. Keep citations attached to the claims they support.",
+        "5. Do not merge unsupported details into otherwise supported claims.",
+        "6. If a claim cannot be supported, omit it.",
+        "",
+        "Unsupported atomic claims:",
+    ]
+
+    for index, item in enumerate(
+        unsupported_atomic_claims,
+        start=1,
+    ):
+        claim = _safe_text(item.get("claim"))
+
+        score = item.get(
+            "score",
+            0.0,
+        )
+
+        evidence = _safe_text(item.get("best_evidence_unit"))
+
+        citation = _safe_text(item.get("best_citation"))
+
+        lines.append(f"{index}. {claim}")
+
+        lines.append(f"   Entailment score: {score}")
+
+        if citation:
+            lines.append(f"   Citation: [{citation}]")
+
+        if evidence:
+            lines.append("   Best available evidence: " + evidence)
+
+    lines.extend(
+        [
+            "",
+            "Return ONLY the revised answer.",
+        ]
+    )
+
+    return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
+# Grounding critic node
+# ---------------------------------------------------------------------------
 
 
 def grounding_critic_node(
-    state: AgentState,
-):
+    state: Dict[str, Any],
+) -> Dict[str, Any]:
     """
-    Evaluate whether the generated answer is grounded.
-
-    Strict grounding requires:
-
-        1. At least one valid cited claim.
-        2. Every cited chunk exists.
-        3. Every cited claim passes entailment.
-        4. No substantive factual content is uncited.
-
-    Markdown headings and formatting-only lines are excluded from
-    factual claim evaluation.
+    Strict post-generation grounding validator.
     """
 
-    route = (state.get("route") or "").strip().lower()
+    final_answer = _safe_text(
+        state.get("final_answer")
+        or state.get("candidate_answer")
+        or state.get("answer")
+    )
 
-    current_query = (state.get("current_query") or "").strip()
+    # ------------------------------------------------------------------
+    # Empty answer
+    # ------------------------------------------------------------------
 
-    # ================================================================
-    # CONVERSATIONAL BYPASS
-    # ================================================================
-
-    if route == "simple" or current_query.upper() == "CONVERSATIONAL":
-        logfire.info("Grounding critic bypassed for conversational response.")
-
-        return {
+    if not final_answer:
+        grounding_scores = {
+            "atomic_claims": [],
             "claims": [],
-            "grounding_scores": [],
-            "grounding_feedback": [],
-            "is_grounded": True,
-            "answer_supported": True,
-            "support_score": 1.0,
-            "status": ("Grounding bypassed: conversational response."),
+            "unsupported_claims": [],
+            "uncited_claims": [],
+            "invalid_citations": [],
+            "entailment_threshold": ENTAILMENT_THRESHOLD,
+            "claim_count": 0,
+            "atomic_claim_count": 0,
+            "unsupported_atomic_count": 0,
+            "available_citation_count": 0,
+            "evidence_window": {
+                "radius": EVIDENCE_WINDOW_RADIUS,
+                "large_radius": EVIDENCE_LARGE_WINDOW_RADIUS,
+                "max_candidates": MAX_ENTAILMENT_CANDIDATES,
+            },
         }
 
-    answer = (state.get("final_answer") or "").strip()
+        return {
+            "is_grounded": False,
+            "answer_supported": False,
+            "support_score": 0.0,
+            "grounding_scores": grounding_scores,
+            "grounding_feedback": (
+                "No final answer was produced for grounding validation."
+            ),
+            "unsupported_atomic_claims": [],
+            "revision_prompt": "",
+            "status": ("Grounding validation failed: empty answer."),
+        }
 
-    merged_context = (state.get("merged_context") or "").strip()
+    # ------------------------------------------------------------------
+    # Extract claims and evidence
+    # ------------------------------------------------------------------
 
-    with logfire.span(
-        "🔬 Grounding Critic",
-        answer_length=len(answer),
-        context_length=len(merged_context),
-    ):
-        # ============================================================
-        # EMPTY ANSWER
-        # ============================================================
+    claim_records = _extract_claim_records(final_answer)
 
-        if not answer:
-            return {
-                "claims": [],
-                "grounding_scores": [],
-                "grounding_feedback": ["Generated answer is empty."],
-                "is_grounded": False,
-                "answer_supported": False,
-                "support_score": 0.0,
-                "status": ("Grounding failed: generated answer is empty."),
-            }
+    evidence_map = _build_evidence_map(state)
 
-        # ============================================================
-        # EMPTY EVIDENCE
-        # ============================================================
+    # A citation is valid only when actual generation evidence can be
+    # resolved for it.
+    available_citations = {
+        citation_id for citation_id, windows in evidence_map.items() if windows
+    }
 
-        if not merged_context:
-            return {
-                "claims": [],
-                "grounding_scores": [],
-                "grounding_feedback": ["No evidence context is available."],
-                "is_grounded": False,
-                "answer_supported": False,
-                "support_score": 0.0,
-                "status": ("Grounding failed: no evidence context."),
-            }
+    atomic_results: List[Dict[str, Any]] = []
 
-        # ============================================================
-        # CLAIM EXTRACTION
-        # ============================================================
+    claim_results: List[Dict[str, Any]] = []
 
-        claims = _extract_claims(answer)
+    unsupported_claims: List[Dict[str, Any]] = []
 
-        # ============================================================
-        # UNCITED CONTENT
-        # ============================================================
+    unsupported_atomic_claims: List[Dict[str, Any]] = []
 
-        uncited_lines = _extract_substantive_uncited_lines(answer)
+    uncited_claims: List[Dict[str, Any]] = []
 
-        # ============================================================
-        # NO CITED CLAIMS
-        # ============================================================
+    invalid_citations: List[Dict[str, Any]] = []
 
-        if not claims:
-            feedback = ["No valid citations were found in the answer."]
+    substantive_results: List[Dict[str, Any]] = []
 
-            feedback.extend(
-                "Uncited substantive statement: " + line for line in uncited_lines
+    # ------------------------------------------------------------------
+    # Validate every claim
+    # ------------------------------------------------------------------
+
+    for record in claim_records:
+        claim_text = _safe_text(record.get("text"))
+
+        citations = _dedupe_preserve_order(
+            record.get(
+                "citations",
+                [],
             )
-
-            return {
-                "claims": [],
-                "grounding_scores": [],
-                "grounding_feedback": feedback,
-                "is_grounded": False,
-                "answer_supported": False,
-                "support_score": 0.0,
-                "status": ("Grounding failed: no valid cited claims found."),
-            }
-
-        # ============================================================
-        # ENTAILMENT
-        # ============================================================
-
-        scores: list[dict[str, Any]] = []
-
-        for claim in claims:
-            scores.append(
-                _evaluate_claim(
-                    claim=claim,
-                    merged_context=merged_context,
-                )
-            )
-
-        supported_count = sum(1 for item in scores if item["supported"])
-
-        total_claims = len(scores)
-
-        support_score = supported_count / total_claims if total_claims else 0.0
-
-        all_claims_supported = total_claims > 0 and supported_count == total_claims
-
-        no_uncited_content = not uncited_lines
-
-        is_grounded = all_claims_supported and no_uncited_content
-
-        revision_feedback = _build_revision_feedback(
-            scores=scores,
-            uncited_lines=uncited_lines,
         )
 
-        logfire.info(
-            "Grounding evaluation completed",
-            supported_claims=supported_count,
-            total_claims=total_claims,
-            support_score=round(
-                support_score,
+        atomic_claims = record.get("atomic_claims") or [claim_text]
+
+        # --------------------------------------------------------------
+        # Citation checks
+        # --------------------------------------------------------------
+
+        missing_citations = [
+            citation for citation in citations if citation not in available_citations
+        ]
+
+        if missing_citations:
+            invalid_citations.append(
+                {
+                    "claim": claim_text,
+                    "citations": missing_citations,
+                }
+            )
+
+        if not citations:
+            uncited_claims.append(
+                {
+                    "claim": claim_text,
+                }
+            )
+
+        # --------------------------------------------------------------
+        # Atomic validation
+        # --------------------------------------------------------------
+
+        record_atomic_results: List[Dict[str, Any]] = []
+
+        for atomic_claim in atomic_claims:
+            result = _validate_atomic_claim(
+                atomic_claim,
+                citations,
+                evidence_map,
+            )
+
+            result["parent_claim"] = claim_text
+
+            record_atomic_results.append(result)
+
+            atomic_results.append(result)
+
+            if _safe_text(result.get("claim")):
+                substantive_results.append(result)
+
+            if not result["supported"]:
+                unsupported_atomic_claims.append(
+                    {
+                        "claim": result["claim"],
+                        "score": result["score"],
+                        "supported": False,
+                        "best_evidence_unit": (result["best_evidence_unit"]),
+                        "best_citation": (result["best_citation"]),
+                        "citations": result["citations"],
+                        "support_method": result["support_method"],
+                        "parent_claim": claim_text,
+                    }
+                )
+
+        # --------------------------------------------------------------
+        # Top-level claim status
+        # --------------------------------------------------------------
+
+        if record_atomic_results:
+            claim_supported = all(
+                bool(result["supported"]) for result in record_atomic_results
+            )
+
+            claim_score = min(
+                float(result["score"]) for result in record_atomic_results
+            )
+
+        else:
+            claim_supported = False
+            claim_score = 0.0
+
+        claim_result = {
+            "claim": claim_text,
+            "score": round(
+                claim_score,
                 4,
             ),
-            uncited_statements=len(uncited_lines),
-            feedback_items=len(revision_feedback),
-            is_grounded=is_grounded,
+            "supported": claim_supported,
+            "citations": citations,
+            "atomic_claims": record_atomic_results,
+        }
+
+        claim_results.append(claim_result)
+
+        if not claim_supported:
+            unsupported_claims.append(claim_result)
+
+    # ------------------------------------------------------------------
+    # Deduplicate unsupported atomic claims
+    # ------------------------------------------------------------------
+
+    deduped_unsupported_atomic_claims: List[Dict[str, Any]] = []
+
+    seen_atomic = set()
+
+    for item in unsupported_atomic_claims:
+        key = (
+            _safe_text(item.get("claim")),
+            _safe_text(item.get("best_citation")),
         )
 
-    # ================================================================
-    # STATUS
-    # ================================================================
+        if key in seen_atomic:
+            continue
 
-    if is_grounded:
-        status = f"Grounding passed: {supported_count}/{total_claims} claims supported."
+        seen_atomic.add(key)
+
+        deduped_unsupported_atomic_claims.append(item)
+
+    unsupported_atomic_claims = deduped_unsupported_atomic_claims
+
+    # ------------------------------------------------------------------
+    # Overall support score
+    # ------------------------------------------------------------------
+
+    if substantive_results:
+        support_score = min(float(result["score"]) for result in substantive_results)
+    else:
+        support_score = 0.0
+
+    # ------------------------------------------------------------------
+    # Strict grounding decision
+    # ------------------------------------------------------------------
+
+    semantic_support_ok = bool(substantive_results and not unsupported_claims)
+
+    citation_support_ok = bool(not uncited_claims and not invalid_citations)
+
+    answer_supported = bool(semantic_support_ok and citation_support_ok)
+
+    is_grounded = bool(answer_supported)
+
+    # ------------------------------------------------------------------
+    # Stable grounding schema
+    # ------------------------------------------------------------------
+
+    grounding_scores = {
+        "atomic_claims": atomic_results,
+        "claims": claim_results,
+        "unsupported_claims": unsupported_claims,
+        "uncited_claims": uncited_claims,
+        "invalid_citations": invalid_citations,
+        "entailment_threshold": ENTAILMENT_THRESHOLD,
+        "claim_count": len(claim_results),
+        "atomic_claim_count": len(atomic_results),
+        "unsupported_atomic_count": len(unsupported_atomic_claims),
+        "available_citation_count": len(available_citations),
+        # --------------------------------------------------------------
+        # Explicit evidence-window configuration.
+        # Useful for observability and eval debugging.
+        # --------------------------------------------------------------
+        "evidence_window": {
+            "radius": EVIDENCE_WINDOW_RADIUS,
+            "large_radius": (EVIDENCE_LARGE_WINDOW_RADIUS),
+            "max_candidates": (MAX_ENTAILMENT_CANDIDATES),
+            "fallback_candidates": (FALLBACK_WINDOW_COUNT),
+            "minimum_lexical_overlap": (MIN_WINDOW_OVERLAP),
+        },
+    }
+
+    # ------------------------------------------------------------------
+    # Feedback
+    # ------------------------------------------------------------------
+
+    feedback_parts: List[str] = []
+
+    if unsupported_atomic_claims:
+        feedback_parts.append(
+            f"{len(unsupported_atomic_claims)} unsupported atomic claim(s)"
+        )
+
+    if uncited_claims:
+        feedback_parts.append(f"{len(uncited_claims)} uncited claim(s)")
+
+    if invalid_citations:
+        feedback_parts.append(f"{len(invalid_citations)} invalid citation reference(s)")
+
+    if not feedback_parts:
+        feedback = "All substantive claims passed strict grounding validation."
 
     else:
-        status = f"Grounding failed: {supported_count}/{total_claims} claims supported."
+        feedback = "Grounding validation failed: " + ", ".join(feedback_parts) + "."
 
-        if uncited_lines:
-            status += f"; {len(uncited_lines)} uncited statements."
+    # ------------------------------------------------------------------
+    # Revision prompt
+    # ------------------------------------------------------------------
 
-        status += " Revision required."
+    revision_prompt = _build_revision_prompt(unsupported_atomic_claims)
+
+    existing_revision_prompt = _safe_text(state.get("revision_prompt"))
+
+    if not revision_prompt and existing_revision_prompt:
+        revision_prompt = existing_revision_prompt
+
+    # ------------------------------------------------------------------
+    # Final state update
+    # ------------------------------------------------------------------
 
     return {
-        "claims": claims,
-        "grounding_scores": scores,
-        "grounding_feedback": revision_feedback,
         "is_grounded": is_grounded,
-        "answer_supported": is_grounded,
-        "support_score": support_score,
-        "status": status,
+        "answer_supported": answer_supported,
+        "support_score": round(
+            float(support_score),
+            4,
+        ),
+        "grounding_scores": grounding_scores,
+        "grounding_feedback": feedback,
+        "unsupported_atomic_claims": (unsupported_atomic_claims),
+        "revision_prompt": revision_prompt,
+        "status": (
+            "Grounding validation passed."
+            if is_grounded
+            else (
+                "Grounding validation failed: "
+                f"{len(unsupported_atomic_claims)} "
+                "unsupported atomic claim(s)."
+            )
+        ),
     }

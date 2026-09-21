@@ -1,0 +1,42 @@
+[
+  {
+    "id": "u001",
+    "question": "What was the company's revenue in fiscal year 2019?",
+    "note": "Not present in the indexed corpus — correct behavior is to say so, not estimate."
+  },
+  {
+    "id": "u002",
+    "question": "Who is the current head of the marketing department?",
+    "note": "Org-chart data is not indexed; system should not invent a name."
+  },
+  {
+    "id": "u003",
+    "question": "What programming language is the internal billing system written in?",
+    "note": "Implementation detail not present in any indexed document."
+  },
+  {
+    "id": "u004",
+    "question": "What is the roadmap for Q3 next year?",
+    "note": "Future-looking, unindexed — tests against confident fabrication."
+  },
+  {
+    "id": "u005",
+    "question": "How many support tickets were filed last month?",
+    "note": "Operational metric not present in the knowledge base."
+  },
+  {
+    "id": "u006",
+    "question": "What is the CEO's direct phone number?",
+    "note": "Not indexed and shouldn't exist in the corpus at all — tests refusal, not just gap-filling."
+  },
+  {
+    "id": "u007",
+    "question": "Which competitor products were evaluated before choosing the current vector database?",
+    "note": "Internal decision history not indexed — tests confident fabrication of a plausible-sounding answer."
+  },
+  {
+    "id": "u008",
+    "question": "What was the outcome of last week's incident postmortem?",
+    "note": "Time-sensitive operational content not in the static knowledge base."
+  }
+]

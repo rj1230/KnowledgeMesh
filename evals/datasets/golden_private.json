@@ -1,0 +1,85 @@
+[
+  {
+    "id": "gp001",
+    "question": "What is retrieval-augmented generation and what two types of memory does it combine?",
+    "relevant_chunks": [
+      {
+        "document_id": "89e40c0de3ce2081b9d726b9",
+        "chunk_id": 0
+      },
+      {
+        "document_id": "89e40c0de3ce2081b9d726b9",
+        "chunk_id": 1
+      }
+    ],
+    "expected_answer_points": [
+      "RAG combines retrieval with language generation",
+      "RAG combines parametric memory and non-parametric memory"
+    ]
+  },
+  {
+    "id": "gp002",
+    "question": "What are the main components of an LLM-based agent according to the survey?",
+    "relevant_chunks": [
+      {
+        "document_id": "7ed18d7a17efb3ce8ec56478",
+        "chunk_id": 9
+      }
+    ],
+    "expected_answer_points": [
+      "brain",
+      "perception",
+      "action"
+    ]
+  },
+  {
+    "id": "gp003",
+    "question": "What memory capabilities does AutoGPT provide?",
+    "relevant_chunks": [
+      {
+        "document_id": "7ed18d7a17efb3ce8ec56478",
+        "chunk_id": 74
+      }
+    ],
+    "expected_answer_points": [
+      "long-term memory",
+      "short-term memory"
+    ]
+  },
+  {
+    "id": "gp004",
+    "question": "What is the role of the brain in an LLM-based agent?",
+    "relevant_chunks": [
+      {
+        "document_id": "7ed18d7a17efb3ce8ec56478",
+        "chunk_id": 9
+      }
+    ],
+    "expected_answer_points": [
+      "stores memories, information, and knowledge",
+      "information processing",
+      "decision-making",
+      "reasoning",
+      "planning"
+    ]
+  },
+  {
+    "id": "gp005",
+    "question": "How does the RAG retriever obtain documents for a query?",
+    "relevant_chunks": [
+      {
+        "document_id": "89e40c0de3ce2081b9d726b9",
+        "chunk_id": 2
+      },
+      {
+        "document_id": "89e40c0de3ce2081b9d726b9",
+        "chunk_id": 3
+      }
+    ],
+    "expected_answer_points": [
+      "retrieves top-k documents",
+      "uses a dense retriever",
+      "retrieval is conditioned on the input query"
+    ]
+  }
+]

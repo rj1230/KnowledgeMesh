@@ -1,0 +1,62 @@
+[
+  {
+    "id": "g001",
+    "question": "What is the refund policy for enterprise customers?",
+    "relevant_chunk_ids": ["policy_doc_chunk_12", "policy_doc_chunk_13"],
+    "expected_answer_keypoints": ["30-day window", "prorated for annual plans"]
+  },
+  {
+    "id": "g002",
+    "question": "How is data encrypted at rest?",
+    "relevant_chunk_ids": ["security_doc_chunk_4"],
+    "expected_answer_keypoints": ["AES-256", "managed keys"]
+  },
+  {
+    "id": "g003",
+    "question": "What SLA uptime does the platform guarantee?",
+    "relevant_chunk_ids": ["sla_doc_chunk_1"],
+    "expected_answer_keypoints": ["99.9%", "monthly measurement window"]
+  },
+  {
+    "id": "g004",
+    "question": "Who is eligible for the partner discount program?",
+    "relevant_chunk_ids": ["partner_doc_chunk_7", "partner_doc_chunk_8"],
+    "expected_answer_keypoints": ["certified partners", "minimum annual spend"]
+  },
+  {
+    "id": "g005",
+    "question": "What is the process for requesting a data export?",
+    "relevant_chunk_ids": ["ops_doc_chunk_19"],
+    "expected_answer_keypoints": ["support ticket", "48-hour turnaround"]
+  },
+  {
+    "id": "g006",
+    "question": "What authentication methods are supported for API access?",
+    "relevant_chunk_ids": ["security_doc_chunk_9", "security_doc_chunk_10"],
+    "expected_answer_keypoints": ["API keys", "OAuth 2.0", "rotation policy"]
+  },
+  {
+    "id": "g007",
+    "question": "How are usage overages billed on the metered plan?",
+    "relevant_chunk_ids": ["billing_doc_chunk_3"],
+    "expected_answer_keypoints": ["per-unit rate", "billed monthly in arrears"]
+  },
+  {
+    "id": "g008",
+    "question": "What is the process for reporting a security vulnerability?",
+    "relevant_chunk_ids": ["security_doc_chunk_21"],
+    "expected_answer_keypoints": ["security@ contact", "90-day disclosure window"]
+  },
+  {
+    "id": "g009",
+    "question": "What data retention period applies after account cancellation?",
+    "relevant_chunk_ids": ["policy_doc_chunk_30"],
+    "expected_answer_keypoints": ["30 days", "permanent deletion after"]
+  },
+  {
+    "id": "g010",
+    "question": "What regions are available for data residency?",
+    "relevant_chunk_ids": ["ops_doc_chunk_5", "ops_doc_chunk_6"],
+    "expected_answer_keypoints": ["US", "EU", "customer-selectable at signup"]
+  }
+]

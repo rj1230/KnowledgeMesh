@@ -1,608 +1,397 @@
 """
-KnowledgeMesh local embedding service using Hugging Face
-Sentence Transformers.
+KnowledgeMesh Embedding Service
+================================
 
-Default model:
-    BAAI/bge-m3
+Canonical embedding service for private RAG retrieval and ingestion.
 
-IMPORTANT:
-    The embedding dimension is detected dynamically from the loaded model.
+Current production embedding:
+    BAAI/bge-small-en-v1.5
 
-    Do NOT hardcode the dimension in this module.
+Expected dimension:
+    384
 
-    The active Qdrant collection is currently configured for:
-        384 dimensions
+Important invariants:
+    - No Gemini embedding fallback.
+    - No BGE-M3 fallback.
+    - The configured model must match the canonical model.
+    - The loaded embedding dimension must match 384.
+    - Query and document embeddings therefore remain compatible
+      with the existing Qdrant `enterprise_rag` collection.
 
-Supported configuration through .env:
-    EMBEDDING_MODEL
-    EMBEDDING_DEVICE
-    EMBEDDING_BATCH_SIZE
-    EMBEDDING_NORMALIZE
-    EMBEDDING_ENCODE_RETRIES
-    EMBEDDING_MODEL_LOAD_RETRIES
-    EXPECTED_EMBEDDING_DIMENSION
-
-Public API:
-    get_embedding_dim()
-    get_active_model_type()
-    embed_query(query)
-    embed_texts(texts)
-    safe_summary()
+The Qdrant collection currently contains 384-dimensional vectors,
+so changing this model/dimension requires an explicit collection
+migration and re-indexing. This module intentionally fails closed
+instead of silently changing embedding models.
 """
 
 from __future__ import annotations
 
 import os
-import threading
 import time
+from functools import lru_cache
 from typing import List, Optional
 
 import logfire
 
 
-# ---------------------------------------------------------------------
-# Configuration
-# ---------------------------------------------------------------------
+# ============================================================
+# Canonical embedding configuration
+# ============================================================
 
+CANONICAL_EMBEDDING_MODEL = "BAAI/bge-small-en-v1.5"
+CANONICAL_EMBEDDING_DIMENSION = 384
 
-class EmbeddingConfigError(RuntimeError):
-    """Raised when embedding-service configuration is invalid."""
-
-
-def _int_env(
-    var_name: str,
-    default: str,
-) -> int:
-    """
-    Read a positive integer environment variable.
-    """
-
-    raw = os.getenv(
-        var_name,
-        default,
-    )
-
-    try:
-        value = int(raw)
-
-    except ValueError as exc:
-        raise EmbeddingConfigError(
-            f"Environment variable {var_name}={raw!r} must be an integer."
-        ) from exc
-
-    if value <= 0:
-        raise EmbeddingConfigError(
-            f"{var_name} must be a positive integer, got {value}."
-        )
-
-    return value
-
-
-# ---------------------------------------------------------------------
-# Model configuration
-# ---------------------------------------------------------------------
-
-
+# Read environment configuration.
+#
+# The fallback is deliberately the same canonical model so that a
+# missing environment variable cannot silently switch to another
+# embedding family.
 EMBEDDING_MODEL_NAME = os.getenv(
     "EMBEDDING_MODEL",
-    "BAAI/bge-m3",
+    CANONICAL_EMBEDDING_MODEL,
+).strip()
+
+_EXPECTED_DIMENSION_RAW = os.getenv(
+    "EMBEDDING_DIMENSION",
+    str(CANONICAL_EMBEDDING_DIMENSION),
 ).strip()
 
 
-if not EMBEDDING_MODEL_NAME:
-    raise EmbeddingConfigError("EMBEDDING_MODEL is set but empty.")
+# ============================================================
+# Configuration validation
+# ============================================================
 
+def _parse_expected_dimension(value: str) -> int:
+    """Parse and validate the configured embedding dimension."""
 
-BATCH_SIZE = _int_env(
-    "EMBEDDING_BATCH_SIZE",
-    "4",
-)
-
-
-EMBEDDING_DEVICE = os.getenv("EMBEDDING_DEVICE") or None
-
-
-NORMALIZE_EMBEDDINGS = os.getenv(
-    "EMBEDDING_NORMALIZE",
-    "true",
-).lower() in {
-    "1",
-    "true",
-    "yes",
-    "on",
-}
-
-
-# ---------------------------------------------------------------------
-# Optional dimension cross-check
-# ---------------------------------------------------------------------
-#
-# This should normally be:
-#
-#     EXPECTED_EMBEDDING_DIMENSION=384
-#
-# in your .env because your current Qdrant collection is 384-dimensional.
-#
-# However, the actual dimension is always detected from the loaded model.
-# ---------------------------------------------------------------------
-
-
-_expected_dimension_raw = os.getenv("EXPECTED_EMBEDDING_DIMENSION")
-
-
-EXPECTED_EMBEDDING_DIMENSION: Optional[int] = None
-
-
-if _expected_dimension_raw:
     try:
-        EXPECTED_EMBEDDING_DIMENSION = int(_expected_dimension_raw)
-
-    except ValueError as exc:
-        raise EmbeddingConfigError(
-            "EXPECTED_EMBEDDING_DIMENSION must be an integer."
+        dimension = int(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(
+            f"EMBEDDING_DIMENSION must be an integer, got {value!r}"
         ) from exc
 
-    if EXPECTED_EMBEDDING_DIMENSION <= 0:
-        raise EmbeddingConfigError(
-            "EXPECTED_EMBEDDING_DIMENSION must be greater than zero."
+    if dimension <= 0:
+        raise ValueError(
+            f"EMBEDDING_DIMENSION must be positive, got {dimension}"
         )
 
-
-# ---------------------------------------------------------------------
-# Retry configuration
-# ---------------------------------------------------------------------
+    return dimension
 
 
-MAX_RETRIES = _int_env(
-    "EMBEDDING_ENCODE_RETRIES",
-    "2",
+EXPECTED_EMBEDDING_DIMENSION = _parse_expected_dimension(
+    _EXPECTED_DIMENSION_RAW
 )
 
 
-MODEL_LOAD_RETRIES = _int_env(
-    "EMBEDDING_MODEL_LOAD_RETRIES",
-    "2",
-)
+if EMBEDDING_MODEL_NAME != CANONICAL_EMBEDDING_MODEL:
+    raise RuntimeError(
+        "Embedding configuration mismatch.\n"
+        f"Expected model: {CANONICAL_EMBEDDING_MODEL}\n"
+        f"Configured model: {EMBEDDING_MODEL_NAME}\n\n"
+        "KnowledgeMesh is intentionally fail-closed here because "
+        "changing the embedding model without rebuilding the Qdrant "
+        "collection can corrupt retrieval compatibility."
+    )
 
 
-RETRY_BASE_DELAY_SECONDS = 1.0
+if EXPECTED_EMBEDDING_DIMENSION != CANONICAL_EMBEDDING_DIMENSION:
+    raise RuntimeError(
+        "Embedding dimension configuration mismatch.\n"
+        f"Expected dimension: {CANONICAL_EMBEDDING_DIMENSION}\n"
+        f"Configured dimension: {EXPECTED_EMBEDDING_DIMENSION}\n\n"
+        "The current Qdrant enterprise_rag collection uses "
+        f"{CANONICAL_EMBEDDING_DIMENSION}-dimensional vectors."
+    )
 
 
-# ---------------------------------------------------------------------
-# Runtime state
-# ---------------------------------------------------------------------
+# ============================================================
+# Runtime model
+# ============================================================
 
-
-_active_model = None
-
-_model_type: Optional[str] = None
-
-_embedding_dim: Optional[int] = None
-
-_init_lock = threading.Lock()
-
-
-# ---------------------------------------------------------------------
-# Model loading
-# ---------------------------------------------------------------------
+_model = None
+_embedding_dimension: Optional[int] = None
 
 
 def _load_model():
     """
-    Load the configured Hugging Face Sentence Transformer model.
+    Lazily load the SentenceTransformer model.
 
-    The embedding dimension is detected dynamically from the
-    loaded model.
-
-    This avoids hardcoding dimensions and makes the service
-    compatible with models having different output sizes.
+    Lazy loading prevents expensive model initialization during
+    unrelated application imports.
     """
 
-    from sentence_transformers import SentenceTransformer
+    global _model
+    global _embedding_dimension
 
-    last_exc: Optional[Exception] = None
+    if _model is not None:
+        return _model
 
-    for attempt in range(
-        1,
-        MODEL_LOAD_RETRIES + 1,
-    ):
-        try:
-            logfire.info(
-                "Loading local Hugging Face Sentence Transformer",
-                model=EMBEDDING_MODEL_NAME,
-                device=EMBEDDING_DEVICE or "auto",
-                attempt=attempt,
-            )
+    try:
+        from sentence_transformers import SentenceTransformer
+    except ImportError as exc:
+        raise RuntimeError(
+            "sentence-transformers is required for the KnowledgeMesh "
+            "embedding service. Install it with:\n"
+            "uv pip install sentence-transformers"
+        ) from exc
 
-            kwargs = {}
+    logfire.info(
+        f"Loading embedding model: {CANONICAL_EMBEDDING_MODEL}"
+    )
 
-            if EMBEDDING_DEVICE:
-                kwargs["device"] = EMBEDDING_DEVICE
+    model = SentenceTransformer(
+        CANONICAL_EMBEDDING_MODEL,
+        device=os.getenv("EMBEDDING_DEVICE") or None,
+    )
 
-            # ---------------------------------------------------------
-            # Load model
-            # ---------------------------------------------------------
+    # SentenceTransformer exposes get_sentence_embedding_dimension().
+    detected_dimension = model.get_sentence_embedding_dimension()
 
-            model = SentenceTransformer(
-                EMBEDDING_MODEL_NAME,
-                **kwargs,
-            )
+    if detected_dimension is None:
+        raise RuntimeError(
+            "Unable to determine embedding dimension for "
+            f"{CANONICAL_EMBEDDING_MODEL}"
+        )
 
-            # ---------------------------------------------------------
-            # Detect dimension
-            # ---------------------------------------------------------
-            #
-            # get_sentence_embedding_dimension()
-            # is deprecated.
-            #
-            # Use get_embedding_dimension().
-            # ---------------------------------------------------------
+    detected_dimension = int(detected_dimension)
 
-            dim = model.get_embedding_dimension()
+    if detected_dimension != CANONICAL_EMBEDDING_DIMENSION:
+        raise RuntimeError(
+            "Loaded embedding model has an unexpected dimension.\n"
+            f"Model: {CANONICAL_EMBEDDING_MODEL}\n"
+            f"Expected: {CANONICAL_EMBEDDING_DIMENSION}\n"
+            f"Loaded: {detected_dimension}"
+        )
 
-            if not dim or dim <= 0:
-                raise ValueError(
-                    f"Invalid embedding dimension for {EMBEDDING_MODEL_NAME}: {dim}"
-                )
+    if detected_dimension != EXPECTED_EMBEDDING_DIMENSION:
+        raise RuntimeError(
+            "Loaded embedding dimension does not match configuration.\n"
+            f"Configured: {EXPECTED_EMBEDDING_DIMENSION}\n"
+            f"Loaded: {detected_dimension}"
+        )
 
-            # ---------------------------------------------------------
-            # Optional configured dimension check
-            # ---------------------------------------------------------
+    _model = model
+    _embedding_dimension = detected_dimension
 
-            if (
-                EXPECTED_EMBEDDING_DIMENSION is not None
-                and dim != EXPECTED_EMBEDDING_DIMENSION
-            ):
-                raise EmbeddingConfigError(
-                    f"Loaded model "
-                    f"{EMBEDDING_MODEL_NAME} produces "
-                    f"{dim}-dim vectors, but "
-                    f"EXPECTED_EMBEDDING_DIMENSION="
-                    f"{EXPECTED_EMBEDDING_DIMENSION}."
-                )
+    print(
+        f"🧠 Embedding model ready: "
+        f"{CANONICAL_EMBEDDING_MODEL}"
+    )
+    print(
+        f"📐 Embedding dimension: "
+        f"{detected_dimension}"
+    )
 
-            # ---------------------------------------------------------
-            # Success
-            # ---------------------------------------------------------
+    logfire.info(
+        "Embedding model ready",
+        model=CANONICAL_EMBEDDING_MODEL,
+        dimension=detected_dimension,
+    )
 
-            logfire.info(
-                "Embedding model ready",
-                model=EMBEDDING_MODEL_NAME,
-                dimension=dim,
-                normalized=NORMALIZE_EMBEDDINGS,
-            )
-
-            print(f"🧠 Embedding model ready: {EMBEDDING_MODEL_NAME}")
-
-            print(f"📐 Embedding dimension: {dim}")
-
-            return model, dim
-
-        # -------------------------------------------------------------
-        # Configuration errors should NOT retry
-        # -------------------------------------------------------------
-
-        except (
-            ValueError,
-            EmbeddingConfigError,
-        ):
-            raise
-
-        # -------------------------------------------------------------
-        # Transient model-loading errors
-        # -------------------------------------------------------------
-
-        except Exception as exc:
-            last_exc = exc
-
-            if attempt == MODEL_LOAD_RETRIES:
-                logfire.exception(
-                    "Failed to load embedding model",
-                    model=EMBEDDING_MODEL_NAME,
-                    attempts=MODEL_LOAD_RETRIES,
-                )
-
-                break
-
-            delay = RETRY_BASE_DELAY_SECONDS * (2 ** (attempt - 1))
-
-            logfire.warning(
-                "Embedding model load failed; retrying",
-                model=EMBEDDING_MODEL_NAME,
-                attempt=attempt,
-                max_retries=MODEL_LOAD_RETRIES,
-                error=str(exc),
-                retry_delay_seconds=delay,
-            )
-
-            time.sleep(delay)
-
-    raise RuntimeError(
-        f"Failed to load embedding model "
-        f"{EMBEDDING_MODEL_NAME} after "
-        f"{MODEL_LOAD_RETRIES} attempts."
-    ) from last_exc
+    return _model
 
 
-# ---------------------------------------------------------------------
-# Initialization
-# ---------------------------------------------------------------------
+# ============================================================
+# Public model metadata
+# ============================================================
 
-
-def _init() -> None:
+def get_active_model_type() -> str:
     """
-    Initialize the embedding model exactly once per process.
+    Return a stable identifier describing the active embedding model.
     """
 
-    global _active_model
-    global _model_type
-    global _embedding_dim
-
-    if _active_model is not None:
-        return
-
-    with _init_lock:
-        if _active_model is not None:
-            return
-
-        model, dim = _load_model()
-
-        _active_model = model
-
-        _model_type = f"huggingface:sentence-transformers:{EMBEDDING_MODEL_NAME}"
-
-        _embedding_dim = dim
-
-
-# ---------------------------------------------------------------------
-# Public metadata API
-# ---------------------------------------------------------------------
+    return (
+        "huggingface:"
+        "sentence-transformers:"
+        f"{CANONICAL_EMBEDDING_MODEL}"
+    )
 
 
 def get_embedding_dim() -> int:
     """
-    Return the active model's embedding dimension.
+    Return the active embedding dimension.
+
+    Loads the model if necessary so the returned value reflects the
+    actual loaded model rather than only configuration.
     """
 
-    _init()
+    global _embedding_dimension
 
-    assert _embedding_dim is not None
+    if _embedding_dimension is None:
+        _load_model()
 
-    return _embedding_dim
+    assert _embedding_dimension is not None
+
+    return _embedding_dimension
 
 
-def get_active_model_type() -> str:
+# ============================================================
+# Embedding helpers
+# ============================================================
+
+def _validate_embedding(vector) -> List[float]:
     """
-    Return the active embedding backend and model.
-    """
-
-    _init()
-
-    assert _model_type is not None
-
-    return _model_type
-
-
-def safe_summary() -> dict:
-    """
-    Return a non-secret snapshot of embedding configuration.
-
-    Safe for health checks and startup diagnostics.
+    Validate and normalize a single embedding vector.
     """
 
-    return {
-        "model": EMBEDDING_MODEL_NAME,
-        "device": EMBEDDING_DEVICE or "auto",
-        "batch_size": BATCH_SIZE,
-        "normalize": NORMALIZE_EMBEDDINGS,
-        "expected_dimension": (EXPECTED_EMBEDDING_DIMENSION),
-        "loaded": _active_model is not None,
-        "active_dimension": _embedding_dim,
-    }
+    values = vector.tolist() if hasattr(vector, "tolist") else list(vector)
+
+    values = [float(value) for value in values]
+
+    expected = CANONICAL_EMBEDDING_DIMENSION
+
+    if len(values) != expected:
+        raise RuntimeError(
+            "Embedding dimension mismatch.\n"
+            f"Expected: {expected}\n"
+            f"Actual: {len(values)}"
+        )
+
+    return values
 
 
-# ---------------------------------------------------------------------
-# Validation
-# ---------------------------------------------------------------------
+# ============================================================
+# Query embedding
+# ============================================================
+
+def embed_query(query: str) -> List[float]:
+    """
+    Generate one embedding for a query.
+
+    Returns:
+        List[float] with exactly 384 values.
+    """
+
+    if not isinstance(query, str) or not query.strip():
+        raise ValueError(
+            "query must be a non-empty string"
+        )
+
+    model = _load_model()
+
+    vector = model.encode(
+        query.strip(),
+        normalize_embeddings=True,
+        convert_to_numpy=True,
+        show_progress_bar=False,
+    )
+
+    return _validate_embedding(vector)
 
 
-def _validate_texts(
+# ============================================================
+# Batch document embedding
+# ============================================================
+
+def embed_documents(
     texts: List[str],
-) -> None:
-    """
-    Validate a list of text inputs.
-    """
-
-    if not isinstance(
-        texts,
-        list,
-    ):
-        raise TypeError(f"texts must be a list[str], got {type(texts).__name__}")
-
-    for text in texts:
-        if not isinstance(
-            text,
-            str,
-        ):
-            raise TypeError(
-                f"every item in texts must be str, found {type(text).__name__}"
-            )
-
-
-def _check_dim(
-    vectors: List[List[float]],
-    what: str,
-) -> None:
-    """
-    Verify that every vector has the expected dimension.
-    """
-
-    expected = get_embedding_dim()
-
-    for i, vector in enumerate(vectors):
-        actual = len(vector)
-
-        if actual != expected:
-            raise ValueError(
-                f"{what}: embedding {i} has dim {actual}, expected {expected}."
-            )
-
-
-# ---------------------------------------------------------------------
-# Encoding
-# ---------------------------------------------------------------------
-
-
-def _encode(
-    batch: List[str],
+    batch_size: int = 16,
+    max_retries: int = 3,
 ) -> List[List[float]]:
     """
-    Encode a batch using the active Sentence Transformer model.
+    Generate embeddings for multiple documents.
+
+    Args:
+        texts:
+            List of document/chunk strings.
+
+        batch_size:
+            SentenceTransformer batch size.
+
+        max_retries:
+            Number of attempts if model inference fails.
+
+    Returns:
+        List of 384-dimensional embedding vectors.
     """
 
-    if _active_model is None:
-        raise RuntimeError("Embedding model is not initialized.")
+    if not isinstance(texts, list):
+        raise TypeError("texts must be a list")
 
-    last_exc: Optional[Exception] = None
+    if not texts:
+        return []
 
-    for attempt in range(
-        1,
-        MAX_RETRIES + 1,
-    ):
+    if batch_size <= 0:
+        raise ValueError(
+            "batch_size must be positive"
+        )
+
+    if max_retries <= 0:
+        raise ValueError(
+            "max_retries must be positive"
+        )
+
+    cleaned_texts = []
+
+    for index, text in enumerate(texts):
+        if not isinstance(text, str):
+            raise TypeError(
+                f"texts[{index}] must be a string"
+            )
+
+        cleaned_texts.append(text)
+
+    model = _load_model()
+
+    last_exception: Optional[Exception] = None
+
+    for attempt in range(1, max_retries + 1):
         try:
-            vectors = _active_model.encode(
-                batch,
-                batch_size=BATCH_SIZE,
-                show_progress_bar=False,
+            vectors = model.encode(
+                cleaned_texts,
+                batch_size=batch_size,
+                normalize_embeddings=True,
                 convert_to_numpy=True,
-                normalize_embeddings=(NORMALIZE_EMBEDDINGS),
+                show_progress_bar=False,
             )
 
-            result = vectors.tolist()
+            result = [
+                _validate_embedding(vector)
+                for vector in vectors
+            ]
 
-            _check_dim(
-                result,
-                "Sentence Transformer batch",
-            )
+            if len(result) != len(cleaned_texts):
+                raise RuntimeError(
+                    "Embedding count mismatch.\n"
+                    f"Expected: {len(cleaned_texts)}\n"
+                    f"Received: {len(result)}"
+                )
 
             return result
 
-        except Exception as exc:
-            last_exc = exc
+        except Exception as exc:  # noqa: BLE001
+            last_exception = exc
 
-            if attempt == MAX_RETRIES:
-                logfire.exception(
-                    "Sentence Transformer embedding failed",
-                    model=EMBEDDING_MODEL_NAME,
-                    attempts=MAX_RETRIES,
-                )
-
+            if attempt == max_retries:
                 break
 
-            delay = RETRY_BASE_DELAY_SECONDS * (2 ** (attempt - 1))
+            delay = 0.5 * (2 ** (attempt - 1))
 
             logfire.warning(
-                "Sentence Transformer embedding failed; retrying",
-                model=EMBEDDING_MODEL_NAME,
-                attempt=attempt,
-                max_retries=MAX_RETRIES,
-                error=str(exc),
-                retry_delay_seconds=delay,
+                f"Document embedding failed "
+                f"(attempt {attempt}/{max_retries}): {exc}. "
+                f"Retrying in {delay:.1f}s."
             )
 
             time.sleep(delay)
 
     raise RuntimeError(
-        "Embedding failed for model "
-        f"{EMBEDDING_MODEL_NAME} after "
-        f"{MAX_RETRIES} attempts."
-    ) from last_exc
+        f"Document embedding failed after {max_retries} attempts"
+    ) from last_exception
 
 
-# ---------------------------------------------------------------------
-# Public embedding API
-# ---------------------------------------------------------------------
+# ============================================================
+# Convenience aliases / metadata
+# ============================================================
+
+def get_embedding_model_name() -> str:
+    """Return the canonical active model name."""
+
+    return CANONICAL_EMBEDDING_MODEL
 
 
-def embed_query(
-    query: str,
-) -> List[float]:
-    """
-    Embed one query into a vector.
+def get_embedding_dimension() -> int:
+    """Return the active embedding dimension."""
 
-    Returns:
-        List[float]
-    """
-
-    if not isinstance(query, str) or not query.strip():
-        raise ValueError("query must be a non-empty string")
-
-    _init()
-
-    vector = _encode([query])[0]
-
-    _check_dim(
-        [vector],
-        "embed_query",
-    )
-
-    return vector
-
-
-def embed_texts(
-    texts: List[str],
-) -> List[List[float]]:
-    """
-    Embed document chunks in batches.
-
-    Returns:
-        List[List[float]]
-    """
-
-    _validate_texts(texts)
-
-    if not texts:
-        return []
-
-    _init()
-
-    all_embeddings: List[List[float]] = []
-
-    for start in range(
-        0,
-        len(texts),
-        BATCH_SIZE,
-    ):
-        batch = texts[start : start + BATCH_SIZE]
-
-        with logfire.span(
-            "Sentence Transformer embedding batch",
-            model=EMBEDDING_MODEL_NAME,
-            start=start,
-            size=len(batch),
-        ):
-            batch_embeddings = _encode(batch)
-
-            all_embeddings.extend(batch_embeddings)
-
-    # -------------------------------------------------------------
-    # Final count validation
-    # -------------------------------------------------------------
-
-    if len(all_embeddings) != len(texts):
-        raise RuntimeError(
-            "Embedding count mismatch: generated "
-            f"{len(all_embeddings)} vectors for "
-            f"{len(texts)} texts."
-        )
-
-    # -------------------------------------------------------------
-    # Final dimension validation
-    # -------------------------------------------------------------
-
-    _check_dim(
-        all_embeddings,
-        "embed_texts",
-    )
-
-    return all_embeddings
+    return get_embedding_dim()

@@ -47,7 +47,7 @@ load_dotenv(dotenv_path=ENV_PATH, override=False)
 
 DEFAULT_BACKEND_URL = os.getenv(
     "BACKEND_URL",
-    "http://localhost:8000",
+    "http://127.0.0.1:8000",
 ).rstrip("/")
 
 BACKEND_TIMEOUT_SECONDS = int(os.getenv("BACKEND_TIMEOUT_SECONDS", "180"))
@@ -3093,7 +3093,7 @@ with st.sidebar:
         value=st.session_state.backend_url,
         label_visibility="collapsed",
         key="km_backend_url_input",
-        placeholder="http://localhost:8000",
+        placeholder="http://127.0.0.1:8000",
     ).rstrip("/")
 
     if backend_url_input != st.session_state.backend_url:
@@ -3712,3 +3712,4 @@ display_html(
     </div>
     """
 )
+

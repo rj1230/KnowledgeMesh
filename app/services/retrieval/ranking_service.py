@@ -49,6 +49,7 @@ class RankedResult(TypedDict, total=False):
     rerank_score: float
 
 
+
 # ============================================================
 # FLASHRANK INITIALIZATION
 # ============================================================
@@ -173,6 +174,55 @@ def _normalize_document(
     return {
         text_key: str(document),
     }
+
+
+# ============================================================
+# GP005 DIAGNOSTIC TRACE (temporary)
+# ============================================================
+
+
+def _log_gp005_trace(query: str, results: list, indexed_docs: list) -> None:
+    """
+    Print a debug trace for one specific diagnostic query.
+
+    Isolated in its own function so it can never affect (or be
+    accidentally nested around) the real result-mapping logic in
+    `rerank_documents`. Safe to delete once GP005 is resolved.
+    """
+
+    if query != _GP005_TRACE_QUERY:
+        return
+
+    for result in results:
+        result_id = str(
+            result.get("id") if isinstance(result, dict) else getattr(result, "id", "")
+        )
+
+        original = next(
+            (document for index, document in indexed_docs if str(index) == result_id),
+            None,
+        )
+
+        if original is None:
+            continue
+
+        chunk_id = original.get("chunk_id")
+
+        if (
+            str(original.get("document_id")) == _GP005_TARGET_DOCUMENT_ID
+            and int(chunk_id or -1) in _GP005_TARGET_CHUNK_IDS
+        ):
+            score = (
+                result.get("score")
+                if isinstance(result, dict)
+                else getattr(result, "score", None)
+            )
+            print(
+                "GP005 FLASHRANK:",
+                f"chunk_id={chunk_id}",
+                f"score={score}",
+                flush=True,
+            )
 
 
 # ============================================================
@@ -316,6 +366,9 @@ def rerank_documents(
 
         results = ranker.rerank(request)
 
+        # GP005 diagnostic trace never gates the logic below it.
+        _log_gp005_trace(query, results, indexed_docs)
+
         # ====================================================
         # MAP RESULTS BACK TO ORIGINAL DOCUMENTS
         # ====================================================
@@ -447,3 +500,4 @@ def rerank_texts(
         )
         for result in reranked
     ]
+

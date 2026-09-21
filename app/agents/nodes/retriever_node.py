@@ -20,9 +20,24 @@ def retrieve_node(state: AgentState):
     Contract:
         documents -> List[RetrievedDocument]
 
-    The output is intentionally structured so downstream
-    grading/evaluation nodes can consume document metadata,
-    scores, and content consistently.
+    Retrieval metadata preserved through the entire node:
+        - id
+        - document_id
+        - chunk_id
+        - total_chunks
+        - content
+        - source
+        - source_type
+        - score
+        - rerank_score
+        - url
+
+    Keeping document/chunk identity is important for:
+        - citation generation
+        - grounding checks
+        - evaluation
+        - retrieval diagnostics
+        - regression benchmarks
     """
 
     query = state["current_query"]
@@ -76,16 +91,46 @@ def retrieve_node(state: AgentState):
     for doc in reranked_documents:
         documents.append(
             {
+                # Qdrant point identity
                 "id": str(doc.get("id", "")),
-                "content": str(doc.get("content", "")),
-                "source": str(doc.get("source", "Unknown")),
-                "source_type": str(doc.get("source_type", "internal")),
-                "score": float(doc.get("score", 0.0) or 0.0),
+
+                # Corpus identity
+                "document_id": str(
+                    doc.get("document_id", "")
+                ),
+                "chunk_id": int(
+                    doc.get("chunk_id", -1)
+                    if doc.get("chunk_id") is not None
+                    else -1
+                ),
+                "total_chunks": int(
+                    doc.get("total_chunks", 0)
+                    if doc.get("total_chunks") is not None
+                    else 0
+                ),
+
+                # Content/source
+                "content": str(
+                    doc.get("content", "")
+                ),
+                "source": str(
+                    doc.get("source", "Unknown")
+                ),
+                "source_type": str(
+                    doc.get("source_type", "internal")
+                ),
+
+                # Retrieval/reranking scores
+                "score": float(
+                    doc.get("score", 0.0) or 0.0
+                ),
                 "rerank_score": (
                     float(doc["rerank_score"])
                     if doc.get("rerank_score") is not None
                     else None
                 ),
+
+                # Optional external-source compatibility
                 "url": doc.get("url"),
             }
         )
@@ -112,7 +157,10 @@ def retrieve_node(state: AgentState):
         "search_query": query,
         "retrieval_latency_ms": retrieval_ms,
         "rerank_latency_ms": rerank_ms,
-        "status": (f"Retrieved and reranked {len(documents)} internal sources."),
+        "status": (
+            f"Retrieved and reranked "
+            f"{len(documents)} internal sources."
+        ),
         "plan": list(state.get("plan", []))
         + [
             f"Internal Retrieval: {len(documents)} documents",

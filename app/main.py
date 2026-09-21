@@ -30,7 +30,6 @@ logger = logging.getLogger("knowledgemesh")
 # ENVIRONMENT
 # ============================================================
 
-# app/main.py -> project root
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 ENV_PATH = os.path.join(
@@ -41,14 +40,12 @@ ENV_PATH = os.path.join(
 from dotenv import load_dotenv
 
 
-# Load project-root .env first.
 load_dotenv(
     dotenv_path=ENV_PATH,
     override=False,
 )
 
 
-# Optional fallback if .env is located one directory above.
 if not os.path.exists(ENV_PATH):
     parent_env_path = os.path.join(
         os.path.dirname(BASE_DIR),
@@ -70,6 +67,7 @@ import logfire
 
 
 LOGFIRE_TOKEN = os.getenv("LOGFIRE_TOKEN")
+
 
 if LOGFIRE_TOKEN:
     try:
@@ -99,6 +97,7 @@ from fastapi import FastAPI, Response
 from pydantic import BaseModel, Field
 
 from app.agents.graph import rag_agent
+
 from app.guardrails import (
     guard,
     initialize_rails,
@@ -113,7 +112,7 @@ APP_NAME = "KnowledgeMesh"
 
 APP_TITLE = "KnowledgeMesh · Enterprise Agentic RAG API"
 
-APP_VERSION = "2.2.0"
+APP_VERSION = "2.3.2"
 
 
 # ============================================================
@@ -128,6 +127,8 @@ app = FastAPI(
         "NeMo Guardrails, document grading, "
         "query rewriting, grounding validation, "
         "citation validation, bounded answer revision, "
+        "canonical citation provenance, "
+        "candidate-answer preservation, "
         "and conversational memory."
     ),
     version=APP_VERSION,
@@ -308,6 +309,89 @@ def _safe_bool(
 
 
 # ============================================================
+# ANSWER NORMALIZATION
+# ============================================================
+
+
+def _normalize_answer(
+    value: Any,
+) -> str:
+    """
+    Normalize a LangGraph answer into a safe string.
+
+    Empty strings are preserved as empty strings rather than
+    being replaced with an error message.
+    """
+
+    if value is None:
+        return ""
+
+    if isinstance(
+        value,
+        str,
+    ):
+        return value.strip()
+
+    return str(value).strip()
+
+
+def _select_best_answer(
+    final_output: Dict[str, Any],
+) -> tuple[str, str]:
+    """
+    Select the best available generated answer.
+
+    Priority:
+
+        final_answer
+            ↓
+        answer
+            ↓
+        candidate_answer
+            ↓
+        previous_answer
+
+    Returns:
+
+        (answer, answer_source)
+
+    The API must distinguish:
+
+        1. no answer was generated
+        2. an answer was generated but validation failed
+
+    Validation failure must NOT erase the generated answer.
+    """
+
+    candidates = [
+        (
+            "final_answer",
+            final_output.get("final_answer"),
+        ),
+        (
+            "answer",
+            final_output.get("answer"),
+        ),
+        (
+            "candidate_answer",
+            final_output.get("candidate_answer"),
+        ),
+        (
+            "previous_answer",
+            final_output.get("previous_answer"),
+        ),
+    ]
+
+    for source, value in candidates:
+        answer = _normalize_answer(value)
+
+        if answer:
+            return answer, source
+
+    return "", "none"
+
+
+# ============================================================
 # DOCUMENT NORMALIZATION
 # ============================================================
 
@@ -318,9 +402,6 @@ def _normalize_document(
 ) -> Dict[str, Any]:
     """
     Normalize a private or web document into a stable API format.
-
-    This prevents the frontend from breaking when individual
-    retrieval services return slightly different structures.
     """
 
     if isinstance(
@@ -359,6 +440,21 @@ def _normalize_document(
         )
 
         normalized.setdefault(
+            "document_id",
+            None,
+        )
+
+        normalized.setdefault(
+            "chunk_id",
+            None,
+        )
+
+        normalized.setdefault(
+            "total_chunks",
+            None,
+        )
+
+        normalized.setdefault(
             "url",
             None,
         )
@@ -392,6 +488,9 @@ def _normalize_document(
 
     return {
         "id": None,
+        "document_id": None,
+        "chunk_id": None,
+        "total_chunks": None,
         "content": str(document),
         "source": "Unknown source",
         "source_type": source_type,
@@ -437,61 +536,261 @@ def _normalize_documents(
 
 
 # ============================================================
+# CITATION PROVENANCE NORMALIZATION
+# ============================================================
+
+
+def _normalize_citation_provenance(
+    provenance: Any,
+) -> Dict[str, Dict[str, Any]]:
+    """
+    Normalize canonical citation provenance.
+    """
+
+    if not provenance:
+        return {}
+
+    if not isinstance(
+        provenance,
+        dict,
+    ):
+        return {}
+
+    normalized: Dict[str, Dict[str, Any]] = {}
+
+    for citation_id, item in provenance.items():
+        citation_key = str(citation_id).strip()
+
+        if not citation_key:
+            continue
+
+        if not isinstance(
+            item,
+            dict,
+        ):
+            continue
+
+        normalized_item = dict(item)
+
+        normalized_item["citation_id"] = str(
+            normalized_item.get(
+                "citation_id",
+                citation_key,
+            )
+        )
+
+        point_id = normalized_item.get("point_id")
+
+        normalized_item["point_id"] = (
+            str(point_id).strip()
+            if point_id is not None and str(point_id).strip()
+            else None
+        )
+
+        document_id = normalized_item.get("document_id")
+
+        normalized_item["document_id"] = (
+            str(document_id).strip()
+            if document_id is not None and str(document_id).strip()
+            else None
+        )
+
+        chunk_id = normalized_item.get("chunk_id")
+
+        normalized_item["chunk_id"] = (
+            _safe_int(
+                chunk_id,
+                default=0,
+            )
+            if chunk_id is not None
+            else None
+        )
+
+        total_chunks = normalized_item.get("total_chunks")
+
+        normalized_item["total_chunks"] = (
+            _safe_int(
+                total_chunks,
+                default=0,
+            )
+            if total_chunks is not None
+            else None
+        )
+
+        normalized_item["source"] = str(
+            normalized_item.get(
+                "source",
+                "Unknown source",
+            )
+        )
+
+        normalized_item["source_type"] = str(
+            normalized_item.get(
+                "source_type",
+                "unknown",
+            )
+        )
+
+        normalized[citation_key] = normalized_item
+
+    return normalized
+
+
+# ============================================================
 # GROUNDING / REFLECTION NORMALIZATION
 # ============================================================
 
 
 def _normalize_claims(
     claims: Any,
-) -> List[Dict[str, Any]]:
+    *,
+    citation_provenance: Any = None,
+) -> list[dict[str, Any]]:
     """
-    Normalize grounding claims for API consumers.
-    """
+    Normalize grounding claims into the public API contract.
 
-    if not claims:
-        return []
+    Citation namespaces are deliberately separated:
+
+        citations
+            LLM citation identities, e.g. ["chunk_1", "chunk_2"]
+
+        cited_chunk_id
+            Primary LLM citation identity, e.g. "chunk_1"
+
+        cited_chunk_ids
+            Canonical private evidence identities,
+            e.g. ["document_id::3", "document_id::0"]
+
+        cited_chunk_key
+            Primary canonical private evidence identity,
+            e.g. "document_id::3"
+
+    IMPORTANT:
+
+    The evaluator's citation metrics operate on the LLM citation
+    namespace. Therefore `cited_chunk_id` MUST remain `chunk_N`
+    and MUST NOT contain `document_id::chunk_id`.
+    """
 
     if not isinstance(
         claims,
         list,
     ):
-        claims = [claims]
+        return []
 
-    normalized: List[Dict[str, Any]] = []
-
-    for claim in claims:
+    provenance = (
+        citation_provenance
         if isinstance(
-            claim,
+            citation_provenance,
+            dict,
+        )
+        else {}
+    )
+
+    normalized: list[dict[str, Any]] = []
+
+    for raw_claim in claims:
+        if not isinstance(
+            raw_claim,
             dict,
         ):
-            item = dict(claim)
+            continue
 
-            item["text"] = str(
-                item.get(
-                    "text",
-                    "",
-                )
+        claim = dict(raw_claim)
+
+        raw_citations = claim.get(
+            "citations",
+            [],
+        )
+
+        if isinstance(
+            raw_citations,
+            str,
+        ):
+            raw_citations = [raw_citations]
+
+        if not isinstance(
+            raw_citations,
+            list,
+        ):
+            raw_citations = []
+
+        citation_ids: list[str] = []
+
+        cited_chunk_keys: list[str] = []
+
+        for raw_citation in raw_citations:
+            if raw_citation is None:
+                continue
+
+            citation_id = str(raw_citation).strip()
+
+            if not citation_id:
+                continue
+
+            # ------------------------------------------------
+            # LLM citation namespace
+            # ------------------------------------------------
+
+            if citation_id not in citation_ids:
+                citation_ids.append(citation_id)
+
+            # ------------------------------------------------
+            # Canonical evidence namespace
+            # ------------------------------------------------
+
+            provenance_item = provenance.get(
+                citation_id,
+                {},
             )
 
-            chunk_id = item.get("cited_chunk_id")
+            if not isinstance(
+                provenance_item,
+                dict,
+            ):
+                continue
 
-            if chunk_id is not None:
-                try:
-                    item["cited_chunk_id"] = int(chunk_id)
-                except (
-                    TypeError,
-                    ValueError,
-                ):
-                    pass
+            document_id = provenance_item.get("document_id")
 
-            normalized.append(item)
+            chunk_id = provenance_item.get("chunk_id")
 
-        else:
-            normalized.append(
-                {
-                    "text": str(claim),
-                }
-            )
+            # Private / Qdrant evidence.
+            if document_id is not None and chunk_id is not None:
+                canonical_key = f"{document_id}::{chunk_id}"
+
+                if canonical_key not in cited_chunk_keys:
+                    cited_chunk_keys.append(canonical_key)
+
+                continue
+
+            # Web evidence intentionally does not receive a
+            # fabricated Qdrant key.
+            #
+            # Its canonical identity remains the citation ID.
+            provenance_citation_id = provenance_item.get("citation_id")
+
+            web_key = str(provenance_citation_id or citation_id).strip()
+
+            if web_key and web_key not in cited_chunk_keys:
+                cited_chunk_keys.append(web_key)
+
+        # ----------------------------------------------------
+        # Public LLM citation namespace
+        # ----------------------------------------------------
+
+        claim["citations"] = citation_ids
+
+        claim["cited_chunk_id"] = citation_ids[0] if citation_ids else None
+
+        # ----------------------------------------------------
+        # Canonical evidence namespace
+        # ----------------------------------------------------
+
+        claim["cited_chunk_ids"] = cited_chunk_keys
+
+        claim["cited_chunk_key"] = cited_chunk_keys[0] if cited_chunk_keys else None
+
+        normalized.append(claim)
 
     return normalized
 
@@ -500,11 +799,63 @@ def _normalize_grounding_scores(
     scores: Any,
 ) -> List[Dict[str, Any]]:
     """
-    Normalize semantic grounding evaluation results.
+    Normalize grounding results into a flat evaluator-compatible list.
+
+    Canonical Grounding Critic schema:
+
+        {
+            "atomic_claims": [...],
+            "claims": [...],
+            "unsupported_claims": [...],
+            "uncited_claims": [...],
+            "invalid_citations": [...],
+            "entailment_threshold": 0.50,
+            ...
+        }
+
+    The evaluator expects:
+
+        grounding_scores = [
+            {
+                "claim": "...",
+                "score": 0.91,
+                "supported": True,
+                "citations": [...],
+                ...
+            }
+        ]
+
+    Therefore only the claim-level results are flattened here.
+
+    The complete canonical object is preserved separately as
+    `grounding_details`.
     """
 
     if not scores:
         return []
+
+    # ------------------------------------------------------------
+    # Canonical Grounding Critic dictionary
+    # ------------------------------------------------------------
+
+    if isinstance(
+        scores,
+        dict,
+    ):
+        claim_results = scores.get("claims")
+
+        if isinstance(
+            claim_results,
+            list,
+        ):
+            scores = claim_results
+
+        else:
+            return []
+
+    # ------------------------------------------------------------
+    # Legacy list schema
+    # ------------------------------------------------------------
 
     if not isinstance(
         scores,
@@ -524,18 +875,32 @@ def _normalize_grounding_scores(
                     "claim": str(score),
                     "score": None,
                     "supported": None,
+                    "citations": [],
+                    "atomic_claims": [],
                 }
             )
+
             continue
 
         item = dict(score)
 
+        # --------------------------------------------------------
+        # Claim text
+        # --------------------------------------------------------
+
         item["claim"] = str(
             item.get(
                 "claim",
-                "",
+                item.get(
+                    "text",
+                    "",
+                ),
             )
         )
+
+        # --------------------------------------------------------
+        # Score
+        # --------------------------------------------------------
 
         if "score" in item:
             item["score"] = _safe_float(
@@ -543,14 +908,9 @@ def _normalize_grounding_scores(
                 default=None,
             )
 
-        if "cited_chunk_id" in item:
-            try:
-                item["cited_chunk_id"] = int(item["cited_chunk_id"])
-            except (
-                TypeError,
-                ValueError,
-            ):
-                pass
+        # --------------------------------------------------------
+        # Support status
+        # --------------------------------------------------------
 
         if "supported" in item:
             item["supported"] = _safe_bool(
@@ -558,16 +918,139 @@ def _normalize_grounding_scores(
                 default=None,
             )
 
+        # --------------------------------------------------------
+        # Citations
+        #
+        # Keep LLM citation IDs unchanged.
+        # --------------------------------------------------------
+
+        citations = item.get(
+            "citations",
+            [],
+        )
+
+        if isinstance(
+            citations,
+            str,
+        ):
+            citations = [citations]
+
+        if not isinstance(
+            citations,
+            list,
+        ):
+            citations = []
+
+        normalized_citations: list[str] = []
+
+        for citation in citations:
+            if citation is None:
+                continue
+
+            citation_id = str(citation).strip()
+
+            if citation_id and citation_id not in normalized_citations:
+                normalized_citations.append(citation_id)
+
+        item["citations"] = normalized_citations
+
+        # --------------------------------------------------------
+        # Atomic claims
+        # --------------------------------------------------------
+
+        atomic_claims = item.get("atomic_claims")
+
+        if not isinstance(
+            atomic_claims,
+            list,
+        ):
+            atomic_claims = []
+
+        item["atomic_claims"] = atomic_claims
+
         normalized.append(item)
 
     return normalized
+
+
+def _extract_grounding_details(
+    scores: Any,
+) -> Dict[str, Any]:
+    """
+    Preserve the canonical Grounding Critic structure.
+
+    This prevents the API normalization layer from destroying the
+    richer grounding metadata required for debugging, UI inspection,
+    and future evaluation analysis.
+    """
+
+    if not isinstance(
+        scores,
+        dict,
+    ):
+        return {
+            "atomic_claims": [],
+            "claims": [],
+            "unsupported_claims": [],
+            "uncited_claims": [],
+            "invalid_citations": [],
+            "entailment_threshold": None,
+            "claim_count": 0,
+            "atomic_claim_count": 0,
+            "unsupported_atomic_count": 0,
+            "available_citation_count": 0,
+        }
+
+    details = dict(scores)
+
+    for key in (
+        "atomic_claims",
+        "claims",
+        "unsupported_claims",
+        "uncited_claims",
+        "invalid_citations",
+    ):
+        value = details.get(key)
+
+        if not isinstance(
+            value,
+            list,
+        ):
+            details[key] = []
+
+    details["claim_count"] = _safe_int(
+        details.get("claim_count"),
+        default=len(details["claims"]),
+    )
+
+    details["atomic_claim_count"] = _safe_int(
+        details.get("atomic_claim_count"),
+        default=len(details["atomic_claims"]),
+    )
+
+    details["unsupported_atomic_count"] = _safe_int(
+        details.get("unsupported_atomic_count"),
+        default=len(details["unsupported_claims"]),
+    )
+
+    details["available_citation_count"] = _safe_int(
+        details.get("available_citation_count"),
+        default=0,
+    )
+
+    details["entailment_threshold"] = _safe_float(
+        details.get("entailment_threshold"),
+        default=None,
+    )
+
+    return details
 
 
 def _normalize_grounding_feedback(
     feedback: Any,
 ) -> List[str]:
     """
-    Normalize revision feedback generated by the grounding critic.
+    Normalize revision feedback.
     """
 
     if not feedback:
@@ -592,7 +1075,7 @@ def _get_latency(
     key: str,
 ) -> Optional[float]:
     """
-    Read latency metadata from LangGraph output.
+    Read latency metadata.
     """
 
     return _safe_float(
@@ -609,9 +1092,6 @@ def _get_latency(
 def _normalize_context_quality(
     value: Any,
 ) -> str:
-    """
-    Normalize context quality into a stable string.
-    """
 
     if value is None:
         return "unknown"
@@ -624,6 +1104,8 @@ def _normalize_context_quality(
         "weak",
         "empty",
         "needs_web",
+        "web_sufficient",
+        "web_empty",
         "blocked",
         "error",
         "unknown",
@@ -641,22 +1123,29 @@ def _normalize_context_quality(
 
 
 def _build_invalid_response() -> Dict[str, Any]:
-    """
-    Stable response for blank questions.
-    """
 
     return {
         "question": "",
         "answer": "Please provide a question.",
+        "candidate_answer": "",
+        "answer_available": False,
+        "answer_source": "none",
+        "validation_status": "invalid_request",
         "thought_process": [],
         "status": "invalid_request",
         "sources": [],
         "private_sources": [],
+        "answer_sources": [],
+        "retrieved_private_sources": [],
         "web_sources": [],
+        "citations": {},
+        "citation_provenance": {},
         "search_query": None,
         "retrieval_used": False,
         "web_search_used": False,
+        "should_search_web": False,
         "context_quality": "empty",
+        "context_reason": "No question was provided.",
         "citation_valid": None,
         "is_grounded": None,
         "answer_supported": None,
@@ -666,10 +1155,13 @@ def _build_invalid_response() -> Dict[str, Any]:
         "claims": [],
         "grounding_scores": [],
         "grounding_feedback": [],
+        "grounding_details": {},
+        "validation_passed": False,
         "revision_count": 0,
         "retrieval_rewrite_count": 0,
         "web_rewrite_count": 0,
         "support_retry_count": 0,
+        "max_revisions": 0,
         "retrieval_latency_ms": None,
         "rerank_latency_ms": None,
         "grader_latency_ms": None,
@@ -688,9 +1180,6 @@ def _build_blocked_response(
     answer: Any,
     elapsed_ms: float,
 ) -> Dict[str, Any]:
-    """
-    Stable response for guardrail-blocked requests.
-    """
 
     safe_answer = (
         str(answer) if answer is not None else "This request cannot be processed."
@@ -699,6 +1188,10 @@ def _build_blocked_response(
     return {
         "question": question,
         "answer": safe_answer,
+        "candidate_answer": safe_answer,
+        "answer_available": bool(safe_answer.strip()),
+        "answer_source": "guardrails",
+        "validation_status": "blocked",
         "thought_process": [
             "Intent: Guardrails Fired",
             "Retrieval: Skipped",
@@ -706,11 +1199,17 @@ def _build_blocked_response(
         "status": "Blocked by guardrails.",
         "sources": [],
         "private_sources": [],
+        "answer_sources": [],
+        "retrieved_private_sources": [],
         "web_sources": [],
+        "citations": {},
+        "citation_provenance": {},
         "search_query": None,
         "retrieval_used": False,
         "web_search_used": False,
+        "should_search_web": False,
         "context_quality": "blocked",
+        "context_reason": ("The request was blocked by NeMo Guardrails."),
         "citation_valid": None,
         "is_grounded": None,
         "answer_supported": None,
@@ -720,10 +1219,13 @@ def _build_blocked_response(
         "claims": [],
         "grounding_scores": [],
         "grounding_feedback": [],
+        "grounding_details": {},
+        "validation_passed": False,
         "revision_count": 0,
         "retrieval_rewrite_count": 0,
         "web_rewrite_count": 0,
         "support_retry_count": 0,
+        "max_revisions": 0,
         "retrieval_latency_ms": None,
         "rerank_latency_ms": None,
         "grader_latency_ms": None,
@@ -741,30 +1243,36 @@ def _build_error_response(
     question: str,
     elapsed_ms: float,
 ) -> Dict[str, Any]:
-    """
-    Stable error response.
 
-    Detailed exception information is logged internally and is
-    not returned to the user.
-    """
+    answer = (
+        "I apologize, but I encountered an internal error "
+        "while processing your request. Please try again later."
+    )
 
     return {
         "question": question,
-        "answer": (
-            "I apologize, but I encountered an internal error "
-            "while processing your request. Please try again later."
-        ),
+        "answer": answer,
+        "candidate_answer": "",
+        "answer_available": False,
+        "answer_source": "error",
+        "validation_status": "error",
         "thought_process": [
             "Error encountered during execution.",
         ],
         "status": "error",
         "sources": [],
         "private_sources": [],
+        "answer_sources": [],
+        "retrieved_private_sources": [],
         "web_sources": [],
+        "citations": {},
+        "citation_provenance": {},
         "search_query": question,
         "retrieval_used": False,
         "web_search_used": False,
+        "should_search_web": False,
         "context_quality": "error",
+        "context_reason": ("An internal backend error occurred."),
         "citation_valid": None,
         "is_grounded": None,
         "answer_supported": None,
@@ -773,11 +1281,14 @@ def _build_error_response(
         "usefulness_score": None,
         "claims": [],
         "grounding_scores": [],
+        "grounding_details": {},
         "grounding_feedback": [],
+        "validation_passed": False,
         "revision_count": 0,
         "retrieval_rewrite_count": 0,
         "web_rewrite_count": 0,
         "support_retry_count": 0,
+        "max_revisions": 0,
         "retrieval_latency_ms": None,
         "rerank_latency_ms": None,
         "grader_latency_ms": None,
@@ -793,9 +1304,6 @@ def _build_error_response(
 
 @app.get("/")
 def home() -> Dict[str, Any]:
-    """
-    Basic service information.
-    """
 
     return {
         "message": ("KnowledgeMesh Enterprise Agentic RAG API is live."),
@@ -810,9 +1318,11 @@ def home() -> Dict[str, Any]:
             "Document Grader",
             "Query Rewriter",
             "Web Search Fallback",
-            "Grounding Critic",
             "Citation Check",
+            "Grounding Critic",
+            "Canonical Citation Provenance",
             "Bounded Answer Revision",
+            "Candidate Answer Preservation",
             "Portkey",
             "Conversational Memory",
         ],
@@ -826,11 +1336,6 @@ def home() -> Dict[str, Any]:
 
 @app.get("/health")
 def health() -> Dict[str, Any]:
-    """
-    Lightweight liveness check.
-
-    This endpoint does not call Qdrant, the LLM, or LangGraph.
-    """
 
     return {
         "status": "ok",
@@ -846,9 +1351,6 @@ def health() -> Dict[str, Any]:
 
 @app.get("/ready")
 def ready() -> Dict[str, Any]:
-    """
-    Readiness check for deployment platforms.
-    """
 
     checks = {
         "api": "ok",
@@ -878,9 +1380,6 @@ def ready() -> Dict[str, Any]:
     response_model=None,
 )
 def graph():
-    """
-    Return the current LangGraph as a Mermaid-generated PNG.
-    """
 
     try:
         png_bytes = rag_agent.get_graph().draw_mermaid_png()
@@ -913,38 +1412,6 @@ def graph():
 def query(
     request: QueryRequest,
 ) -> Dict[str, Any]:
-    """
-    Execute the KnowledgeMesh Agentic RAG pipeline.
-
-    High-level flow:
-
-        User Query
-             ↓
-        NeMo Guardrails
-             ↓
-        LangGraph Planner
-             ↓
-        Private Retrieval
-             ↓
-        FlashRank
-             ↓
-        Document Grader
-             ↓
-        Context Evaluator
-             ├── strong → Responder
-             ├── weak → Query Rewrite → Private Retry
-             └── needs_web → Web Search
-                              ↓
-                           Responder
-                              ↓
-                       Grounding Critic
-                              ↓
-                        Citation Check
-                              ├── PASS → END
-                              └── FAIL → Revision
-                                           ↓
-                                       Responder
-    """
 
     # ========================================================
     # REQUEST PREPARATION
@@ -964,10 +1431,6 @@ def query(
     if not q:
         return _build_invalid_response()
 
-    # ========================================================
-    # REQUEST LOGGING
-    # ========================================================
-
     start_time = time.perf_counter()
 
     logfire.info(
@@ -977,7 +1440,7 @@ def query(
     )
 
     # ========================================================
-    # INITIAL LANGGRAPH STATE
+    # INITIAL STATE
     # ========================================================
 
     initial_state = {
@@ -995,15 +1458,16 @@ def query(
         "web_documents": [],
         "all_documents": [],
         "merged_context": "",
-        "plan": [
-            "Start",
-        ],
+        "citation_provenance": {},
+        "plan": ["Start"],
         "status": "Initializing Graph...",
         "search_query": q,
         "web_search_used": False,
-        "retrieval_required": True,
         "web_search_required": False,
+        "should_search_web": False,
+        "retrieval_required": True,
         "context_quality": "unknown",
+        "context_reason": "",
         "citation_valid": None,
         "is_grounded": None,
         "answer_supported": None,
@@ -1012,6 +1476,7 @@ def query(
         "usefulness_score": None,
         "claims": [],
         "grounding_scores": [],
+        "grounding_details": {},
         "grounding_feedback": [],
         "retrieval_rewrite_count": 0,
         "web_rewrite_count": 0,
@@ -1019,10 +1484,11 @@ def query(
         "revision_count": 0,
         "max_revisions": 2,
         "final_answer": "",
+        "candidate_answer": "",
     }
 
     # ========================================================
-    # LANGGRAPH THREAD CONFIGURATION
+    # THREAD CONFIG
     # ========================================================
 
     config = {
@@ -1032,12 +1498,12 @@ def query(
     }
 
     # ========================================================
-    # PIPELINE EXECUTION
+    # PIPELINE
     # ========================================================
 
     try:
         # ====================================================
-        # GATE 1 · NeMo Guardrails
+        # GATE 1 · GUARDRAILS
         # ====================================================
 
         with logfire.span(
@@ -1045,10 +1511,6 @@ def query(
             thread_id=thread_id,
         ):
             rail_fired, rail_response = guard(q)
-
-        # ----------------------------------------------------
-        # BLOCKED REQUEST
-        # ----------------------------------------------------
 
         if rail_fired:
             elapsed_ms = round(
@@ -1096,25 +1558,51 @@ def query(
         ):
             final_output = {}
 
-        # ========================================================
-        # ANSWER
-        # ========================================================
+        # ====================================================
+        # FINAL STATE RETRIEVAL DIAGNOSTICS
+        # ====================================================
 
-        answer = (
-            final_output.get("final_answer")
-            or final_output.get("answer")
-            or "I was unable to generate an answer."
+        raw_documents = final_output.get("documents") or []
+
+        raw_all_documents = final_output.get("all_documents") or []
+
+        raw_graded_documents = final_output.get("graded_documents") or []
+
+        logger.info(
+            (
+                "Final retrieval state | "
+                "documents=%d | "
+                "all_documents=%d | "
+                "graded_documents=%d"
+            ),
+            len(raw_documents),
+            len(raw_all_documents),
+            len(raw_graded_documents),
         )
 
-        if not isinstance(
-            answer,
-            str,
-        ):
-            answer = str(answer)
+        logfire.info(
+            "🔎 Final retrieval state",
+            documents=len(raw_documents),
+            all_documents=len(raw_all_documents),
+            graded_documents=len(raw_graded_documents),
+        )
 
-        # ========================================================
+        # ====================================================
+        # ANSWER SELECTION
+        # ====================================================
+
+        answer, answer_source = _select_best_answer(final_output)
+
+        candidate_answer = _normalize_answer(final_output.get("candidate_answer"))
+
+        if not candidate_answer:
+            candidate_answer = answer
+
+        answer_available = bool(answer.strip())
+
+        # ====================================================
         # EXECUTION TRACE
-        # ========================================================
+        # ====================================================
 
         plan = final_output.get("plan") or []
 
@@ -1126,9 +1614,9 @@ def query(
 
         plan = [str(step) for step in plan]
 
-        # ========================================================
+        # ====================================================
         # STATUS
-        # ========================================================
+        # ====================================================
 
         status = final_output.get(
             "status",
@@ -1141,27 +1629,56 @@ def query(
         ):
             status = str(status)
 
-        # ========================================================
-        # PRIVATE DOCUMENTS
-        # ========================================================
+        # ====================================================
+        # ANSWER / GENERATION DOCUMENTS
+        # ====================================================
 
-        documents = _normalize_documents(
-            documents=final_output.get("documents"),
+        answer_sources = _normalize_documents(
+            documents=raw_documents,
             source_type="private_kb",
         )
 
-        # ========================================================
+        # ====================================================
+        # RETRIEVED PRIVATE DOCUMENTS
+        # ====================================================
+
+        retrieval_documents_raw = (
+            raw_all_documents if raw_all_documents else raw_documents
+        )
+
+        private_documents_only = [
+            doc
+            for doc in retrieval_documents_raw
+            if (doc.get("source_type") or "").lower() != "web"
+        ]
+
+        private_sources = _normalize_documents(
+            documents=private_documents_only,
+            source_type="private_kb",
+        )
+
+        # ====================================================
         # WEB DOCUMENTS
-        # ========================================================
+        # ====================================================
 
         web_documents = _normalize_documents(
             documents=final_output.get("web_documents"),
             source_type="web",
         )
 
-        # ========================================================
+        # ====================================================
+        # CITATION PROVENANCE
+        # ====================================================
+
+        citation_provenance = _normalize_citation_provenance(
+            final_output.get("citation_provenance")
+        )
+
+        citations = dict(citation_provenance)
+
+        # ====================================================
         # QUERY METADATA
-        # ========================================================
+        # ====================================================
 
         search_query = (
             final_output.get("search_query") or final_output.get("current_query") or q
@@ -1173,9 +1690,9 @@ def query(
         ):
             search_query = str(search_query)
 
-        # ========================================================
+        # ====================================================
         # CONTEXT QUALITY
-        # ========================================================
+        # ====================================================
 
         context_quality = _normalize_context_quality(
             final_output.get(
@@ -1184,27 +1701,50 @@ def query(
             )
         )
 
-        # ========================================================
+        context_reason = str(
+            final_output.get(
+                "context_reason",
+                "",
+            )
+            or ""
+        )
+
+        # ====================================================
+        # WEB SEARCH
+        # ====================================================
+
+        should_search_web = bool(
+            final_output.get(
+                "should_search_web",
+                False,
+            )
+        )
+
+        web_search_used = bool(
+            final_output.get(
+                "web_search_used",
+                False,
+            )
+            or len(web_documents) > 0
+        )
+
+        # ====================================================
         # CITATION VALIDATION
-        # ========================================================
+        # ====================================================
 
         citation_valid = _safe_bool(
             final_output.get("citation_valid"),
             default=None,
         )
 
-        # ========================================================
-        # SEMANTIC GROUNDING
-        # ========================================================
+        # ====================================================
+        # GROUNDING
+        # ====================================================
 
         is_grounded = _safe_bool(
             final_output.get("is_grounded"),
             default=None,
         )
-
-        # ========================================================
-        # ANSWER SUPPORT
-        # ========================================================
 
         answer_supported = _safe_bool(
             final_output.get("answer_supported"),
@@ -1226,31 +1766,52 @@ def query(
             default=None,
         )
 
-        # ========================================================
+        # ====================================================
+        # GROUNDING DETAILS
+        # ====================================================
+
+        raw_grounding_scores = final_output.get("grounding_scores")
+
+        grounding_details = _extract_grounding_details(raw_grounding_scores)
+
+        # ====================================================
         # CLAIMS
-        # ========================================================
+        # ====================================================
 
-        claims = _normalize_claims(final_output.get("claims"))
-
-        # ========================================================
-        # GROUNDING SCORES
-        # ========================================================
-
-        grounding_scores = _normalize_grounding_scores(
-            final_output.get("grounding_scores")
+        canonical_claims = grounding_details.get(
+            "claims",
+            [],
         )
 
-        # ========================================================
+        if canonical_claims:
+            claims = _normalize_claims(
+                canonical_claims,
+                citation_provenance=citation_provenance,
+            )
+
+        else:
+            claims = _normalize_claims(
+                final_output.get("claims"),
+                citation_provenance=citation_provenance,
+            )
+
+        # ====================================================
+        # GROUNDING SCORES
+        # ====================================================
+
+        grounding_scores = _normalize_grounding_scores(raw_grounding_scores)
+
+        # ====================================================
         # GROUNDING FEEDBACK
-        # ========================================================
+        # ====================================================
 
         grounding_feedback = _normalize_grounding_feedback(
             final_output.get("grounding_feedback")
         )
 
-        # ========================================================
-        # REVISION / RETRY METADATA
-        # ========================================================
+        # ====================================================
+        # REVISION METADATA
+        # ====================================================
 
         revision_count = _safe_int(
             final_output.get("revision_count"),
@@ -1272,33 +1833,26 @@ def query(
             default=0,
         )
 
-        # ========================================================
-        # WEB SEARCH
-        # ========================================================
-
-        web_search_used = bool(
-            final_output.get(
-                "web_search_used",
-                False,
-            )
-            or len(web_documents) > 0
+        max_revisions = _safe_int(
+            final_output.get("max_revisions"),
+            default=2,
         )
 
-        # ========================================================
+        # ====================================================
         # RETRIEVAL
-        # ========================================================
+        # ====================================================
 
         retrieval_used = bool(
-            len(documents) > 0
+            len(private_sources) > 0
             or final_output.get(
                 "retrieval_required",
                 False,
             )
         )
 
-        # ========================================================
+        # ====================================================
         # PERFORMANCE
-        # ========================================================
+        # ====================================================
 
         retrieval_latency_ms = _get_latency(
             final_output,
@@ -1325,40 +1879,87 @@ def query(
             2,
         )
 
-        # ========================================================
-        # COMBINED SOURCES
-        # ========================================================
+        # ====================================================
+        # SOURCES
+        # ====================================================
 
         all_sources: List[Dict[str, Any]] = [
-            *documents,
+            *private_sources,
             *web_documents,
         ]
 
-        # ========================================================
-        # SELF-RAG VALIDATION SUMMARY
-        # ========================================================
+        # ====================================================
+        # VALIDATION
+        # ====================================================
 
         validation_passed = bool(citation_valid is True and is_grounded is True)
 
-        # ========================================================
+        # ====================================================
+        # VALIDATION STATUS
+        # ====================================================
+
+        if not answer_available:
+            validation_status = "generation_failed"
+
+        elif validation_passed:
+            validation_status = "validated"
+
+        elif citation_valid is False:
+            validation_status = "citation_validation_failed"
+
+        elif is_grounded is False:
+            validation_status = "grounding_validation_failed"
+
+        else:
+            validation_status = "validation_incomplete"
+
+        # ====================================================
+        # FINAL STATUS
+        # ====================================================
+
+        if answer_available and not validation_passed and status == "completed":
+            status = "completed_with_validation_failure"
+
+        # ====================================================
         # COMPLETION LOG
-        # ========================================================
+        # ====================================================
 
         logfire.info(
             "✅ RAG request completed",
             thread_id=thread_id,
-            documents_retrieved=len(documents),
+            answer_available=answer_available,
+            answer_source=answer_source,
+            retrieved_private_documents=len(private_sources),
+            answer_documents=len(answer_sources),
             web_documents_retrieved=len(web_documents),
+            citations=len(citation_provenance),
             web_search_used=web_search_used,
+            should_search_web=should_search_web,
             context_quality=context_quality,
+            context_reason=context_reason,
             citation_valid=citation_valid,
             is_grounded=is_grounded,
             answer_supported=answer_supported,
             answer_useful=answer_useful,
             support_score=support_score,
             grounding_claims=len(claims),
+            grounding_atomic_claims=_safe_int(
+                grounding_details.get(
+                    "atomic_claim_count",
+                    0,
+                ),
+                default=0,
+            ),
+            grounding_unsupported_atomic_claims=_safe_int(
+                grounding_details.get(
+                    "unsupported_atomic_count",
+                    0,
+                ),
+                default=0,
+            ),
             grounding_feedback_items=len(grounding_feedback),
             validation_passed=validation_passed,
+            validation_status=validation_status,
             revision_count=revision_count,
             retrieval_rewrite_count=(retrieval_rewrite_count),
             web_rewrite_count=(web_rewrite_count),
@@ -1370,70 +1971,86 @@ def query(
             latency_ms=elapsed_ms,
         )
 
-        # ========================================================
+        # ====================================================
         # API RESPONSE
-        # ========================================================
+        # ====================================================
 
         return {
-            # ----------------------------------------------------
+            # ------------------------------------------------
             # Request / answer
-            # ----------------------------------------------------
+            # ------------------------------------------------
             "question": q,
             "answer": answer,
+            "candidate_answer": candidate_answer,
+            "answer_available": answer_available,
+            "answer_source": answer_source,
             "status": status,
-            # ----------------------------------------------------
+            "validation_status": validation_status,
+            # ------------------------------------------------
             # Execution trace
-            # ----------------------------------------------------
+            # ------------------------------------------------
             "thought_process": plan,
-            # ----------------------------------------------------
+            # ------------------------------------------------
             # Sources
-            # ----------------------------------------------------
+            # ------------------------------------------------
             "sources": all_sources,
-            "private_sources": documents,
+            "private_sources": private_sources,
+            "answer_sources": answer_sources,
+            "retrieved_private_sources": private_sources,
             "web_sources": web_documents,
-            # ----------------------------------------------------
+            "generation_documents": final_output.get("generation_documents") or [],
+            "graded_documents": raw_graded_documents,
+            "grader_status": final_output.get("grader_status"),
+            "grading_mode": final_output.get("grading_mode"),
+            "grader_error_type": final_output.get("grader_error_type"),
+            # ------------------------------------------------
+            # Citation provenance
+            # ------------------------------------------------
+            "citations": citations,
+            "citation_provenance": citation_provenance,
+            # ------------------------------------------------
             # Query / retrieval
-            # ----------------------------------------------------
+            # ------------------------------------------------
             "search_query": search_query,
             "retrieval_used": retrieval_used,
             "web_search_used": web_search_used,
-            # ----------------------------------------------------
-            # Context evaluation
-            # ----------------------------------------------------
+            "should_search_web": should_search_web,
+            # ------------------------------------------------
+            # Context
+            # ------------------------------------------------
             "context_quality": context_quality,
-            # ----------------------------------------------------
+            "context_reason": context_reason,
+            # ------------------------------------------------
             # Citation validation
-            # ----------------------------------------------------
+            # ------------------------------------------------
             "citation_valid": citation_valid,
-            # ----------------------------------------------------
-            # Semantic grounding
-            # ----------------------------------------------------
+            # ------------------------------------------------
+            # Grounding
+            # ------------------------------------------------
             "is_grounded": is_grounded,
             "claims": claims,
             "grounding_scores": grounding_scores,
+            "grounding_details": grounding_details,
             "grounding_feedback": grounding_feedback,
-            # ----------------------------------------------------
-            # Final answer evaluation
-            # ----------------------------------------------------
+            # ------------------------------------------------
+            # Answer evaluation
+            # ------------------------------------------------
             "answer_supported": answer_supported,
             "answer_useful": answer_useful,
             "support_score": support_score,
             "usefulness_score": usefulness_score,
             "validation_passed": validation_passed,
-            # ----------------------------------------------------
+            # ------------------------------------------------
             # Retry / revision
-            # ----------------------------------------------------
+            # ------------------------------------------------
             "revision_count": revision_count,
             "retrieval_rewrite_count": (retrieval_rewrite_count),
             "web_rewrite_count": (web_rewrite_count),
             "support_retry_count": (support_retry_count),
-            "max_revisions": _safe_int(
-                final_output.get("max_revisions"),
-                default=2,
-            ),
-            # ----------------------------------------------------
+            "max_revisions": max_revisions,
+            # ------------------------------------------------
             # Performance
-            # ----------------------------------------------------
+            # ------------------------------------------------
             "retrieval_latency_ms": (retrieval_latency_ms),
             "rerank_latency_ms": (rerank_latency_ms),
             "grader_latency_ms": (grader_latency_ms),
