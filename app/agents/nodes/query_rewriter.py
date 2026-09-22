@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 import re
 
-from app.gateway import portkey_client
+from app.gateway import create_chat_completion
 
 logger = logging.getLogger(__name__)
 
@@ -113,7 +113,7 @@ Return only the search query.
 """
 
     try:
-        response = portkey_client.chat.completions.create(
+        response = create_chat_completion(
             messages=[
                 {
                     "role": "system",

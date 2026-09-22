@@ -47,15 +47,12 @@ from typing import Any
 
 import logfire
 
-from app.gateway import portkey_client
+from app.gateway import create_chat_completion
 from app.services.evidence_quality import rank_evidence
 
-
-# ================================================================
-# CONFIGURATION
-# ================================================================
-
 MIN_RELEVANT_DOCS = 2
+
+# Keep this unchanged while diagnosing the grader.
 MIN_CONTEXT_SCORE = 0.60
 
 # Maximum number of documents passed to downstream generation.
@@ -74,35 +71,15 @@ MAX_GENERATION_DOCUMENTS = 5
 MAX_GRADER_DOCUMENT_CHARS = 2500
 
 
-# ================================================================
-# JSON EXTRACTION
-# ================================================================
-
-
 def _extract_json(text: str) -> Any:
     """Extract JSON from plain text or markdown fenced output."""
 
     text = (text or "").strip()
 
     # Remove markdown fences.
-    text = re.sub(
-        r"^```json\s*",
-        "",
-        text,
-        flags=re.IGNORECASE,
-    )
-
-    text = re.sub(
-        r"^```\s*",
-        "",
-        text,
-    )
-
-    text = re.sub(
-        r"\s*```$",
-        "",
-        text,
-    )
+    text = re.sub(r"^```json\s*", "", text, flags=re.IGNORECASE)
+    text = re.sub(r"^```\s*", "", text)
+    text = re.sub(r"\s*```$", "", text)
 
     # Direct JSON.
     try:
@@ -111,10 +88,7 @@ def _extract_json(text: str) -> Any:
         pass
 
     # Find first JSON array.
-    match = re.search(
-        r"\[[\s\S]*\]",
-        text,
-    )
+    match = re.search(r"\[[\s\S]*\]", text)
 
     if match:
         try:
@@ -123,10 +97,7 @@ def _extract_json(text: str) -> Any:
             pass
 
     # Find first JSON object.
-    match = re.search(
-        r"\{[\s\S]*\}",
-        text,
-    )
+    match = re.search(r"\{[\s\S]*\}", text)
 
     if match:
         try:
@@ -135,11 +106,6 @@ def _extract_json(text: str) -> Any:
             pass
 
     raise ValueError("Could not extract valid JSON from grader response")
-
-
-# ================================================================
-# GRADER PAYLOAD
-# ================================================================
 
 
 def _build_document_payload(documents):
@@ -164,15 +130,7 @@ def _build_document_payload(documents):
     return payload
 
 
-# ================================================================
-# BATCH LLM GRADING
-# ================================================================
-
-
-def _batch_grade_documents(
-    query: str,
-    documents,
-):
+def _batch_grade_documents(query: str, documents):
     """Grade all documents in one LLM call."""
 
     payload = _build_document_payload(documents)
@@ -225,13 +183,9 @@ Rules:
 - preserve the original document index
 """
 
-    # ============================================================
-    # LLM GRADING TIMING
-    # ============================================================
-
     llm_start = time.perf_counter()
 
-    response = portkey_client.chat.completions.create(
+    response = create_chat_completion(
         messages=[
             {
                 "role": "system",
@@ -240,10 +194,7 @@ Rules:
                     "relevance grader. Return valid JSON only."
                 ),
             },
-            {
-                "role": "user",
-                "content": prompt,
-            },
+            {"role": "user", "content": prompt},
         ],
         temperature=0.0,
     )
@@ -252,43 +203,42 @@ Rules:
 
     raw = response.choices[0].message.content
 
+    print("\n" + "=" * 80)
+    print("🧪 GRADER RAW RESPONSE")
+    print(raw)
+    print("=" * 80)
+
     results = _extract_json(raw)
 
     if not isinstance(results, list):
         raise ValueError("Grader output must be a JSON array")
 
+    print(
+        f"🧪 GRADER RESULT COUNT | documents={len(documents)} | results={len(results)}"
+    )
+
     logfire.info(
         "📊 Batch document grading timing",
         grading_ms=round(grading_ms, 2),
         documents=len(documents),
+        grader_results=len(results),
     )
 
     return results, grading_ms
-
-
-# ================================================================
-# EVIDENCE QUALITY HELPERS
-# ================================================================
 
 
 def _evidence_counts(documents):
     """Return evidence-type counts for diagnostics."""
 
     content_count = sum(1 for doc in documents if doc.get("evidence_type") == "CONTENT")
-
     reference_count = sum(
         1 for doc in documents if doc.get("evidence_type") == "REFERENCE"
     )
-
     navigation_count = sum(
         1 for doc in documents if doc.get("evidence_type") == "NAVIGATION"
     )
 
-    return (
-        content_count,
-        reference_count,
-        navigation_count,
-    )
+    return content_count, reference_count, navigation_count
 
 
 def _select_generation_documents(documents):
@@ -315,88 +265,48 @@ def _select_generation_documents(documents):
         doc
         for doc in documents
         if doc.get("grader_relevant")
-        and float(
-            doc.get(
-                "grader_score",
-                0.0,
-            )
-        )
-        >= MIN_CONTEXT_SCORE
+        and float(doc.get("grader_score", 0.0)) >= MIN_CONTEXT_SCORE
     ]
 
     content_documents = [
         doc
         for doc in relevant_documents
-        if doc.get(
-            "evidence_type",
-            "CONTENT",
-        )
-        == "CONTENT"
+        if doc.get("evidence_type", "CONTENT") == "CONTENT"
     ]
 
     reference_documents = [
         doc for doc in relevant_documents if doc.get("evidence_type") == "REFERENCE"
     ]
 
-    # Navigation chunks should never become answer evidence.
     navigation_documents = [
         doc for doc in relevant_documents if doc.get("evidence_type") == "NAVIGATION"
     ]
 
-    # ------------------------------------------------------------
-    # Primary case:
-    # useful CONTENT exists.
-    # ------------------------------------------------------------
-
-    if content_documents:
-        # CONTENT is already ordered by rank_evidence():
-        #
-        #     evidence priority
-        #         ↓
-        #     grader score
-        #         ↓
-        #     rerank score
-        #
-        # Apply the generation budget only after relevance and
-        # evidence classification have been performed.
-        selected = content_documents[:MAX_GENERATION_DOCUMENTS]
-
-        fallback_reference_count = 0
-
-        return (
-            selected,
-            fallback_reference_count,
-            len(navigation_documents),
-        )
-
-    # ------------------------------------------------------------
-    # Fallback case:
-    # no CONTENT evidence exists.
-    #
-    # We allow relevant reference evidence so the system does not
-    # unnecessarily declare context empty for citation/paper
-    # identification questions.
-    # ------------------------------------------------------------
-
-    if reference_documents:
-        selected = reference_documents[:MAX_GENERATION_DOCUMENTS]
-
-        return (
-            selected,
-            len(reference_documents),
-            len(navigation_documents),
-        )
-
-    return (
-        [],
-        0,
-        len(navigation_documents),
+    print(
+        "\n🧪 GENERATION SELECTION INPUT | "
+        f"total={len(documents)} | "
+        f"relevant={len(relevant_documents)} | "
+        f"content={len(content_documents)} | "
+        f"reference={len(reference_documents)} | "
+        f"navigation={len(navigation_documents)} | "
+        f"threshold={MIN_CONTEXT_SCORE}"
     )
 
+    # Primary case: useful CONTENT exists.
+    if content_documents:
+        selected = content_documents[:MAX_GENERATION_DOCUMENTS]
+        print(f"🧪 GENERATION SELECTION | selected_content={len(selected)}")
+        return selected, 0, len(navigation_documents)
 
-# ================================================================
-# MAIN NODE
-# ================================================================
+    # Fallback case: no CONTENT evidence exists.
+    if reference_documents:
+        selected = reference_documents[:MAX_GENERATION_DOCUMENTS]
+        print(f"🧪 GENERATION SELECTION | selected_reference={len(selected)}")
+        return selected, len(reference_documents), len(navigation_documents)
+
+    print("🧪 GENERATION SELECTION | selected=0")
+
+    return [], 0, len(navigation_documents)
 
 
 def grade_documents_node(state):
@@ -429,10 +339,7 @@ def grade_documents_node(state):
     The full graded document set is preserved for observability.
     """
 
-    documents = state.get(
-        "documents",
-        [],
-    )
+    documents = state.get("documents", [])
 
     query = (
         state.get("current_query")
@@ -441,9 +348,7 @@ def grade_documents_node(state):
         or ""
     )
 
-    # ============================================================
-    # NO DOCUMENTS
-    # ============================================================
+    print(f"\n🧪 GRADER INPUT | query={query!r} | documents={len(documents)}")
 
     if not documents:
         return {
@@ -455,10 +360,7 @@ def grade_documents_node(state):
             "grading_mode": "no_documents",
             "context_quality": "empty",
             "grader_latency_ms": 0.0,
-            "plan": state.get(
-                "plan",
-                [],
-            )
+            "plan": state.get("plan", [])
             + [
                 "Document Grade: 0/0 relevant",
                 "Evidence Quality: no documents",
@@ -468,114 +370,84 @@ def grade_documents_node(state):
         }
 
     try:
-        # ========================================================
-        # BATCH LLM GRADING
-        # ========================================================
-
-        grades, grading_ms = _batch_grade_documents(
-            query,
-            documents,
-        )
+        grades, grading_ms = _batch_grade_documents(query, documents)
 
         grade_map = {}
 
         for item in grades:
             try:
                 index = int(item["index"])
-
-                score = float(
-                    item.get(
-                        "score",
-                        0.0,
-                    )
-                )
-
-                score = max(
-                    0.0,
-                    min(
-                        1.0,
-                        score,
-                    ),
-                )
+                score = float(item.get("score", 0.0))
+                score = max(0.0, min(1.0, score))
 
                 grade_map[index] = {
-                    "relevant": bool(
-                        item.get(
-                            "relevant",
-                            False,
-                        )
-                    ),
+                    "relevant": bool(item.get("relevant", False)),
                     "score": score,
-                    "reason": str(
-                        item.get(
-                            "reason",
-                            "",
-                        )
-                    ),
+                    "reason": str(item.get("reason", "")),
                 }
 
-            except (
-                KeyError,
-                TypeError,
-                ValueError,
-            ):
+            except (KeyError, TypeError, ValueError):
+                print(f"⚠️ GRADER INVALID ITEM | item={item!r}")
                 continue
 
-        # ========================================================
-        # ENRICH DOCUMENTS WITH GRADER RESULTS
-        # ========================================================
+        expected_indices = set(range(len(documents)))
+        received_indices = set(grade_map.keys())
+        missing_indices = sorted(expected_indices - received_indices)
+        extra_indices = sorted(received_indices - expected_indices)
+
+        print(
+            "🧪 GRADER INDEX COVERAGE | "
+            f"expected={sorted(expected_indices)} | "
+            f"received={sorted(received_indices)} | "
+            f"missing={missing_indices} | "
+            f"extra={extra_indices}"
+        )
+
+        if missing_indices:
+            logfire.warning(
+                "⚠️ Grader returned incomplete document coverage",
+                expected_indices=sorted(expected_indices),
+                received_indices=sorted(received_indices),
+                missing_indices=missing_indices,
+                extra_indices=extra_indices,
+            )
 
         graded_documents = []
 
         for idx, doc in enumerate(documents):
             grade = grade_map.get(
                 idx,
-                {
-                    "relevant": False,
-                    "score": 0.0,
-                    "reason": ("No valid grader result."),
-                },
+                {"relevant": False, "score": 0.0, "reason": "No valid grader result."},
             )
 
             enriched = dict(doc)
-
             enriched["grader_score"] = grade["score"]
-
             enriched["grader_relevant"] = grade["relevant"]
-
             enriched["grader_reason"] = grade["reason"]
 
             graded_documents.append(enriched)
 
-        # ========================================================
-        # EVIDENCE QUALITY CLASSIFICATION
-        # ========================================================
-        #
-        # IMPORTANT:
-        # This happens AFTER LLM relevance grading.
-        #
-        # Therefore:
-        #
-        #   relevant bibliography
-        #
-        # can still be identified as:
-        #
-        #   REFERENCE
-        #
-        # rather than becoming primary answer evidence.
-        # ========================================================
+            print(
+                "🧪 GRADED DOCUMENT | "
+                f"idx={idx} | "
+                f"grader_relevant={enriched.get('grader_relevant')} | "
+                f"grader_score={enriched.get('grader_score')} | "
+                f"evidence_type={enriched.get('evidence_type')} | "
+                f"reason={enriched.get('grader_reason')}"
+            )
 
         graded_documents = rank_evidence(graded_documents)
 
-        (
-            content_count,
-            reference_count,
-            navigation_count,
-        ) = _evidence_counts(graded_documents)
+        content_count, reference_count, navigation_count = _evidence_counts(
+            graded_documents
+        )
 
-        # ========================================================
-        # SELECT GENERATION CONTEXT
-        # ========================================================
+        print(
+            "🧪 EVIDENCE CLASSIFICATION | "
+            f"content={content_count} | "
+            f"reference={reference_count} | "
+            f"navigation={navigation_count}"
+        )
 
         (
             relevant_documents,
@@ -583,57 +455,17 @@ def grade_documents_node(state):
             excluded_navigation_count,
         ) = _select_generation_documents(graded_documents)
 
-        # ========================================================
-        # FINAL GENERATION ORDER
-        # ========================================================
-        #
-        # `_select_generation_documents()` already receives
-        # documents ordered by rank_evidence().
-        #
-        # Keep an explicit deterministic sort here so this
-        # contract remains stable even if the selector changes.
-        # ========================================================
-
         relevant_documents.sort(
             key=lambda d: (
-                (
-                    1
-                    if d.get(
-                        "evidence_type",
-                        "CONTENT",
-                    )
-                    == "CONTENT"
-                    else 0
-                ),
-                float(
-                    d.get(
-                        "grader_score",
-                        0.0,
-                    )
-                ),
-                float(
-                    d.get(
-                        "rerank_score",
-                        0.0,
-                    )
-                    or 0.0
-                ),
+                1 if d.get("evidence_type", "CONTENT") == "CONTENT" else 0,
+                float(d.get("grader_score", 0.0)),
+                float(d.get("rerank_score", 0.0) or 0.0),
             ),
             reverse=True,
         )
 
-        # Defensive final budget.
-        #
-        # This guarantees that downstream generation can never
-        # receive more than MAX_GENERATION_DOCUMENTS even if the
-        # selector is modified later.
         relevant_documents = relevant_documents[:MAX_GENERATION_DOCUMENTS]
-
         relevant_count = len(relevant_documents)
-
-        # ========================================================
-        # CONTENT EVIDENCE COUNT
-        # ========================================================
 
         generation_content_count = sum(
             1 for doc in relevant_documents if doc.get("evidence_type") == "CONTENT"
@@ -643,29 +475,21 @@ def grade_documents_node(state):
             1 for doc in relevant_documents if doc.get("evidence_type") == "REFERENCE"
         )
 
-        # ========================================================
-        # CONTEXT QUALITY
-        # ========================================================
-        #
-        # Strong context should be based primarily on CONTENT.
-        #
-        # A collection of bibliography chunks must not become
-        # "strong" merely because an LLM grader considers them
-        # semantically relevant.
-        # ========================================================
-
         if generation_content_count >= MIN_RELEVANT_DOCS:
             context_quality = "strong"
-
         elif generation_content_count > 0 or generation_reference_count > 0:
             context_quality = "weak"
-
         else:
             context_quality = "empty"
 
-        # ========================================================
-        # LOG EVIDENCE QUALITY
-        # ========================================================
+        print(
+            "🧪 GRADER FINAL | "
+            f"graded={len(graded_documents)} | "
+            f"generation={relevant_count} | "
+            f"generation_content={generation_content_count} | "
+            f"generation_reference={generation_reference_count} | "
+            f"context_quality={context_quality}"
+        )
 
         logfire.info(
             "🔎 Evidence quality filtering",
@@ -674,26 +498,18 @@ def grade_documents_node(state):
             reference_documents=reference_count,
             navigation_documents=navigation_count,
             generation_documents=relevant_count,
-            generation_document_limit=(MAX_GENERATION_DOCUMENTS),
-            generation_content_documents=(generation_content_count),
-            generation_reference_documents=(generation_reference_count),
-            excluded_navigation_documents=(excluded_navigation_count),
+            generation_document_limit=MAX_GENERATION_DOCUMENTS,
+            generation_content_documents=generation_content_count,
+            generation_reference_documents=generation_reference_count,
+            excluded_navigation_documents=excluded_navigation_count,
+            fallback_reference_count=fallback_reference_count,
         )
 
-        # ========================================================
-        # PLAN
-        # ========================================================
-
-        plan = list(
-            state.get(
-                "plan",
-                [],
-            )
-        )
+        plan = list(state.get("plan", []))
 
         plan.extend(
             [
-                (f"Document Grade: {relevant_count}/{len(documents)} usable"),
+                f"Document Grade: {relevant_count}/{len(documents)} usable",
                 (
                     f"Evidence Quality: "
                     f"{content_count} content / "
@@ -705,27 +521,14 @@ def grade_documents_node(state):
                     f"{generation_content_count} content / "
                     f"{generation_reference_count} reference"
                 ),
-                (f"Generation Context: {relevant_count}/{MAX_GENERATION_DOCUMENTS}"),
-                (f"Context Quality: {context_quality}"),
-                (f"Grader Time: {grading_ms:.0f} ms"),
+                f"Generation Context: {relevant_count}/{MAX_GENERATION_DOCUMENTS}",
+                f"Context Quality: {context_quality}",
+                f"Grader Time: {grading_ms:.0f} ms",
             ]
         )
 
-        # ========================================================
-        # RETURN
-        # ========================================================
-
         return {
-            # Documents selected for generation.
-            #
-            # CONTENT is preferred over bibliography/reference
-            # chunks when actual explanatory evidence exists.
-            #
-            # IMPORTANT:
-            # This list is capped at MAX_GENERATION_DOCUMENTS.
             "documents": documents,
-            # Preserve EVERY graded and classified document for
-            # observability, diagnostics, and future policies.
             "graded_documents": graded_documents,
             "generation_documents": relevant_documents,
             "grader_status": "success",
@@ -734,51 +537,20 @@ def grade_documents_node(state):
             "context_quality": context_quality,
             "grader_latency_ms": grading_ms,
             "plan": plan,
-            "status": ("Documents graded and evidence quality classified."),
+            "status": "Documents graded and evidence quality classified.",
         }
 
     except Exception as exc:
-        # ========================================================
-        # SAFE DEGRADED MODE
-        # ========================================================
-        #
-        # IMPORTANT:
-        #
-        # The grader failed, but retrieval itself succeeded.
-        #
-        # Therefore:
-        #
-        #     documents
-        #         -> PRESERVE
-        #
-        #     graded_documents
-        #         -> EMPTY
-        #
-        #     generation_documents
-        #         -> EMPTY
-        #
-        # The retrieved documents are NOT considered validated
-        # generation evidence.
-        #
-        # This allows downstream routing and observability to
-        # distinguish:
-        #
-        #     "no evidence exists"
-        #
-        # from:
-        #
-        #     "evidence exists but could not be verified because
-        #      the grading provider failed."
-        # ========================================================
-
+        # Safe degraded mode: private evidence is preserved but marked unverified.
         error_type = type(exc).__name__
 
-        plan = list(
-            state.get(
-                "plan",
-                [],
-            )
-        )
+        print("\n" + "=" * 80)
+        print("❌ DOCUMENT GRADER FAILED")
+        print(f"error_type={error_type}")
+        print(f"error={exc}")
+        print("=" * 80)
+
+        plan = list(state.get("plan", []))
 
         plan.extend(
             [
@@ -798,36 +570,12 @@ def grade_documents_node(state):
         )
 
         return {
-            # ----------------------------------------------------
-            # IMPORTANT:
-            # Preserve the retrieved private evidence for:
-            #
-            # - auditability
-            # - observability
-            # - provenance diagnostics
-            # - fallback analysis
-            #
-            # BUT do not treat it as generation-approved evidence.
-            # ----------------------------------------------------
             "documents": documents,
-            # ----------------------------------------------------
-            # No grading result exists.
-            # ----------------------------------------------------
             "graded_documents": [],
-            # ----------------------------------------------------
-            # Never send ungraded evidence directly to generation.
-            # ----------------------------------------------------
             "generation_documents": [],
-            # ----------------------------------------------------
-            # Explicit failure state.
-            # ----------------------------------------------------
             "grader_status": "failed",
             "grader_error_type": error_type,
             "grading_mode": "unavailable",
-            # ----------------------------------------------------
-            # The private context cannot be declared strong,
-            # weak, or empty because its relevance was not evaluated.
-            # ----------------------------------------------------
             "context_quality": "unverified",
             "grader_latency_ms": 0.0,
             "plan": plan,

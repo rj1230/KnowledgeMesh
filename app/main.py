@@ -1444,31 +1444,55 @@ def query(
     # ========================================================
 
     initial_state = {
+        # ----------------------------------------------------
+        # Conversation
+        # ----------------------------------------------------
         "messages": [
             {
                 "role": "user",
                 "content": q,
             }
         ],
+        # ----------------------------------------------------
+        # Query state
+        # ----------------------------------------------------
         "original_query": q,
         "current_query": q,
         "rewritten_query": "",
+        "search_query": q,
+        # ----------------------------------------------------
+        # Retrieval state
+        # ----------------------------------------------------
+        "retrieval_required": True,
         "documents": [],
+        "private_documents": [],
         "graded_documents": [],
+        "generation_documents": [],
+        # ----------------------------------------------------
+        # Web state
+        # ----------------------------------------------------
         "web_documents": [],
         "all_documents": [],
-        "merged_context": "",
-        "citation_provenance": {},
-        "plan": ["Start"],
-        "status": "Initializing Graph...",
-        "search_query": q,
-        "web_search_used": False,
         "web_search_required": False,
+        "web_search_attempted": False,
+        "web_search_used": False,
         "should_search_web": False,
-        "retrieval_required": True,
+        # ----------------------------------------------------
+        # Context
+        # ----------------------------------------------------
+        "merged_context": "",
         "context_quality": "unknown",
         "context_reason": "",
+        # ----------------------------------------------------
+        # Citation state
+        # ----------------------------------------------------
+        "citation_provenance": {},
         "citation_valid": None,
+        "citation_feedback": [],
+        "citation_errors": [],
+        # ----------------------------------------------------
+        # Grounding / evaluation
+        # ----------------------------------------------------
         "is_grounded": None,
         "answer_supported": None,
         "answer_useful": None,
@@ -1478,13 +1502,25 @@ def query(
         "grounding_scores": [],
         "grounding_details": {},
         "grounding_feedback": [],
+        # ----------------------------------------------------
+        # Revision / retry state
+        # ----------------------------------------------------
+        "revision_requested": False,
+        "revision_count": 0,
+        "max_revisions": 2,
         "retrieval_rewrite_count": 0,
         "web_rewrite_count": 0,
         "support_retry_count": 0,
-        "revision_count": 0,
-        "max_revisions": 2,
+        # ----------------------------------------------------
+        # Answer state
+        # ----------------------------------------------------
         "final_answer": "",
         "candidate_answer": "",
+        # ----------------------------------------------------
+        # Execution
+        # ----------------------------------------------------
+        "plan": ["Start"],
+        "status": "Initializing Graph...",
     }
 
     # ========================================================
@@ -1548,15 +1584,39 @@ def query(
                 config=config,
             )
 
-        # ====================================================
-        # DEFENSIVE EXTRACTION
-        # ====================================================
-
         if not isinstance(
             final_output,
             dict,
         ):
             final_output = {}
+
+        # ====================================================
+        # GROUNDING DEBUG LOGGING
+        # ====================================================
+
+        logger.info(
+            "GROUNDING DEBUG | answer_supported=%s | "
+            "answer_useful=%s | support_score=%s | usefulness_score=%s",
+            final_output.get("answer_supported"),
+            final_output.get("answer_useful"),
+            final_output.get("support_score"),
+            final_output.get("usefulness_score"),
+        )
+
+        logger.info(
+            "GROUNDING SCORES | %s",
+            final_output.get("grounding_scores", []),
+        )
+
+        logger.info(
+            "GROUNDING DETAILS | %s",
+            final_output.get("grounding_details", {}),
+        )
+
+        logger.info(
+            "GROUNDING FEEDBACK | %s",
+            final_output.get("grounding_feedback", []),
+        )
 
         # ====================================================
         # FINAL STATE RETRIEVAL DIAGNOSTICS
@@ -1649,7 +1709,7 @@ def query(
         private_documents_only = [
             doc
             for doc in retrieval_documents_raw
-            if (doc.get("source_type") or "").lower() != "web"
+            if isinstance(doc, dict) and (doc.get("source_type") or "").lower() != "web"
         ]
 
         private_sources = _normalize_documents(

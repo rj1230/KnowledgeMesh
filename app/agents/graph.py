@@ -1,121 +1,315 @@
+"""
+KnowledgeMesh · Agentic RAG Graph
+=================================
+
+LangGraph orchestration for the Agentic RAG pipeline.
+
+Pipeline
+--------
+
+START
+  ↓
+planner
+  ↓
+retriever
+  ↓
+grader
+  ↓
+context_evaluator
+  ├── strong → responder
+  ├── insufficient → query_rewriter → private_retry → grader
+  └── web fallback → web_search → grader
+                                      ↓
+                                   responder
+                                      ↓
+                                citation_check
+                                  ├── PASS → grounding_critic
+                                  │              ├── PASS → END
+                                  │              └── FAIL → prepare_revision
+                                  │                              ↓
+                                  │                          revision
+                                  │                              ↓
+                                  │                          responder
+                                  │
+                                  └── FAIL → prepare_revision
+                                                 ↓
+                                             revision
+                                                 ↓
+                                             responder
+
+
+Revision safety
+---------------
+
+answer_revision_count is the canonical revision counter.
+
+MAX_ANSWER_REVISIONS controls the maximum number of answer
+regenerations after the initial response.
+
+The graph explicitly prepares a revision before entering the
+revision responder.
+
+prepare_revision_node:
+
+    current count
+        ↓
+    +1
+        ↓
+    revision_requested = True
+        ↓
+    revision_prompt
+        ↓
+    revision responder
+
+After regeneration, the responder is responsible for clearing
+revision_requested.
+
+Grounding compatibility
+-----------------------
+
+The current grounding critic returns:
+
+    is_grounded
+    answer_supported
+    support_score
+    grounding_scores
+    grounding_feedback
+    unsupported_atomic_claims
+    revision_prompt
+
+The graph therefore treats:
+
+    is_grounded
+
+as the canonical grounding routing signal, while also accepting:
+
+    grounding_valid
+    answer_supported
+
+for backward compatibility.
+
+This prevents a state-field mismatch from turning every successful
+grounding evaluation into a revision.
+"""
+
 from __future__ import annotations
 
-from typing import Any, Dict, List
+import logging
+from typing import Any, Dict
 
 import logfire
+
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph
 
-from app.agents.nodes.citation_check import citation_check_node
-from app.agents.nodes.context_evaluator_node import context_evaluator_node
-from app.agents.nodes.grader import grade_documents_node
-from app.agents.nodes.grounding_critic import grounding_critic_node
-from app.agents.nodes.planner import planner_node
-from app.agents.nodes.query_rewriter import rewrite_query_node
-from app.agents.nodes.responder import generate_node
-from app.agents.nodes.retriever import retrieve_node
-from app.agents.nodes.private_retry import retry_private_retrieval_node
-from app.agents.nodes.web_search_node import web_search_node
+from app.agents.nodes.citation_check import (
+    citation_check_node,
+)
+from app.agents.nodes.context_evaluator_node import (
+    context_evaluator_node,
+)
+from app.agents.nodes.grader import (
+    grade_documents_node,
+)
+from app.agents.nodes.grounding_critic import (
+    grounding_critic_node,
+)
+from app.agents.nodes.planner import (
+    planner_node,
+)
+from app.agents.nodes.private_retry import (
+    retry_private_retrieval_node,
+)
+from app.agents.nodes.query_rewriter import (
+    rewrite_query_node,
+)
+from app.agents.nodes.responder import (
+    generate_node,
+)
+from app.agents.nodes.retriever import (
+    retrieve_node,
+)
+from app.agents.nodes.web_search_node import (
+    web_search_node,
+)
 from app.agents.state import AgentState
 
 
-# =====================================================================
-# GRAPH LIMITS
-# =====================================================================
+# ============================================================
+# Configuration
+# ============================================================
 
 MAX_RETRIEVAL_REWRITES = 2
+
 MAX_ANSWER_REVISIONS = 2
 
 
-# =====================================================================
-# PLANNER ROUTING
-# =====================================================================
+logger = logging.getLogger(__name__)
+
+
+# ============================================================
+# Helpers
+# ============================================================
+
+
+def _safe_int(
+    value: Any,
+    default: int = 0,
+) -> int:
+    """
+    Safely convert a state value to int.
+    """
+
+    try:
+        return int(value or default)
+    except (
+        TypeError,
+        ValueError,
+    ):
+        return default
+
+
+def _revision_count(
+    state: AgentState,
+) -> int:
+    """
+    Return the canonical answer revision count.
+
+    answer_revision_count is preferred.
+
+    revision_count is retained as a compatibility fallback for
+    older nodes/state.
+    """
+
+    value = state.get("answer_revision_count")
+
+    if value is None:
+        value = state.get(
+            "revision_count",
+            0,
+        )
+
+    return max(
+        0,
+        _safe_int(value),
+    )
+
+
+def _normalise_feedback(
+    value: Any,
+) -> list[str]:
+    """
+    Normalize grounding/citation feedback into a list of strings.
+
+    Important:
+
+        grounding_feedback may be either:
+
+            "Grounding validation failed: 4 unsupported atomic claim(s)."
+
+        or:
+
+            [
+                "Grounding validation failed...",
+                "Remove unsupported claims.",
+            ]
+
+    Never iterate directly over a string because that would produce
+    individual characters.
+    """
+
+    if value is None:
+        return []
+
+    if isinstance(value, str):
+        cleaned = value.strip()
+
+        if not cleaned:
+            return []
+
+        return [cleaned]
+
+    if isinstance(value, (list, tuple, set)):
+        result: list[str] = []
+
+        for item in value:
+            cleaned = str(item).strip()
+
+            if cleaned:
+                result.append(cleaned)
+
+        return result
+
+    cleaned = str(value).strip()
+
+    if not cleaned:
+        return []
+
+    return [cleaned]
+
+
+# ============================================================
+# Planner routing
+# ============================================================
 
 
 def route_after_planner(
     state: AgentState,
 ) -> str:
     """
-    Route planner output.
-
-    Conversational requests bypass retrieval.
-
-    Technical / knowledge requests enter the retrieval pipeline.
+    Decide whether the planner sends the request directly to the
+    responder or through retrieval.
     """
 
-    plan = state.get("plan") or []
+    route = str(state.get("route") or "").strip().lower()
 
-    intent = (
-        str(state.get("intent") or state.get("query_type") or state.get("route") or "")
-        .strip()
-        .upper()
+    retrieval_required = bool(
+        state.get(
+            "retrieval_required",
+            True,
+        )
     )
 
-    plan_text = " ".join(str(item) for item in plan).upper()
+    if (
+        route
+        in {
+            "responder",
+            "direct",
+            "conversation",
+            "chat",
+        }
+        and not retrieval_required
+    ):
+        logger.info("Planner route: responder")
 
-    if intent == "CONVERSATIONAL" or "CONVERSATIONAL" in plan_text:
         return "responder"
+
+    logger.info("Planner route: retriever")
 
     return "retriever"
 
 
-# =====================================================================
-# CONTEXT ROUTING
-# =====================================================================
+# ============================================================
+# Context evaluator routing
+# ============================================================
 
 
 def route_after_context_evaluator(
     state: AgentState,
 ) -> str:
     """
-    Decide whether retrieved private evidence is sufficient.
-
-    Strong private context:
-        -> responder
-
-    Explicitly insufficient / external-needed context:
-        -> web search
-
-    Otherwise:
-        -> bounded retrieval rewrite
+    Decide whether context is sufficient, should be rewritten,
+    or should escalate to web search.
     """
 
-    # ================================================================
-    # GRADER FAILURE / UNVERIFIED PRIVATE EVIDENCE
-    # ================================================================
-    #
-    # A grader failure must NEVER be interpreted as:
-    #
-    #     strong private evidence
-    #
-    # even when the retrieved/reranked documents have high vector
-    # or rerank scores.
-    #
-    # Retrieval confidence and evidence validation are separate
-    # contracts.
-    # ================================================================
+    quality = str(state.get("context_quality") or "").strip().lower()
 
-    grader_status = str(state.get("grader_status") or "").strip().lower()
-
-    grading_mode = str(state.get("grading_mode") or "").strip().lower()
-
-    if grader_status == "failed" or grading_mode == "unavailable":
-        logfire.warning(
-            "Private evidence is unverified because document grading "
-            "failed; routing to controlled web fallback.",
-            grader_status=grader_status,
-            grading_mode=grading_mode,
-            grader_error_type=state.get("grader_error_type"),
-            document_count=len(state.get("documents") or []),
+    web_search_attempted = bool(
+        state.get(
+            "web_search_attempted",
+            False,
         )
-
-        return "web_search"
-
-    # ================================================================
-    # NORMAL CONTEXT ROUTING
-    # ================================================================
-
-    context_quality = str(state.get("context_quality") or "").strip().lower()
+    )
 
     web_search_required = bool(
         state.get(
@@ -124,710 +318,447 @@ def route_after_context_evaluator(
         )
     )
 
-    rewrite_count = int(
+    should_search_web = bool(
+        state.get(
+            "should_search_web",
+            False,
+        )
+    )
+
+    grader_status = str(state.get("grader_status") or "").strip().lower()
+
+    grading_mode = str(state.get("grading_mode") or "").strip().lower()
+
+    rewrite_count = _safe_int(
         state.get(
             "retrieval_rewrite_count",
             0,
         )
-        or 0
     )
 
-    if context_quality in {
-        "strong",
-        "good",
-        "sufficient",
-        "excellent",
-    }:
+    # --------------------------------------------------------
+    # 1. Strong validated context
+    # --------------------------------------------------------
+
+    if quality == "strong":
+        logger.info("Context route: responder | strong context")
+
         return "responder"
 
-    if web_search_required or context_quality in {
-        "empty",
-        "needs_web",
-        "web",
-        "insufficient_external",
-    }:
-        return "web_search"
+    # --------------------------------------------------------
+    # 2. Web was already attempted
+    #
+    # Prevent repeated web-search loops.
+    # --------------------------------------------------------
 
-    if rewrite_count >= MAX_RETRIEVAL_REWRITES:
-        logfire.warning(
-            "Retrieval rewrite budget exhausted; routing to web search.",
-            rewrite_count=rewrite_count,
-            max_rewrites=MAX_RETRIEVAL_REWRITES,
+    if web_search_attempted:
+        logger.warning(
+            "Web search already attempted; preventing another "
+            "web-search loop. Routing to responder."
         )
 
+        return "responder"
+
+    # --------------------------------------------------------
+    # 3. Explicit web requirement
+    # --------------------------------------------------------
+
+    if web_search_required or should_search_web:
+        logger.info("Context route: web_search | explicit web requirement")
+
         return "web_search"
+
+    # --------------------------------------------------------
+    # 4. Grader failure
+    #
+    # Private evidence could not be validated.
+    # Escalate to web before generation.
+    # --------------------------------------------------------
+
+    if grader_status == "failed" or grading_mode == "unavailable":
+        logger.warning("Context route: web_search | grader unavailable")
+
+        return "web_search"
+
+    # --------------------------------------------------------
+    # 5. Retrieval rewrite budget
+    # --------------------------------------------------------
+
+    if rewrite_count >= MAX_RETRIEVAL_REWRITES:
+        logger.info("Retrieval rewrite budget exhausted; routing to web_search.")
+
+        return "web_search"
+
+    # --------------------------------------------------------
+    # 6. Default
+    # --------------------------------------------------------
+
+    logger.info("Context route: query_rewriter | insufficient private context")
 
     return "query_rewriter"
 
 
-# =====================================================================
-# RESPONDER ROUTING
-# =====================================================================
+# ============================================================
+# Responder routing
+# ============================================================
 
 
 def route_after_responder(
     state: AgentState,
 ) -> str:
     """
-    Every successful generated answer must first pass citation
-    validation.
+    Route a successfully generated answer into citation validation.
+
+    If generation failed, terminate instead of entering validation
+    with an empty/invalid answer.
     """
 
-    if bool(
+    generation_failed = bool(
         state.get(
             "generation_failed",
             False,
         )
-    ):
-        logfire.warning(
-            "Generation failed; ending graph.",
-            status=state.get("status"),
-        )
-
-        return "end"
-
-    status = str(state.get("status") or "").strip().lower()
-
-    generation_failure_markers = (
-        "generation unavailable",
-        "generation degraded",
-        "generation failed",
-        "llm generation failed",
-        "llm unavailable",
     )
 
-    if any(marker in status for marker in generation_failure_markers):
-        logfire.warning(
-            "Generation degraded or unavailable; ending graph.",
-            status=state.get("status"),
-        )
+    if generation_failed:
+        logger.warning("Responder generation failed; ending graph.")
 
         return "end"
+
+    logger.info("Responder route: citation_check | answer generated")
 
     return "citation_check"
 
 
-# =====================================================================
-# CITATION CHECK ROUTING
-# =====================================================================
+# ============================================================
+# Citation routing
+# ============================================================
 
 
 def route_after_citation_check(
     state: AgentState,
 ) -> str:
     """
-    Route after citation validation.
+    Route based on citation validation.
 
-    Citation failure:
-        -> bounded revision
+    Citation PASS:
+        grounding_critic
 
-    Citation success:
-        -> grounding critic
+    Citation FAIL:
+        bounded revision
+
+    If the revision budget is exhausted:
+        END
     """
 
-    if bool(
+    citation_valid = bool(
         state.get(
-            "generation_failed",
+            "citation_valid",
             False,
         )
-    ):
+    )
+
+    revision_count = _revision_count(state)
+
+    # --------------------------------------------------------
+    # Citation PASS
+    # --------------------------------------------------------
+
+    if citation_valid:
+        logger.info("Citation route: grounding_critic | citation validation passed")
+
+        return "grounding_critic"
+
+    # --------------------------------------------------------
+    # Citation FAIL + budget exhausted
+    # --------------------------------------------------------
+
+    if revision_count >= MAX_ANSWER_REVISIONS:
+        logger.warning(
+            "Citation validation failed but answer revision "
+            "budget is exhausted. Ending graph.",
+            extra={
+                "revision_count": revision_count,
+                "max_answer_revisions": MAX_ANSWER_REVISIONS,
+            },
+        )
+
         return "end"
 
-    if bool(
-        state.get(
-            "simple_response",
-            False,
-        )
-    ):
-        return "end"
+    # --------------------------------------------------------
+    # Citation FAIL → revision
+    # --------------------------------------------------------
 
-    citation_valid = state.get("citation_valid")
+    logger.warning(
+        "Citation route: revision | citation validation failed | revisions=%s/%s",
+        revision_count,
+        MAX_ANSWER_REVISIONS,
+    )
 
-    # ================================================================
-    # CITATION FAILURE
-    # ================================================================
-
-    if citation_valid is not True:
-        revision_count = int(
-            state.get(
-                "revision_count",
-                0,
-            )
-            or 0
-        )
-
-        if revision_count >= MAX_ANSWER_REVISIONS:
-            logfire.warning(
-                "Citation revision budget exhausted.",
-                revision_count=revision_count,
-                max_revisions=MAX_ANSWER_REVISIONS,
-                citation_valid=citation_valid,
-            )
-
-            return "end"
-
-        logfire.info(
-            "Citation validation failed; routing to bounded answer revision.",
-            revision_count=revision_count,
-            max_revisions=MAX_ANSWER_REVISIONS,
-        )
-
-        return "revision"
-
-    logfire.info("Citation validation passed; routing to grounding critic.")
-
-    return "grounding_critic"
+    return "revision"
 
 
-# =====================================================================
-# GROUNDING ROUTING
-# =====================================================================
+# ============================================================
+# Grounding routing
+# ============================================================
 
 
 def route_after_grounding_critic(
     state: AgentState,
 ) -> str:
     """
-    Route after evidence grounding.
+    Route based on strict grounding validation.
 
-    Fully supported answer:
-        -> END
+    Canonical signal:
+        is_grounded
 
-    Unsupported / partially supported answer:
-        -> bounded revision
+    Compatibility signals:
+        grounding_valid
+        answer_supported
+
+    This is important because the current grounding critic returns
+    `is_grounded` and `answer_supported`, while older graph versions
+    expected `grounding_valid`.
     """
 
-    if bool(
-        state.get(
-            "simple_response",
-            False,
-        )
-    ):
+    # --------------------------------------------------------
+    # Canonical grounding result
+    # --------------------------------------------------------
+
+    is_grounded_value = state.get("is_grounded")
+
+    # --------------------------------------------------------
+    # Compatibility fallback
+    # --------------------------------------------------------
+
+    if is_grounded_value is None:
+        grounding_valid_value = state.get("grounding_valid")
+
+        if grounding_valid_value is not None:
+            is_grounded_value = grounding_valid_value
+
+    # --------------------------------------------------------
+    # Final compatibility fallback
+    # --------------------------------------------------------
+
+    if is_grounded_value is None:
+        answer_supported_value = state.get("answer_supported")
+
+        if answer_supported_value is not None:
+            is_grounded_value = answer_supported_value
+
+    grounding_valid = bool(is_grounded_value)
+
+    revision_count = _revision_count(state)
+
+    # --------------------------------------------------------
+    # Observability
+    # --------------------------------------------------------
+
+    logger.info(
+        "Grounding routing | is_grounded=%s | "
+        "answer_supported=%s | grounding_valid=%s | "
+        "revision_count=%s/%s",
+        state.get("is_grounded"),
+        state.get("answer_supported"),
+        state.get("grounding_valid"),
+        revision_count,
+        MAX_ANSWER_REVISIONS,
+    )
+
+    # --------------------------------------------------------
+    # Grounding PASS
+    # --------------------------------------------------------
+
+    if grounding_valid:
+        logger.info("Grounding route: end | grounding validation passed")
+
         return "end"
 
-    is_grounded = bool(
-        state.get(
-            "is_grounded",
-            False,
-        )
-    )
-
-    answer_supported = bool(
-        state.get(
-            "answer_supported",
-            False,
-        )
-    )
-
-    if is_grounded and answer_supported:
-        logfire.info(
-            "Grounding validation passed; finalizing answer.",
-            support_score=state.get("support_score"),
-        )
-
-        return "end"
-
-    revision_count = int(
-        state.get(
-            "revision_count",
-            0,
-        )
-        or 0
-    )
+    # --------------------------------------------------------
+    # Grounding FAIL + budget exhausted
+    # --------------------------------------------------------
 
     if revision_count >= MAX_ANSWER_REVISIONS:
-        logfire.warning(
-            "Grounding revision budget exhausted.",
-            revision_count=revision_count,
-            max_revisions=MAX_ANSWER_REVISIONS,
-            is_grounded=is_grounded,
-            answer_supported=answer_supported,
-            support_score=state.get("support_score"),
+        logger.warning(
+            "Grounding validation failed but answer revision "
+            "budget is exhausted. Ending graph.",
+            extra={
+                "revision_count": revision_count,
+                "max_answer_revisions": MAX_ANSWER_REVISIONS,
+            },
         )
 
         return "end"
 
-    logfire.info(
-        "Grounding validation failed; routing to bounded answer revision.",
-        revision_count=revision_count,
-        max_revisions=MAX_ANSWER_REVISIONS,
-        is_grounded=is_grounded,
-        answer_supported=answer_supported,
-        support_score=state.get("support_score"),
+    # --------------------------------------------------------
+    # Grounding FAIL → revision
+    # --------------------------------------------------------
+
+    logger.warning(
+        "Grounding route: revision | grounding validation failed | revisions=%s/%s",
+        revision_count,
+        MAX_ANSWER_REVISIONS,
     )
 
     return "revision"
 
 
-# =====================================================================
-# SAFE HELPERS
-# =====================================================================
+# ============================================================
+# Revision preparation
+# ============================================================
 
 
-def _safe_list(
-    value: Any,
-) -> List[Any]:
-    """
-    Convert a state value into a safe list.
-    """
-
-    if value is None:
-        return []
-
-    if isinstance(value, list):
-        return value
-
-    if isinstance(value, tuple):
-        return list(value)
-
-    return [value]
-
-
-def _normalise_claim_record(
-    record: Any,
-) -> Dict[str, Any] | None:
-    """
-    Normalize one grounding-critic claim record.
-
-    Supports both the current atomic-claim structure and older
-    grounding-score structures.
-    """
-
-    if not isinstance(record, dict):
-        return None
-
-    supported = record.get("supported")
-
-    # Only explicitly unsupported claims belong in the revision prompt.
-    if supported is True:
-        return None
-
-    claim = str(
-        record.get("claim") or record.get("atomic_claim") or record.get("text") or ""
-    ).strip()
-
-    if not claim:
-        return None
-
-    evidence = str(
-        record.get("best_evidence")
-        or record.get("best_evidence_unit")
-        or record.get("evidence")
-        or ""
-    ).strip()
-
-    citation = str(record.get("best_citation") or record.get("citation") or "").strip()
-
-    score = record.get(
-        "score",
-        record.get(
-            "support_score",
-            record.get("claim_support_score"),
-        ),
-    )
-
-    citations = record.get("citations")
-
-    if not citation and citations:
-        if isinstance(
-            citations,
-            (list, tuple, set),
-        ):
-            citation = str(
-                next(
-                    iter(citations),
-                    "",
-                )
-            ).strip()
-        elif isinstance(
-            citations,
-            str,
-        ):
-            citation = citations.strip()
-
-    return {
-        "claim": claim,
-        "score": score,
-        "best_evidence": evidence,
-        "best_citation": citation,
-        "supported": False,
-    }
-
-
-# =====================================================================
-# GROUNDING DIAGNOSTIC EXTRACTION
-# =====================================================================
-
-
-def _extract_unsupported_atomic_claims(
-    state: AgentState,
-) -> List[Dict[str, Any]]:
-    """
-    Extract unsupported atomic claims from grounding_critic output.
-
-    Expected structure:
-
-        grounding_scores = {
-            "atomic_claims": [
-                {
-                    "claim": "...",
-                    "supported": False,
-                    "score": 0.12,
-                    "best_evidence_unit": "...",
-                    "best_citation": "chunk_5",
-                }
-            ]
-        }
-
-    Defensive support is retained for older grounding-score formats.
-    """
-
-    grounding_scores = state.get("grounding_scores")
-
-    if not isinstance(
-        grounding_scores,
-        dict,
-    ):
-        return []
-
-    records: List[Any] = []
-
-    # ---------------------------------------------------------------
-    # Preferred current format
-    # ---------------------------------------------------------------
-
-    atomic_claims = grounding_scores.get("atomic_claims")
-
-    if isinstance(
-        atomic_claims,
-        list,
-    ):
-        records.extend(atomic_claims)
-
-    # ---------------------------------------------------------------
-    # Defensive fallback
-    # ---------------------------------------------------------------
-
-    if not records:
-        for key, value in grounding_scores.items():
-            if key == "atomic_claims":
-                continue
-
-            if isinstance(
-                value,
-                list,
-            ):
-                records.extend(value)
-                continue
-
-            if isinstance(
-                value,
-                dict,
-            ):
-                if "claim" in value or "atomic_claim" in value or "supported" in value:
-                    records.append(value)
-
-    unsupported: List[Dict[str, Any]] = []
-
-    for record in records:
-        normalized = _normalise_claim_record(record)
-
-        if normalized is None:
-            continue
-
-        unsupported.append(normalized)
-
-    # ---------------------------------------------------------------
-    # Deduplicate while preserving order.
-    # ---------------------------------------------------------------
-
-    seen: set[str] = set()
-    deduplicated: List[Dict[str, Any]] = []
-
-    for item in unsupported:
-        claim_key = " ".join(str(item.get("claim") or "").lower().split())
-
-        if not claim_key:
-            continue
-
-        if claim_key in seen:
-            continue
-
-        seen.add(claim_key)
-        deduplicated.append(item)
-
-    return deduplicated
-
-
-# =====================================================================
-# REVISION PROMPT
-# =====================================================================
-
-
-def _build_grounding_revision_prompt(
-    state: AgentState,
-    unsupported_claims: List[Dict[str, Any]],
-) -> str:
-    """
-    Build an evidence-constrained revision instruction.
-
-    The responder receives:
-
-        - exact unsupported claim
-        - support score
-        - strongest evidence unit
-        - citation
-
-    The responder must narrow, rewrite, or delete unsupported claims.
-    """
-
-    if not unsupported_claims:
-        return (
-            "GROUNDING REVISION REQUIRED\n\n"
-            "The previous answer failed grounding validation, but the "
-            "critic did not expose a specific unsupported atomic claim.\n\n"
-            "Re-read ONLY the supplied evidence and previous answer. "
-            "Preserve statements directly supported by the evidence. "
-            "Delete unsupported factual details. Do not add outside "
-            "knowledge, inference, entities, dates, numbers, mechanisms, "
-            "examples, or explanations.\n\n"
-            "Every retained factual statement must have a valid citation."
-        )
-
-    lines: List[str] = [
-        "GROUNDING REVISION REQUIRED",
-        "",
-        "The previous answer failed evidence-grounding validation.",
-        "Revise the answer using ONLY the supplied evidence.",
-        "",
-        "MANDATORY REVISION RULES:",
-        "",
-        "1. Preserve claims that are directly supported.",
-        "",
-        "2. For each unsupported claim below, narrow it to the portion "
-        "that is explicitly supported by the supplied evidence.",
-        "",
-        "3. If a compound sentence contains both supported and unsupported "
-        "clauses, keep ONLY the supported clause.",
-        "",
-        "4. If no safe supported wording exists, DELETE the claim.",
-        "",
-        "5. Do NOT add outside knowledge.",
-        "",
-        "6. Do NOT infer facts from general knowledge.",
-        "",
-        "7. Do NOT introduce new entities, dates, numbers, mechanisms, "
-        "examples, architectures, technologies, causal explanations, "
-        "or performance characteristics.",
-        "",
-        "8. Do NOT strengthen a weak evidence statement into a stronger claim.",
-        "",
-        "9. Every retained factual statement MUST have a valid citation.",
-        "",
-        "10. A citation does NOT make an unsupported claim supported.",
-        "",
-        "11. The grounding critic is authoritative for support decisions.",
-        "",
-        "UNSUPPORTED ATOMIC CLAIMS:",
-    ]
-
-    for index, item in enumerate(
-        unsupported_claims,
-        start=1,
-    ):
-        claim = item.get("claim") or "(missing claim)"
-
-        score = item.get("score")
-
-        evidence = item.get("best_evidence") or "(no supporting evidence identified)"
-
-        citation = item.get("best_citation") or "(no citation identified)"
-
-        lines.extend(
-            [
-                "",
-                f"{index}. UNSUPPORTED CLAIM",
-                f"Claim: {claim}",
-                f"Grounding score: {score}",
-                f"Best evidence: {evidence}",
-                f"Best citation: {citation}",
-            ]
-        )
-
-    lines.extend(
-        [
-            "",
-            "CRITICAL:",
-            "If the evidence supports only one clause of an unsupported "
-            "compound claim, retain only that supported clause.",
-            "",
-            "Return ONLY the revised answer.",
-            "Do not mention the revision process.",
-            "Do not mention the grounding critic.",
-            "Do not mention unsupported claims.",
-        ]
-    )
-
-    return "\n".join(lines)
-
-
-# =====================================================================
-# CITATION REVISION PROMPT
-# =====================================================================
-
-
-def _build_citation_revision_prompt(
-    state: AgentState,
-) -> str:
-    """
-    Build a citation-focused revision instruction when citation
-    validation fails before grounding validation.
-    """
-
-    feedback = _safe_list(state.get("grounding_feedback"))
-
-    feedback_lines = [str(item).strip() for item in feedback if str(item).strip()]
-
-    prompt = [
-        "CITATION REVISION REQUIRED",
-        "",
-        "The previous answer failed citation validation.",
-        "",
-        "Revise the answer using ONLY the supplied evidence.",
-        "",
-        "RULES:",
-        "1. Preserve only factual claims supported by supplied evidence.",
-        "2. Every retained factual statement must have a valid citation.",
-        "3. Do not invent citations.",
-        "4. Do not introduce new facts.",
-        "5. Remove unsupported factual statements.",
-        "6. Keep citations attached to the claims they support.",
-    ]
-
-    if feedback_lines:
-        prompt.extend(
-            [
-                "",
-                "VALIDATION FEEDBACK:",
-                *feedback_lines[:20],
-            ]
-        )
-
-    prompt.extend(
-        [
-            "",
-            "Return ONLY the revised answer.",
-        ]
-    )
-
-    return "\n".join(prompt)
-
-
-# =====================================================================
-# REVISION NODE
-# =====================================================================
-
-
-def revision_node(
+def prepare_revision_node(
     state: AgentState,
 ) -> Dict[str, Any]:
     """
-    Prepare a bounded evidence-constrained answer revision.
+    Prepare exactly one bounded answer revision.
 
-    This node does not itself call the LLM.
+    Responsibilities:
 
-    It creates revision instructions consumed by responder.py.
+        1. Read current revision count.
+        2. Increment it exactly once.
+        3. Preserve citation feedback.
+        4. Preserve grounding feedback.
+        5. Preserve grounding-generated revision_prompt.
+        6. Set revision_requested=True.
+
+    The actual regenerated answer is produced by generate_node.
     """
 
-    revision_count = int(
-        state.get(
-            "revision_count",
-            0,
+    current_count = _revision_count(state)
+
+    next_count = current_count + 1
+
+    # --------------------------------------------------------
+    # Hard revision budget
+    # --------------------------------------------------------
+
+    if next_count > MAX_ANSWER_REVISIONS:
+        logger.warning(
+            "Revision request blocked because revision budget is exhausted.",
+            extra={
+                "revision_count": current_count,
+                "max_answer_revisions": MAX_ANSWER_REVISIONS,
+            },
         )
-        or 0
-    )
 
-    next_revision_count = revision_count + 1
+        return {
+            "revision_requested": False,
+            "answer_revision_count": current_count,
+            "revision_count": current_count,
+            "status": ("Revision blocked: maximum answer revisions reached."),
+        }
 
-    unsupported_claims = _extract_unsupported_atomic_claims(state)
+    # --------------------------------------------------------
+    # Citation feedback
+    # --------------------------------------------------------
 
-    # ---------------------------------------------------------------
-    # Prefer grounding-specific instructions when available.
-    # Otherwise build citation-specific instructions.
-    # ---------------------------------------------------------------
+    citation_feedback = str(state.get("citation_feedback") or "").strip()
 
-    if unsupported_claims:
-        revision_prompt = _build_grounding_revision_prompt(
-            state,
-            unsupported_claims,
+    # --------------------------------------------------------
+    # Grounding feedback
+    #
+    # IMPORTANT:
+    #
+    # The grounding critic currently returns a string.
+    # Normalize it before processing.
+    # --------------------------------------------------------
+
+    grounding_feedback = _normalise_feedback(state.get("grounding_feedback"))
+
+    # --------------------------------------------------------
+    # Combine feedback
+    # --------------------------------------------------------
+
+    feedback_parts: list[str] = []
+
+    if citation_feedback:
+        feedback_parts.append(citation_feedback)
+
+    feedback_parts.extend(grounding_feedback)
+
+    combined_feedback = "\n\n".join(feedback_parts)
+
+    # --------------------------------------------------------
+    # Grounding-generated revision prompt
+    # --------------------------------------------------------
+
+    revision_prompt = str(state.get("revision_prompt") or "").strip()
+
+    if not revision_prompt:
+        revision_prompt = (
+            "Revise the previous answer using only the supplied "
+            "evidence. Remove unsupported claims and ensure every "
+            "substantive factual statement has a valid citation."
         )
-    else:
-        revision_prompt = _build_citation_revision_prompt(state)
 
-    existing_plan = list(state.get("plan") or [])
+    # --------------------------------------------------------
+    # If feedback exists but the critic prompt is generic,
+    # append the concrete validation feedback.
+    # --------------------------------------------------------
 
-    logfire.info(
-        "Preparing evidence-constrained answer revision.",
-        revision_count=next_revision_count,
-        max_revisions=MAX_ANSWER_REVISIONS,
-        citation_valid=state.get("citation_valid"),
-        is_grounded=state.get("is_grounded"),
-        answer_supported=state.get("answer_supported"),
-        support_score=state.get("support_score"),
-        unsupported_claim_count=len(unsupported_claims),
-        has_revision_prompt=bool(revision_prompt),
-    )
-
-    for index, item in enumerate(
-        unsupported_claims,
-        start=1,
+    if (
+        combined_feedback
+        and "Grounding validation failed" not in revision_prompt
+        and "unsupported" not in revision_prompt.lower()
     ):
-        logfire.warning(
-            "Unsupported atomic claim scheduled for revision.",
-            revision_count=next_revision_count,
-            claim_index=index,
-            claim=item.get("claim"),
-            score=item.get("score"),
-            best_citation=item.get("best_citation"),
+        revision_prompt = (
+            f"{revision_prompt}\n\nValidation feedback:\n{combined_feedback}"
         )
 
-    return {
-        # -----------------------------------------------------------
-        # Revision control
-        # -----------------------------------------------------------
-        "revision_count": next_revision_count,
-        # -----------------------------------------------------------
-        # Explicit responder instruction
-        # -----------------------------------------------------------
-        "revision_prompt": revision_prompt,
-        # -----------------------------------------------------------
-        # IMPORTANT:
-        # Replace stale diagnostics rather than endlessly appending
-        # previous failed claims.
-        # -----------------------------------------------------------
-        "unsupported_atomic_claims": unsupported_claims,
-        # -----------------------------------------------------------
-        # Status / trace
-        # -----------------------------------------------------------
-        "status": (f"Answer revision {next_revision_count}/{MAX_ANSWER_REVISIONS}"),
-        "plan": [
-            *existing_plan,
-            (f"Revision {next_revision_count}/{MAX_ANSWER_REVISIONS}"),
-        ],
-    }
+    # --------------------------------------------------------
+    # Observability
+    # --------------------------------------------------------
+
+    logger.info(
+        "Preparing answer revision %s/%s",
+        next_count,
+        MAX_ANSWER_REVISIONS,
+    )
+
+    with logfire.span(
+        "🔄 Prepare Answer Revision",
+        current_revision=current_count,
+        next_revision=next_count,
+        max_answer_revisions=MAX_ANSWER_REVISIONS,
+        has_citation_feedback=bool(citation_feedback),
+        grounding_feedback_count=len(grounding_feedback),
+        has_revision_prompt=bool(revision_prompt),
+    ):
+        return {
+            "revision_requested": True,
+            # Canonical counter.
+            "answer_revision_count": next_count,
+            # Legacy compatibility counter.
+            "revision_count": next_count,
+            # Explicit revision instructions.
+            "revision_prompt": revision_prompt,
+            # Keep normalized feedback.
+            "grounding_feedback": grounding_feedback,
+            "citation_feedback": citation_feedback,
+            "status": (
+                f"Preparing answer revision {next_count}/{MAX_ANSWER_REVISIONS}."
+            ),
+        }
 
 
-# =====================================================================
-# GRAPH CONSTRUCTION
-# =====================================================================
+# ============================================================
+# Graph construction
+# ============================================================
 
 
 def build_graph():
+    """
+    Build and compile the KnowledgeMesh Agentic RAG graph.
+    """
+
     workflow = StateGraph(AgentState)
 
-    # ================================================================
-    # NODES
-    # ================================================================
+    # ========================================================
+    # Nodes
+    # ========================================================
 
     workflow.add_node(
         "planner",
@@ -837,16 +768,6 @@ def build_graph():
     workflow.add_node(
         "retriever",
         retrieve_node,
-    )
-
-    # ---------------------------------------------------------------
-    # IMPORTANT:
-    # private_retry is registered exactly ONCE.
-    # ---------------------------------------------------------------
-
-    workflow.add_node(
-        "private_retry",
-        retry_private_retrieval_node,
     )
 
     workflow.add_node(
@@ -862,6 +783,11 @@ def build_graph():
     workflow.add_node(
         "query_rewriter",
         rewrite_query_node,
+    )
+
+    workflow.add_node(
+        "private_retry",
+        retry_private_retrieval_node,
     )
 
     workflow.add_node(
@@ -884,23 +810,44 @@ def build_graph():
         grounding_critic_node,
     )
 
+    # ========================================================
+    # Revision preparation
+    #
+    # IMPORTANT:
+    #
+    # Do not point "revision" directly to generate_node.
+    #
+    # prepare_revision_node increments the bounded revision
+    # counter and prepares the revision prompt first.
+    # ========================================================
+
     workflow.add_node(
-        "revision",
-        revision_node,
+        "prepare_revision",
+        prepare_revision_node,
     )
 
-    # ================================================================
-    # START
-    # ================================================================
+    # Logical revision node.
+    #
+    # This is intentionally the same generation implementation
+    # used by the normal responder. The state tells responder
+    # whether this invocation is a revision.
+    workflow.add_node(
+        "revision",
+        generate_node,
+    )
+
+    # ========================================================
+    # Entry
+    # ========================================================
 
     workflow.add_edge(
         START,
         "planner",
     )
 
-    # ================================================================
-    # PLANNER
-    # ================================================================
+    # ========================================================
+    # Planner
+    # ========================================================
 
     workflow.add_conditional_edges(
         "planner",
@@ -911,23 +858,27 @@ def build_graph():
         },
     )
 
-    # ================================================================
-    # PRIVATE RETRIEVAL
-    # ================================================================
+    # ========================================================
+    # Private retrieval
+    # ========================================================
 
     workflow.add_edge(
         "retriever",
         "grader",
     )
 
+    # ========================================================
+    # Grading
+    # ========================================================
+
     workflow.add_edge(
         "grader",
         "context_evaluator",
     )
 
-    # ================================================================
-    # CONTEXT EVALUATION
-    # ================================================================
+    # ========================================================
+    # Context evaluation
+    # ========================================================
 
     workflow.add_conditional_edges(
         "context_evaluator",
@@ -939,9 +890,9 @@ def build_graph():
         },
     )
 
-    # ================================================================
-    # PRIVATE RETRIEVAL REWRITE
-    # ================================================================
+    # ========================================================
+    # Query rewrite
+    # ========================================================
 
     workflow.add_edge(
         "query_rewriter",
@@ -953,18 +904,21 @@ def build_graph():
         "grader",
     )
 
-    # ================================================================
-    # WEB SEARCH
-    # ================================================================
+    # ========================================================
+    # Web fallback
+    #
+    # Web results return to grader so they are validated before
+    # reaching generation.
+    # ========================================================
 
     workflow.add_edge(
         "web_search",
-        "responder",
+        "grader",
     )
 
-    # ================================================================
-    # RESPONDER
-    # ================================================================
+    # ========================================================
+    # Responder
+    # ========================================================
 
     workflow.add_conditional_edges(
         "responder",
@@ -975,60 +929,60 @@ def build_graph():
         },
     )
 
-    # ================================================================
-    # CITATION GATE
-    # ================================================================
+    # ========================================================
+    # Citation validation
+    # ========================================================
 
     workflow.add_conditional_edges(
         "citation_check",
         route_after_citation_check,
         {
             "grounding_critic": "grounding_critic",
-            "revision": "revision",
+            "revision": "prepare_revision",
             "end": END,
         },
     )
 
-    # ================================================================
-    # GROUNDING GATE
-    # ================================================================
+    # ========================================================
+    # Grounding validation
+    # ========================================================
 
     workflow.add_conditional_edges(
         "grounding_critic",
         route_after_grounding_critic,
         {
-            "revision": "revision",
+            "revision": "prepare_revision",
             "end": END,
         },
     )
 
-    # ================================================================
-    # REVISION
-    #
-    # revision -> responder
-    #
-    # responder.py MUST consume:
-    #
-    #     state["revision_prompt"]
-    #
-    # ================================================================
+    # ========================================================
+    # Revision preparation
+    # ========================================================
+
+    workflow.add_edge(
+        "prepare_revision",
+        "revision",
+    )
+
+    # ========================================================
+    # Revision generation
+    # ========================================================
 
     workflow.add_edge(
         "revision",
         "responder",
     )
 
-    # ================================================================
-    # COMPILE
-    # ================================================================
+    # ========================================================
+    # Compile
+    # ========================================================
 
-    return workflow.compile(
-        checkpointer=MemorySaver(),
-    )
+    return workflow.compile(checkpointer=MemorySaver())
 
 
-# =====================================================================
-# GLOBAL GRAPH INSTANCE
-# =====================================================================
+# ============================================================
+# Compiled graph
+# ============================================================
 
 rag_agent = build_graph()

@@ -3,14 +3,32 @@ FlashRank cross-encoder reranking over retrieved passages.
 
 Features
 --------
-- Accepts both structured retrieval dictionaries and plain strings.
+- Accepts structured retrieval dictionaries and plain strings.
 - Preserves source/source_type/original retrieval score.
-- Adds `rerank_score` after FlashRank.
+- Adds `rerank_score` from FlashRank.
 - Thread-safe lazy initialization of FlashRank.
 - Validates query and top_n.
 - Filters empty passages.
 - Gracefully falls back to original retrieval order if reranking fails.
 - Keeps `rerank_texts()` for backward compatibility.
+
+Architecture
+------------
+Qdrant dense retrieval
+        ↓
+normalized documents
+        ↓
+FlashRank cross-encoder
+        ↓
+result["score"]
+        ↓
+document["rerank_score"]
+        ↓
+retriever evidence selector
+
+Important
+---------
+interfere with the FlashRank execution path.
 """
 
 from __future__ import annotations
@@ -42,12 +60,11 @@ class RankedResult(TypedDict, total=False):
     source: str
     source_type: str
 
-    # Original vector-search score
+    # Original vector-search score.
     score: float
 
-    # FlashRank cross-encoder score
+    # FlashRank cross-encoder score.
     rerank_score: float
-
 
 
 # ============================================================
@@ -59,8 +76,7 @@ def _get_ranker() -> Ranker:
     """
     Thread-safe lazy initialization of FlashRank.
 
-    FlashRank loads a local ONNX cross-encoder:
-        ms-marco-MiniLM-L-6-v2
+    FlashRank loads a local ONNX cross-encoder.
     """
 
     global _ranker
@@ -79,13 +95,13 @@ def _get_ranker() -> Ranker:
 
         except Exception as exc:
             logfire.warning(
-                f"FlashRank cache_dir initialization failed "
+                "FlashRank cache_dir initialization failed "
                 f"({exc}); retrying with default cache."
             )
 
             _ranker = Ranker()
 
-        logfire.info("✅ FlashRank model initialized")
+        logfire.info("FlashRank model initialized")
 
         return _ranker
 
@@ -114,8 +130,7 @@ def _normalize_document(
             "score": 0.82
         }
 
-    This is the key compatibility fix for the current
-    KnowledgeMesh retrieval pipeline.
+    The original document metadata is preserved.
     """
 
     # --------------------------------------------------------
@@ -134,7 +149,7 @@ def _normalize_document(
     if isinstance(document, dict):
         normalized = dict(document)
 
-        # If requested text key already exists, keep it.
+        # Requested text key already exists.
         value = normalized.get(text_key)
 
         if value is not None and str(value).strip():
@@ -142,7 +157,7 @@ def _normalize_document(
             return normalized
 
         # ----------------------------------------------------
-        # Try common alternative text fields
+        # Common alternative text fields
         # ----------------------------------------------------
 
         alternative_keys = (
@@ -159,7 +174,6 @@ def _normalize_document(
 
             if value is not None and str(value).strip():
                 normalized[text_key] = str(value)
-
                 return normalized
 
         # No usable text.
@@ -177,52 +191,54 @@ def _normalize_document(
 
 
 # ============================================================
-# GP005 DIAGNOSTIC TRACE (temporary)
+# FLASHRANK RESULT HELPERS
 # ============================================================
 
 
-def _log_gp005_trace(query: str, results: list, indexed_docs: list) -> None:
+def _extract_result_id(result: Any) -> str:
     """
-    Print a debug trace for one specific diagnostic query.
-
-    Isolated in its own function so it can never affect (or be
-    accidentally nested around) the real result-mapping logic in
-    `rerank_documents`. Safe to delete once GP005 is resolved.
+    Extract the passage identifier from a FlashRank result.
     """
 
-    if query != _GP005_TRACE_QUERY:
-        return
+    if isinstance(result, dict):
+        value = result.get("id")
+    else:
+        value = getattr(result, "id", None)
 
-    for result in results:
-        result_id = str(
-            result.get("id") if isinstance(result, dict) else getattr(result, "id", "")
-        )
+    if value is None:
+        return ""
 
-        original = next(
-            (document for index, document in indexed_docs if str(index) == result_id),
-            None,
-        )
+    return str(value)
 
-        if original is None:
-            continue
 
-        chunk_id = original.get("chunk_id")
+def _extract_result_score(result: Any) -> Optional[float]:
+    """
+    Extract the FlashRank score.
 
-        if (
-            str(original.get("document_id")) == _GP005_TARGET_DOCUMENT_ID
-            and int(chunk_id or -1) in _GP005_TARGET_CHUNK_IDS
-        ):
-            score = (
-                result.get("score")
-                if isinstance(result, dict)
-                else getattr(result, "score", None)
-            )
-            print(
-                "GP005 FLASHRANK:",
-                f"chunk_id={chunk_id}",
-                f"score={score}",
-                flush=True,
-            )
+    FlashRank normally returns:
+
+        {
+            "id": "...",
+            "text": "...",
+            "score": ...
+        }
+
+    The score is explicitly converted to float so numpy scalar
+    values such as np.float32 are safely propagated.
+    """
+
+    if isinstance(result, dict):
+        value = result.get("score")
+    else:
+        value = getattr(result, "score", None)
+
+    if value is None:
+        return None
+
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
 
 
 # ============================================================
@@ -247,20 +263,13 @@ def rerank_documents(
     documents:
         Retrieved documents.
 
-        Supports both:
+        Supports:
 
             List[str]
 
         and:
 
             List[dict]
-
-        Structured dictionaries should preferably contain:
-
-            content
-            source
-            source_type
-            score
 
     top_n:
         Maximum number of results returned.
@@ -277,6 +286,10 @@ def rerank_documents(
     Failure behavior
     ----------------
     If FlashRank fails, the original retrieval order is returned.
+
+    Important
+    ---------
+    A missing FlashRank score is never converted to 0.0.
     """
 
     # ========================================================
@@ -293,9 +306,13 @@ def rerank_documents(
     if not isinstance(query, str) or not query.strip():
         raise ValueError("query must be a non-empty string")
 
-    start_time = time.time()
+    start_time = time.perf_counter()
 
-    logfire.info(f"Sending {len(documents)} doc(s) to FlashRank cross-encoder...")
+    logfire.info(
+        "Sending documents to FlashRank cross-encoder",
+        input_documents=len(documents),
+        top_n=top_n,
+    )
 
     # ========================================================
     # NORMALIZE INPUT
@@ -340,20 +357,18 @@ def rerank_documents(
         # BUILD FLASHRANK PASSAGES
         # ====================================================
 
-        passages = []
-
-        for index, document in indexed_docs:
-            passages.append(
-                {
-                    "id": str(index),
-                    "text": str(
-                        document.get(
-                            text_key,
-                            "",
-                        )
-                    ),
-                }
-            )
+        passages = [
+            {
+                "id": str(index),
+                "text": str(
+                    document.get(
+                        text_key,
+                        "",
+                    )
+                ),
+            }
+            for index, document in indexed_docs
+        ]
 
         # ====================================================
         # RERANK
@@ -366,91 +381,130 @@ def rerank_documents(
 
         results = ranker.rerank(request)
 
-        # GP005 diagnostic trace never gates the logic below it.
-        _log_gp005_trace(query, results, indexed_docs)
+        if results is None:
+            results = []
 
         # ====================================================
-        # MAP RESULTS BACK TO ORIGINAL DOCUMENTS
+        # MAP FLASHRANK RESULTS BACK TO DOCUMENTS
         # ====================================================
 
         by_id = {str(index): document for index, document in indexed_docs}
 
         reranked: List[RankedResult] = []
 
+        mapping_misses = 0
+        missing_scores = 0
+
         for result in results[:top_n]:
-            # FlashRank normally returns dictionaries.
-            # Handle object-style results defensively too.
-
-            if isinstance(result, dict):
-                result_id = str(result.get("id"))
-
-                rerank_score = result.get("score")
-
-            else:
-                result_id = str(
-                    getattr(
-                        result,
-                        "id",
-                        "",
-                    )
-                )
-
-                rerank_score = getattr(
-                    result,
-                    "score",
-                    None,
-                )
+            result_id = _extract_result_id(result)
+            rerank_score = _extract_result_score(result)
 
             original = by_id.get(result_id)
 
             if original is None:
+                mapping_misses += 1
                 continue
 
             enriched = dict(original)
 
+            # ------------------------------------------------
+            # Critical score propagation
+            # ------------------------------------------------
+
             if rerank_score is not None:
-                enriched["rerank_score"] = float(rerank_score)
+                enriched["rerank_score"] = rerank_score
+            else:
+                missing_scores += 1
 
             reranked.append(enriched)
 
         # ====================================================
-        # LOG RESULT
+        # OBSERVABILITY
         # ====================================================
 
-        duration = time.time() - start_time
+        duration = time.perf_counter() - start_time
 
-        top_score = reranked[0].get("rerank_score") if reranked else "N/A"
+        top_score = reranked[0].get("rerank_score") if reranked else None
 
         logfire.info(
-            f"Rerank done in {duration:.2f}s. "
-            f"Kept {len(reranked)} document(s). "
-            f"Top score: {top_score}."
+            "FlashRank reranking completed",
+            input_documents=len(normalized_documents),
+            non_empty_documents=len(indexed_docs),
+            flashrank_results=len(results),
+            mapped_results=len(reranked),
+            mapping_misses=mapping_misses,
+            missing_scores=missing_scores,
+            top_rerank_score=top_score,
+            duration_ms=round(
+                duration * 1000,
+                2,
+            ),
         )
 
-        # ----------------------------------------------------
-        # Defensive fallback if FlashRank returned nothing
-        # ----------------------------------------------------
+        # ====================================================
+        # DEFENSIVE FALLBACK
+        # ====================================================
 
         if not reranked:
             logfire.warning(
-                "⚠️ FlashRank returned no usable results. "
+                "FlashRank returned no usable mapped results. "
                 "Falling back to original retrieval order."
             )
 
             return [dict(document) for document in normalized_documents[:top_n]]
 
-        return reranked
+        # ====================================================
+        # IMPORTANT SAFETY CHECK
+        # ====================================================
+
+        # A successful reranking result must carry a semantic
+        # score. Missing scores must never become 0.0 because
+        # downstream retrieval interprets the score as semantic
+        # evidence quality.
+
+        valid_scored_results = [
+            document
+            for document in reranked
+            if document.get("rerank_score") is not None
+        ]
+
+        if not valid_scored_results:
+            logfire.warning(
+                "FlashRank returned mapped documents but no "
+                "valid rerank scores. Falling back to original "
+                "retrieval order."
+            )
+
+            return [dict(document) for document in normalized_documents[:top_n]]
+
+        # ====================================================
+        # FINAL ORDER
+        # ====================================================
+
+        valid_scored_results.sort(
+            key=lambda document: float(document["rerank_score"]),
+            reverse=True,
+        )
+
+        return valid_scored_results[:top_n]
 
     # ========================================================
     # GRACEFUL FAILURE
     # ========================================================
 
     except Exception as exc:
-        logfire.exception("❌ FlashRank reranking failed")
+        duration = time.perf_counter() - start_time
+
+        logfire.exception(
+            "FlashRank reranking failed",
+            duration_ms=round(
+                duration * 1000,
+                2,
+            ),
+        )
 
         logfire.warning(
-            f"⚠️ Falling back to original retrieval "
-            f"order because reranking failed: {exc}"
+            f"Falling back to original retrieval order because reranking failed: {exc}"
         )
 
         return [dict(document) for document in normalized_documents[:top_n]]
@@ -482,7 +536,12 @@ def rerank_texts(
     if not documents:
         return []
 
-    wrapped = [{"content": document} for document in documents]
+    wrapped = [
+        {
+            "content": document,
+        }
+        for document in documents
+    ]
 
     reranked = rerank_documents(
         query=query,
@@ -500,4 +559,3 @@ def rerank_texts(
         )
         for result in reranked
     ]
-

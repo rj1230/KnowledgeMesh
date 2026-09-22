@@ -7,37 +7,33 @@ Responsibilities
 2. Validate atomic claims rather than trusting whole paragraphs.
 3. Validate citation IDs against actual generation evidence.
 4. Use strict entailment scoring.
-5. Evaluate claims against bounded evidence windows rather than isolated
-   sentences, preserving local context from the exact cited chunk.
-6. Allow only conservative exact/near-exact evidence matches as a
-   deterministic support path.
-7. Produce a stable grounding_scores schema for downstream graph nodes.
-8. Export unsupported_atomic_claims for the revision node/UI.
-9. Export revision_prompt when grounding fails.
-10. Keep answer_supported strictly boolean.
-11. Never weaken grounding simply because a citation exists.
+5. Evaluate claims against bounded evidence windows.
+6. Normalize PDF-extracted evidence before sentence/window construction.
+7. Allow conservative exact/near-exact evidence matches.
+8. Produce a stable grounding_scores schema.
+9. Export unsupported_atomic_claims for revision/UI.
+10. Export revision_prompt when grounding fails.
+11. Keep answer_supported strictly boolean.
+12. Never weaken grounding simply because a citation exists.
 
 Evidence architecture
 ---------------------
-The responder preserves the complete evidence text for every citation.
-
-The grounding critic therefore uses:
 
     citation
         ↓
-    full cited chunk
+    complete cited chunk
         ↓
-    bounded evidence windows
+    normalized evidence text
         ↓
-    relevant candidate windows
+    semantic evidence units
+        ↓
+    bounded contextual windows
+        ↓
+    lexical candidate ranking
         ↓
     HHEMv2 entailment
         ↓
     best supported window
-
-This avoids the previous failure mode where a multi-fact claim was
-compared against only one isolated sentence from an otherwise strongly
-supporting chunk.
 """
 
 from __future__ import annotations
@@ -53,47 +49,16 @@ from typing import Any, Dict, Iterable, List, Sequence, Tuple
 
 ENTAILMENT_THRESHOLD = 0.50
 
-# Conservative deterministic evidence matching.
-#
-# This does NOT lower the entailment threshold.
-# It is only used when the generated claim is essentially a textual
-# restatement of a single evidence window.
 EXACT_MATCH_MIN_TOKENS = 6
 EXACT_MATCH_TOKEN_COVERAGE = 0.94
 EXACT_MATCH_SEQUENCE_RATIO = 0.90
 
-# ---------------------------------------------------------------------------
-# Evidence-window configuration
-# ---------------------------------------------------------------------------
-
-# Number of neighboring sentences retained around a candidate sentence.
-#
-# Example:
-#
-#     sentence[i-1] + sentence[i] + sentence[i+1]
-#
-# This gives HHEMv2 enough local context for claims that combine facts
-# distributed across adjacent sentences.
 EVIDENCE_WINDOW_RADIUS = 1
-
-# Also evaluate slightly larger windows for multi-fact technical claims.
 EVIDENCE_LARGE_WINDOW_RADIUS = 2
 
-# Maximum number of candidate windows sent to HHEMv2 for one atomic claim.
-#
-# This prevents the critic from exploding computational cost while still
-# evaluating several plausible evidence contexts.
 MAX_ENTAILMENT_CANDIDATES = 8
 
-# Minimum lexical overlap used only to rank candidate evidence windows.
-#
-# This is NOT a grounding threshold.
-# HHEMv2 remains the actual semantic support decision.
 MIN_WINDOW_OVERLAP = 1
-
-# If lexical candidate selection finds nothing useful, retain a small
-# fallback set of windows so that HHEMv2 still gets an opportunity to
-# detect semantic support.
 FALLBACK_WINDOW_COUNT = 3
 
 
@@ -138,8 +103,10 @@ def _dedupe_preserve_order(values: Iterable[str]) -> List[str]:
         if not value:
             continue
 
-        if value not in seen:
-            seen.add(value)
+        key = value
+
+        if key not in seen:
+            seen.add(key)
             output.append(value)
 
     return output
@@ -180,11 +147,6 @@ def _is_table_separator(text: str) -> bool:
 
 
 def _is_non_claim_line(text: str) -> bool:
-    """
-    Returns True for markdown-only / structural lines that should not
-    be treated as factual claims.
-    """
-
     stripped = text.strip()
 
     if not stripped:
@@ -221,7 +183,6 @@ def _clean_claim_text(text: str) -> str:
     text = _strip_markdown_prefix(text)
 
     text = text.strip(" `*_")
-
     text = re.sub(r"\s+", " ", text)
 
     return text.strip()
@@ -231,9 +192,8 @@ def _split_compound_claim(text: str) -> List[str]:
     """
     Conservative atomic-claim splitter.
 
-    We intentionally avoid aggressive splitting because over-splitting
-    can turn one supported technical statement into several artificial
-    unsupported claims.
+    Avoids aggressive splitting because technical statements frequently
+    contain several dependent clauses that should be evaluated together.
     """
 
     text = _clean_claim_text(text)
@@ -241,7 +201,10 @@ def _split_compound_claim(text: str) -> List[str]:
     if not text:
         return []
 
-    pieces = re.split(r";\s+", text)
+    pieces = re.split(
+        r";\s+",
+        text,
+    )
 
     cleaned: List[str] = []
 
@@ -282,12 +245,6 @@ def _split_compound_claim(text: str) -> List[str]:
 
 
 def _extract_claim_records(answer: str) -> List[Dict[str, Any]]:
-    """
-    Convert the final answer into top-level claim records.
-
-    A record represents one citation-bearing / factual answer unit.
-    """
-
     lines = answer.splitlines()
 
     records: List[Dict[str, Any]] = []
@@ -328,10 +285,6 @@ def _extract_claim_records(answer: str) -> List[Dict[str, Any]]:
 
 
 def _extract_text_from_document(document: Any) -> str:
-    """
-    Extract usable evidence text from a retrieved document-like object.
-    """
-
     if document is None:
         return ""
 
@@ -404,72 +357,267 @@ def _extract_citation_id(document: Any) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Evidence normalization / sentence extraction
+# PDF / extraction normalization
 # ---------------------------------------------------------------------------
 
 
-def _split_evidence_sentences(text: str) -> List[str]:
+def _normalize_extracted_text(text: str) -> str:
     """
-    Extract sentence-like units from one cited chunk.
+    Normalize common PDF extraction artifacts.
 
-    Unlike the previous implementation, these sentences are NOT treated
-    as independent evidence documents. They are the building blocks for
-    bounded contextual windows.
+    This is deliberately conservative.
+
+    It fixes:
+      - broken whitespace
+      - repeated whitespace
+      - soft line breaks
+      - Unicode punctuation
+      - common hyphenation across line breaks
+      - obvious page-artifact spacing
+
+    It does NOT attempt aggressive linguistic rewriting.
     """
 
     text = _safe_text(text)
 
     if not text:
+        return ""
+
+    replacements = {
+        "\u00a0": " ",
+        "\u2018": "'",
+        "\u2019": "'",
+        "\u201c": '"',
+        "\u201d": '"',
+        "\u2013": "-",
+        "\u2014": "-",
+        "\u2212": "-",
+        "\u00ad": "",
+    }
+
+    for old, new in replacements.items():
+        text = text.replace(old, new)
+
+    # Normalize CRLF/CR.
+    text = text.replace("\r\n", "\n")
+    text = text.replace("\r", "\n")
+
+    # Repair words broken by PDF line wrapping:
+    #
+    #   retriev-
+    #   al
+    #
+    # becomes:
+    #
+    #   retrieval
+    #
+    text = re.sub(
+        r"([A-Za-z]{2,})-\s*\n\s*([a-z]{2,})",
+        r"\1\2",
+        text,
+    )
+
+    # Replace line breaks between ordinary prose with spaces.
+    #
+    # Keep blank lines because they often represent paragraph boundaries.
+    text = re.sub(
+        r"(?<!\n)\n(?!\n)",
+        " ",
+        text,
+    )
+
+    # Collapse excessive whitespace.
+    text = re.sub(
+        r"[ \t]+",
+        " ",
+        text,
+    )
+
+    text = re.sub(
+        r"\n{3,}",
+        "\n\n",
+        text,
+    )
+
+    return text.strip()
+
+
+def _clean_evidence_line(line: str) -> str:
+    line = _safe_text(line)
+
+    if not line:
+        return ""
+
+    line = re.sub(
+        r"\s+",
+        " ",
+        line,
+    )
+
+    return line.strip()
+
+
+def _looks_like_structural_fragment(text: str) -> bool:
+    """
+    Detect tiny extraction fragments that should not become independent
+    evidence units.
+
+    Examples:
+        lly,
+        er,
+        3.
+        -
+    """
+
+    text = _safe_text(text)
+
+    if not text:
+        return True
+
+    cleaned = text.strip(" -–—•:;,.()[]{}")
+
+    if not cleaned:
+        return True
+
+    # Very short alphabetic fragments are usually extraction artifacts.
+    if len(cleaned) <= 3 and cleaned.isalpha():
+        return True
+
+    return False
+
+
+def _merge_short_fragments(units: Sequence[str]) -> List[str]:
+    """
+    Merge short PDF fragments into neighboring prose.
+
+    This prevents artifacts such as:
+
+        'lly,'
+        'DPR follows...'
+
+    from becoming independent evidence candidates.
+    """
+
+    merged: List[str] = []
+
+    for unit in units:
+        unit = _clean_evidence_line(unit)
+
+        if not unit:
+            continue
+
+        if not merged:
+            merged.append(unit)
+            continue
+
+        previous = merged[-1]
+
+        # Tiny fragment: attach to previous unit.
+        if len(unit) <= 8 and not re.search(r"[.!?]$", previous):
+            merged[-1] = f"{previous} {unit}".strip()
+            continue
+
+        # Previous tiny fragment: merge into current unit.
+        if len(previous) <= 8:
+            merged[-1] = f"{previous} {unit}".strip()
+            continue
+
+        merged.append(unit)
+
+    return merged
+
+
+# ---------------------------------------------------------------------------
+# Evidence sentence / unit construction
+# ---------------------------------------------------------------------------
+
+
+def _split_evidence_sentences(text: str) -> List[str]:
+    """
+    Build clean sentence-like evidence units.
+
+    Important difference from the old implementation:
+
+    We normalize PDF extraction BEFORE sentence construction.
+
+    We also preserve paragraph boundaries and avoid treating every raw
+    line as a standalone sentence.
+    """
+
+    text = _normalize_extracted_text(text)
+
+    if not text:
         return []
 
-    sentences: List[str] = []
+    paragraphs = re.split(
+        r"\n{2,}",
+        text,
+    )
 
-    # Preserve paragraph structure first.
-    blocks = re.split(r"\n{2,}", text)
+    units: List[str] = []
 
-    for block in blocks:
-        block = block.strip()
+    for paragraph in paragraphs:
+        paragraph = paragraph.strip()
 
-        if not block:
+        if not paragraph:
             continue
 
-        lines = [line.strip() for line in block.splitlines() if line.strip()]
+        # Tables should remain intact.
+        if "|" in paragraph and paragraph.count("|") >= 2:
+            cleaned = _clean_evidence_line(paragraph)
 
-        if not lines:
+            if cleaned and not _looks_like_structural_fragment(cleaned):
+                units.append(cleaned)
+
             continue
 
-        # Markdown bullets are often semantically self-contained.
-        for line in lines:
-            if BULLET_PATTERN.match(line):
-                cleaned = line.strip()
+        # Markdown bullets can contain complete evidence statements.
+        bullet_lines = re.split(
+            r"(?=\n\s*(?:[-*•]|\d+[.)])\s+)",
+            paragraph,
+        )
 
-                if cleaned:
-                    sentences.append(cleaned)
+        for block in bullet_lines:
+            block = block.strip()
 
+            if not block:
                 continue
 
-            # Table-like lines should remain intact.
-            if "|" in line:
-                sentences.append(line)
+            block = BULLET_PATTERN.sub(
+                "",
+                block,
+            ).strip()
+
+            if not block:
                 continue
 
-            # Normal prose sentence splitting.
+            # Sentence splitting is intentionally conservative.
             parts = re.split(
                 r"(?<=[.!?])\s+(?=[A-Z0-9`\"'(\[])",
-                line,
+                block,
             )
 
-            sentences.extend(part.strip() for part in parts if part.strip())
+            for part in parts:
+                part = _clean_evidence_line(part)
 
-    return _dedupe_preserve_order(sentences)
+                if not part:
+                    continue
+
+                if _looks_like_structural_fragment(part):
+                    continue
+
+                units.append(part)
+
+    units = _merge_short_fragments(units)
+
+    return _dedupe_preserve_order(units)
 
 
 def _split_evidence_units(text: str) -> List[str]:
     """
     Backward-compatible helper.
 
-    It now returns bounded evidence windows rather than isolated
-    sentence fragments.
+    Returns bounded evidence windows.
     """
 
     return _build_evidence_windows(text)
@@ -477,36 +625,25 @@ def _split_evidence_units(text: str) -> List[str]:
 
 def _build_evidence_windows(text: str) -> List[str]:
     """
-    Build bounded contextual evidence windows from a complete cited chunk.
+    Build bounded contextual windows from the complete cited chunk.
 
-    Windows are intentionally local rather than whole-document.
+    We deliberately keep several granularities:
 
-    For example, with sentences:
+        sentence
+        sentence +/- 1
+        sentence +/- 2
+        paragraph
 
-        S1
-        S2
-        S3
-        S4
-        S5
-
-    we generate windows such as:
-
-        S1 + S2
-        S1 + S2 + S3
-        S2 + S3 + S4
-        S3 + S4 + S5
-        S4 + S5
-
-    This preserves neighboring context while preventing every claim from
-    being compared against an arbitrarily large chunk.
+    This gives HHEMv2 a local semantic context without passing an entire
+    potentially noisy PDF chunk as one enormous premise.
     """
 
-    text = _safe_text(text)
+    normalized = _normalize_extracted_text(text)
 
-    if not text:
+    if not normalized:
         return []
 
-    sentences = _split_evidence_sentences(text)
+    sentences = _split_evidence_sentences(normalized)
 
     if not sentences:
         return []
@@ -514,16 +651,14 @@ def _build_evidence_windows(text: str) -> List[str]:
     windows: List[str] = []
 
     # ---------------------------------------------------------------
-    # Single-sentence windows.
-    #
-    # These are useful for exact support and concise claims.
+    # Single evidence units
     # ---------------------------------------------------------------
 
     for sentence in sentences:
         windows.append(sentence)
 
     # ---------------------------------------------------------------
-    # Local contextual windows.
+    # Local contextual windows
     # ---------------------------------------------------------------
 
     for radius in (
@@ -537,8 +672,15 @@ def _build_evidence_windows(text: str) -> List[str]:
             continue
 
         for center in range(len(sentences)):
-            start = max(0, center - radius)
-            end = min(len(sentences), center + radius + 1)
+            start = max(
+                0,
+                center - radius,
+            )
+
+            end = min(
+                len(sentences),
+                center + radius + 1,
+            )
 
             window = " ".join(sentences[start:end]).strip()
 
@@ -546,38 +688,36 @@ def _build_evidence_windows(text: str) -> List[str]:
                 windows.append(window)
 
     # ---------------------------------------------------------------
-    # Paragraph-level fallback.
-    #
-    # Useful for structured bullets/tables where sentence splitting
-    # may destroy the semantic relationship between adjacent lines.
+    # Paragraph-level fallback
     # ---------------------------------------------------------------
 
-    for block in re.split(r"\n{2,}", text):
-        block = re.sub(r"\s+", " ", block).strip()
+    for block in re.split(
+        r"\n{2,}",
+        normalized,
+    ):
+        block = re.sub(
+            r"\s+",
+            " ",
+            block,
+        ).strip()
 
-        if block:
+        if not block:
+            continue
+
+        if len(block) >= 20:
             windows.append(block)
 
     return _dedupe_preserve_order(windows)
 
 
 # ---------------------------------------------------------------------------
-# Citation provenance resolution
+# Citation provenance
 # ---------------------------------------------------------------------------
 
 
 def _resolve_citation_provenance(
     citation_provenance: Any,
 ) -> Dict[str, List[str]]:
-    """
-    Build citation_id -> bounded evidence-window mapping.
-
-    The complete provenance text is first recovered and then converted
-    into contextual windows.
-
-    The full raw text remains available in state['citation_provenance']
-    for audit/debugging. This function only creates the evaluation view.
-    """
 
     result: Dict[str, List[str]] = {}
 
@@ -595,6 +735,7 @@ def _resolve_citation_provenance(
                     item["citation_id"] = key
 
                 iterable.append(item)
+
             else:
                 iterable.append(
                     {
@@ -658,12 +799,6 @@ def _resolve_citation_provenance(
 def _resolve_documents_by_citation(
     documents: Sequence[Any],
 ) -> Dict[str, List[str]]:
-    """
-    Build citation -> bounded evidence-window mapping from generation
-    documents.
-
-    Also supports positional chunk IDs such as chunk_1, chunk_2, etc.
-    """
 
     result: Dict[str, List[str]] = {}
 
@@ -699,17 +834,14 @@ def _build_evidence_map(
     state: Dict[str, Any],
 ) -> Dict[str, List[str]]:
     """
-    Resolve the exact evidence used during answer generation.
+    Resolve exact generation evidence.
 
     Priority:
-      1. citation_provenance
-      2. generation_documents
-      3. web_documents
-      4. documents
 
-    Important:
-        citation_provenance wins because it is the responder's canonical
-        mapping between [chunk_N] and the exact generation evidence.
+        1. citation_provenance
+        2. generation_documents
+        3. web_documents
+        4. documents
     """
 
     evidence_map: Dict[str, List[str]] = {}
@@ -754,7 +886,7 @@ def _build_evidence_map(
 
 
 # ---------------------------------------------------------------------------
-# Evidence-window relevance ranking
+# Evidence relevance ranking
 # ---------------------------------------------------------------------------
 
 
@@ -844,7 +976,10 @@ _WINDOW_STOPWORDS = {
 }
 
 
-def _normalize_window_token(token: str) -> str:
+def _normalize_window_token(
+    token: str,
+) -> str:
+
     token = str(token).lower().strip()
 
     if not token:
@@ -862,7 +997,10 @@ def _normalize_window_token(token: str) -> str:
     return token
 
 
-def _window_tokens(text: str) -> set[str]:
+def _window_tokens(
+    text: str,
+) -> set[str]:
+
     raw_tokens = re.findall(
         r"[A-Za-z0-9][A-Za-z0-9_-]*",
         _strip_citations(text).lower(),
@@ -888,15 +1026,9 @@ def _window_relevance_score(
     claim: str,
     evidence_window: str,
 ) -> Tuple[float, int, float]:
-    """
-    Rank evidence windows for HHEMv2 candidate selection.
-
-    This is retrieval/ranking only.
-
-    It does NOT determine grounding support.
-    """
 
     claim_tokens = _window_tokens(claim)
+
     evidence_tokens = _window_tokens(evidence_window)
 
     if not claim_tokens or not evidence_tokens:
@@ -911,8 +1043,6 @@ def _window_relevance_score(
         1,
     )
 
-    # Small phrase bonus helps choose the correct local window when
-    # several windows contain generic vocabulary.
     claim_words = [
         token
         for token in re.findall(
@@ -932,11 +1062,23 @@ def _window_relevance_score(
     ]
 
     claim_bigrams = {
-        tuple(claim_words[i : i + 2]) for i in range(max(0, len(claim_words) - 1))
+        tuple(claim_words[i : i + 2])
+        for i in range(
+            max(
+                0,
+                len(claim_words) - 1,
+            )
+        )
     }
 
     evidence_bigrams = {
-        tuple(evidence_words[i : i + 2]) for i in range(max(0, len(evidence_words) - 1))
+        tuple(evidence_words[i : i + 2])
+        for i in range(
+            max(
+                0,
+                len(evidence_words) - 1,
+            )
+        )
     }
 
     phrase_bonus = len(claim_bigrams.intersection(evidence_bigrams))
@@ -954,14 +1096,6 @@ def _select_entailment_candidates(
     claim: str,
     evidence_windows: Sequence[str],
 ) -> List[str]:
-    """
-    Select a bounded set of likely evidence windows.
-
-    HHEMv2 is only run on these candidates.
-
-    If lexical ranking cannot identify a useful candidate, a small
-    deterministic fallback set is retained.
-    """
 
     unique_windows = _dedupe_preserve_order(evidence_windows)
 
@@ -1013,13 +1147,6 @@ def _select_entailment_candidates(
 
         return [item[0] for item in relevant[:MAX_ENTAILMENT_CANDIDATES]]
 
-    # ---------------------------------------------------------------
-    # Semantic fallback.
-    #
-    # If lexical overlap is poor, still allow HHEMv2 to inspect a few
-    # evidence windows. This matters for paraphrases.
-    # ---------------------------------------------------------------
-
     fallback = sorted(
         scored,
         key=lambda item: item[4],
@@ -1033,7 +1160,10 @@ def _select_entailment_candidates(
 # ---------------------------------------------------------------------------
 
 
-def _normalize_for_exact_match(text: str) -> str:
+def _normalize_for_exact_match(
+    text: str,
+) -> str:
+
     text = _safe_text(text)
 
     if not text:
@@ -1053,7 +1183,10 @@ def _normalize_for_exact_match(text: str) -> str:
     }
 
     for old, new in replacements.items():
-        text = text.replace(old, new)
+        text = text.replace(
+            old,
+            new,
+        )
 
     text = _strip_citations(text)
     text = _strip_markdown_prefix(text)
@@ -1071,7 +1204,10 @@ def _normalize_for_exact_match(text: str) -> str:
     ).strip()
 
 
-def _content_tokens(text: str) -> List[str]:
+def _content_tokens(
+    text: str,
+) -> List[str]:
+
     normalized = _normalize_for_exact_match(text)
 
     if not normalized:
@@ -1084,12 +1220,6 @@ def _deterministic_exact_support(
     claim: str,
     evidence: str,
 ) -> Tuple[bool, float]:
-    """
-    Conservative support path.
-
-    This only succeeds when the claim is essentially a textual
-    restatement of one evidence window.
-    """
 
     claim_normalized = _normalize_for_exact_match(claim)
 
@@ -1128,11 +1258,14 @@ def _deterministic_exact_support(
     ).ratio()
 
     if ratio >= EXACT_MATCH_SEQUENCE_RATIO:
-        return True, min(
-            1.0,
-            max(
-                overlap,
-                ratio,
+        return (
+            True,
+            min(
+                1.0,
+                max(
+                    overlap,
+                    ratio,
+                ),
             ),
         )
 
@@ -1145,10 +1278,6 @@ def _deterministic_exact_support(
 
 
 def _get_entailment_scorer():
-    """
-    Return the project's canonical HHEMv2 entailment scorer.
-    """
-
     try:
         from app.tools.entailment_tool import score_entailment
 
@@ -1165,17 +1294,6 @@ def _score_claim_against_evidence(
     claim: str,
     evidence_units: Sequence[str],
 ) -> Tuple[float, str]:
-    """
-    Score one atomic claim against bounded evidence windows.
-
-    HHEMv2 contract:
-
-        premise    = trusted evidence window
-        hypothesis = generated claim
-
-    Candidate windows are selected before HHEMv2 to preserve local
-    context without evaluating every possible evidence fragment.
-    """
 
     claim = _clean_claim_text(claim)
 
@@ -1202,9 +1320,6 @@ def _score_claim_against_evidence(
             continue
 
         try:
-            # HHEMv2 contract:
-            # premise    = evidence
-            # hypothesis = generated claim
             score = scorer(
                 premise=evidence_unit,
                 hypothesis=claim,
@@ -1219,8 +1334,6 @@ def _score_claim_against_evidence(
             )
 
         except Exception:
-            # A failure on one candidate must not prevent evaluation
-            # against the remaining candidates.
             continue
 
         if score > best_score:
@@ -1285,7 +1398,7 @@ def _validate_atomic_claim(
             continue
 
         # -----------------------------------------------------------
-        # Conservative exact textual support.
+        # Deterministic exact support
         # -----------------------------------------------------------
 
         for evidence_window in evidence_windows:
@@ -1304,7 +1417,7 @@ def _validate_atomic_claim(
                 best_method = "deterministic_exact_match"
 
         # -----------------------------------------------------------
-        # Strict semantic entailment.
+        # HHEMv2
         # -----------------------------------------------------------
 
         try:
@@ -1437,15 +1550,17 @@ def grounding_critic_node(
             "unsupported_claims": [],
             "uncited_claims": [],
             "invalid_citations": [],
-            "entailment_threshold": ENTAILMENT_THRESHOLD,
+            "entailment_threshold": (ENTAILMENT_THRESHOLD),
             "claim_count": 0,
             "atomic_claim_count": 0,
             "unsupported_atomic_count": 0,
             "available_citation_count": 0,
             "evidence_window": {
                 "radius": EVIDENCE_WINDOW_RADIUS,
-                "large_radius": EVIDENCE_LARGE_WINDOW_RADIUS,
-                "max_candidates": MAX_ENTAILMENT_CANDIDATES,
+                "large_radius": (EVIDENCE_LARGE_WINDOW_RADIUS),
+                "max_candidates": (MAX_ENTAILMENT_CANDIDATES),
+                "fallback_candidates": (FALLBACK_WINDOW_COUNT),
+                "minimum_lexical_overlap": (MIN_WINDOW_OVERLAP),
             },
         }
 
@@ -1463,29 +1578,24 @@ def grounding_critic_node(
         }
 
     # ------------------------------------------------------------------
-    # Extract claims and evidence
+    # Extract claims/evidence
     # ------------------------------------------------------------------
 
     claim_records = _extract_claim_records(final_answer)
 
     evidence_map = _build_evidence_map(state)
 
-    # A citation is valid only when actual generation evidence can be
-    # resolved for it.
     available_citations = {
         citation_id for citation_id, windows in evidence_map.items() if windows
     }
 
     atomic_results: List[Dict[str, Any]] = []
-
     claim_results: List[Dict[str, Any]] = []
 
     unsupported_claims: List[Dict[str, Any]] = []
-
     unsupported_atomic_claims: List[Dict[str, Any]] = []
 
     uncited_claims: List[Dict[str, Any]] = []
-
     invalid_citations: List[Dict[str, Any]] = []
 
     substantive_results: List[Dict[str, Any]] = []
@@ -1507,7 +1617,7 @@ def grounding_critic_node(
         atomic_claims = record.get("atomic_claims") or [claim_text]
 
         # --------------------------------------------------------------
-        # Citation checks
+        # Citation validation
         # --------------------------------------------------------------
 
         missing_citations = [
@@ -1652,15 +1762,11 @@ def grounding_critic_node(
         "unsupported_claims": unsupported_claims,
         "uncited_claims": uncited_claims,
         "invalid_citations": invalid_citations,
-        "entailment_threshold": ENTAILMENT_THRESHOLD,
+        "entailment_threshold": (ENTAILMENT_THRESHOLD),
         "claim_count": len(claim_results),
         "atomic_claim_count": len(atomic_results),
         "unsupported_atomic_count": len(unsupported_atomic_claims),
         "available_citation_count": len(available_citations),
-        # --------------------------------------------------------------
-        # Explicit evidence-window configuration.
-        # Useful for observability and eval debugging.
-        # --------------------------------------------------------------
         "evidence_window": {
             "radius": EVIDENCE_WINDOW_RADIUS,
             "large_radius": (EVIDENCE_LARGE_WINDOW_RADIUS),

@@ -2,23 +2,22 @@
 KnowledgeMesh · Final Responder Node
 ====================================
 
-Final answer generation for the Agentic RAG pipeline.
+Final grounded-answer generation for the Agentic RAG pipeline.
 
 Responsibilities
 ----------------
 1. Build grounded generation context from private OR web evidence.
-2. Enforce strict private-first → web-fallback evidence boundaries.
+2. Enforce private-first → web-fallback evidence boundaries.
 3. Build canonical citation provenance from exact generation evidence.
 4. Preserve historical retrieval provenance for audit/debugging.
-5. Consume claim-level revision instructions from revision_node.
-6. Enforce citation-aware generation.
-7. Preserve valid model citations and use deterministic citation
-   alignment only as a fallback.
-8. Preserve graph state when Portkey generation fails.
-9. Propagate context-evaluation state.
-10. Keep generated answers strictly evidence-constrained.
-11. Never generate from unapproved or ungraded private evidence.
-12. Fail closed when no generation-approved evidence exists.
+5. Consume claim-level revision instructions.
+6. Consume citation and grounding feedback during revisions.
+7. Enforce citation-aware generation.
+8. Preserve valid model citations.
+9. Use deterministic citation alignment only as a fallback.
+10. Preserve graph state when Portkey generation fails.
+11. Fail closed when no generation-approved evidence exists.
+12. Maintain bounded answer revision state.
 """
 
 from __future__ import annotations
@@ -30,7 +29,10 @@ from typing import Any, Dict, List, Optional, Tuple
 import logfire
 
 from app.agents.state import AgentState
-from app.gateway import extract_cache_status, portkey_client
+from app.gateway import (
+    create_chat_completion,
+    extract_cache_status,
+)
 from app.gateway.client import PORTKEY_PRIMARY_MODEL
 
 
@@ -114,15 +116,11 @@ _SIMPLE_SUFFIXES = (
 
 
 def _safe_dict(value: Any) -> Dict[str, Any]:
-    if isinstance(value, dict):
-        return value
-    return {}
+    return value if isinstance(value, dict) else {}
 
 
 def _safe_list(value: Any) -> List[Any]:
-    if isinstance(value, list):
-        return value
-    return []
+    return value if isinstance(value, list) else []
 
 
 def _get_revision_prompt(state: Dict[str, Any]) -> str:
@@ -132,6 +130,56 @@ def _get_revision_prompt(state: Dict[str, Any]) -> str:
         return ""
 
     return str(value).strip()
+
+
+def _get_revision_count(state: Dict[str, Any]) -> int:
+    """
+    Canonical revision counter.
+
+    answer_revision_count is authoritative.
+
+    revision_count is retained only as a compatibility fallback.
+    """
+
+    value = state.get("answer_revision_count")
+
+    if value is None:
+        value = state.get("revision_count", 0)
+
+    try:
+        return max(0, int(value or 0))
+    except (TypeError, ValueError):
+        return 0
+
+
+def _get_revision_feedback(
+    state: Dict[str, Any],
+) -> List[str]:
+    """
+    Combine grounding feedback and citation feedback.
+
+    Citation failures previously produced citation_feedback but
+    the responder only consumed grounding_feedback. That meant a
+    revision could be requested without telling the LLM what was
+    wrong with its citations.
+    """
+
+    feedback: List[str] = []
+
+    grounding_feedback = _safe_list(state.get("grounding_feedback"))
+
+    for item in grounding_feedback:
+        text = str(item).strip()
+
+        if text:
+            feedback.append(text)
+
+    citation_feedback = str(state.get("citation_feedback") or "").strip()
+
+    if citation_feedback:
+        feedback.append(citation_feedback)
+
+    return feedback
 
 
 # ============================================================
@@ -173,10 +221,7 @@ def _document_metadata(document: Any) -> Dict[str, Any]:
 
     metadata = document.get("metadata")
 
-    if isinstance(metadata, dict):
-        return metadata
-
-    return {}
+    return metadata if isinstance(metadata, dict) else {}
 
 
 def _document_source(document: Any) -> str:
@@ -201,7 +246,10 @@ def _document_source(document: Any) -> str:
     return ""
 
 
-def _document_score(document: Any) -> Optional[float]:
+def _document_score(
+    document: Any,
+) -> Optional[float]:
+
     if not isinstance(document, dict):
         return None
 
@@ -228,7 +276,10 @@ def _document_score(document: Any) -> Optional[float]:
     return None
 
 
-def _document_url(document: Any) -> Optional[str]:
+def _document_url(
+    document: Any,
+) -> Optional[str]:
+
     if not isinstance(document, dict):
         return None
 
@@ -247,7 +298,10 @@ def _document_url(document: Any) -> Optional[str]:
 # ============================================================
 
 
-def _clean_evidence_text(text: str) -> str:
+def _clean_evidence_text(
+    text: str,
+) -> str:
+
     if not text:
         return ""
 
@@ -258,7 +312,10 @@ def _clean_evidence_text(text: str) -> str:
     return cleaned.strip()
 
 
-def _normalize_token(token: str) -> str:
+def _normalize_token(
+    token: str,
+) -> str:
+
     token = str(token).lower().strip()
 
     if not token:
@@ -290,6 +347,7 @@ def _normalize_token(token: str) -> str:
 def _build_conversation_history(
     state: Dict[str, Any],
 ) -> str:
+
     messages = _safe_list(state.get("messages"))
 
     if not messages:
@@ -339,79 +397,42 @@ def _build_conversation_history(
 def _get_documents_for_generation(
     state: Dict[str, Any],
 ) -> List[Any]:
-    """
-    Return ONLY evidence explicitly approved for the current
-    responder generation.
 
-    A failed private grader always invalidates private generation
-    evidence, even if stale generation_documents are present.
-    """
+    grader_status = str(state.get("grader_status") or "").strip().lower()
 
-    # ========================================================
-    # 1. GRADER STATUS IS THE FIRST SAFETY GATE
-    # ========================================================
-
-    grader_status = str(
-        state.get("grader_status") or ""
-    ).strip().lower()
-
-    grading_mode = str(
-        state.get("grading_mode") or ""
-    ).strip().lower()
+    grading_mode = str(state.get("grading_mode") or "").strip().lower()
 
     if grader_status == "failed" or grading_mode == "unavailable":
         logfire.warning(
-            "No generation-approved evidence available because "
-            "private document grading failed.",
+            "No generation-approved evidence available because document grading failed.",
             grader_status=grader_status,
             grading_mode=grading_mode,
             grader_error_type=state.get("grader_error_type"),
             stale_generation_documents=len(
                 _safe_list(state.get("generation_documents"))
             ),
-            retrieved_documents=len(
-                _safe_list(state.get("documents"))
-            ),
+            retrieved_documents=len(_safe_list(state.get("documents"))),
         )
+
         return []
 
-    # ========================================================
-    # 2. GRADER-APPROVED PRIVATE EVIDENCE
-    # ========================================================
-
-    generation_documents = _safe_list(
-        state.get("generation_documents")
-    )
+    generation_documents = _safe_list(state.get("generation_documents"))
 
     if generation_documents:
         return generation_documents[:MAX_GENERATION_DOCUMENTS]
 
-    # ========================================================
-    # 3. EXPLICIT WEB FALLBACK
-    # ========================================================
+    web_search_used = bool(state.get("web_search_used"))
 
-    web_search_used = bool(
-        state.get("web_search_used")
-    )
-
-    web_documents = _safe_list(
-        state.get("web_documents")
-    )
+    web_documents = _safe_list(state.get("web_documents"))
 
     if web_search_used and web_documents:
         return web_documents[:MAX_GENERATION_DOCUMENTS]
-
-    # ========================================================
-    # 4. NO APPROVED EVIDENCE
-    # ========================================================
 
     logfire.warning(
         "No generation-approved evidence available.",
         grader_status=grader_status,
         grading_mode=grading_mode,
-        retrieved_documents=len(
-            _safe_list(state.get("documents"))
-        ),
+        retrieved_documents=len(_safe_list(state.get("documents"))),
         generation_documents=0,
         web_search_used=web_search_used,
         web_documents=len(web_documents),
@@ -419,19 +440,10 @@ def _get_documents_for_generation(
 
     return []
 
+
 def _get_historical_documents(
     state: Dict[str, Any],
 ) -> List[Any]:
-    """
-    Preserve the complete evidence audit trail.
-
-    During web fallback this intentionally includes both:
-
-        private_documents
-        web_documents
-
-    even though generation uses web evidence only.
-    """
 
     existing = _safe_list(state.get("all_documents"))
 
@@ -456,16 +468,6 @@ def _get_historical_documents(
 def _build_citation_provenance(
     state: Dict[str, Any],
 ) -> Dict[str, Any]:
-    """
-    Build deterministic citation provenance for the exact
-    documents supplied to the current responder generation.
-
-    Citation alignment invariant:
-
-        chunk_1 -> generation_documents[0]
-        chunk_2 -> generation_documents[1]
-        ...
-    """
 
     documents = _get_documents_for_generation(state)
 
@@ -653,8 +655,8 @@ GROUNDING RULES
 16. If a specific claim cannot be directly supported by a supplied
     chunk, omit that claim.
 
-17. Compound claims must be decomposed mentally. If only one clause
-    is supported, retain only that supported clause.
+17. Compound claims must be decomposed mentally. If only one
+    clause is supported, retain only that supported clause.
 
 18. A citation does NOT make an unsupported claim supported.
 
@@ -687,6 +689,7 @@ def _build_generation_prompt(
     revision_feedback: List[Any],
     revision_prompt: str,
     conversational: bool,
+    revision_count: int,
 ) -> str:
 
     sections: List[str] = []
@@ -721,10 +724,10 @@ def _build_generation_prompt(
 
     if revision_prompt or revision_feedback:
         sections.append(
-            """
-REVISION MODE — STRICT EVIDENCE CONSTRAINT
+            f"""
+REVISION MODE — REVISION {revision_count}
 
-The previous answer failed grounding validation.
+The previous answer failed validation.
 
 Rewrite it using ONLY the supplied evidence.
 
@@ -1308,13 +1311,7 @@ def _split_answer_units(
     if not answer:
         return []
 
-    normalized = answer.replace(
-        "\r\n",
-        "\n",
-    ).replace(
-        "\r",
-        "\n",
-    )
+    normalized = answer.replace("\r\n", "\n").replace("\r", "\n")
 
     normalized = _split_inline_bullets(normalized)
 
@@ -1643,12 +1640,12 @@ def _enforce_citations(
                     0,
                     citation_count_before - citation_count_after,
                 ),
-                "citation_count_before": (citation_count_before),
-                "citation_count_after": (citation_count_after),
-                "valid_model_citations_before": (len(valid_model_citations)),
-                "invalid_model_citations_before": (len(invalid_model_citations)),
-                "valid_model_citations_preserved": (len(valid_model_citations)),
-                "invalid_model_citations_removed": (len(invalid_model_citations)),
+                "citation_count_before": citation_count_before,
+                "citation_count_after": citation_count_after,
+                "valid_model_citations_before": len(valid_model_citations),
+                "invalid_model_citations_before": len(invalid_model_citations),
+                "valid_model_citations_preserved": len(valid_model_citations),
+                "invalid_model_citations_removed": len(invalid_model_citations),
                 "lexical_repair_units": 0,
                 "units_processed": 0,
                 "units_cited": 0,
@@ -1657,13 +1654,6 @@ def _enforce_citations(
                 "evidence_chunks": len(evidence),
                 "valid_citation_ids": sorted(provenance.keys()),
                 "selection_policy": {
-                    "min_overlap": (MIN_CITATION_OVERLAP),
-                    "min_density": (MIN_CITATION_DENSITY),
-                    "second_citation_ratio": (SECOND_CITATION_RATIO),
-                    "max_citations_per_sentence": (MAX_CITATIONS_PER_SENTENCE),
-                    "phrase_match_bonus": (PHRASE_MATCH_BONUS),
-                    "trigram_match_bonus": (TRIGRAM_MATCH_BONUS),
-                    "coverage_bonus": (COVERAGE_BONUS),
                     "model_citations_trusted": True,
                     "lexical_repair_is_fallback": True,
                 },
@@ -1799,30 +1789,30 @@ def _enforce_citations(
 
     metadata = {
         "enabled": True,
-        "citations_injected": (citations_injected),
-        "citations_replaced": (citations_replaced),
-        "citations_pruned": (citations_pruned),
-        "citation_count_before": (citation_count_before),
-        "citation_count_after": (citation_count_after),
-        "valid_model_citations_before": (len(valid_model_citations)),
-        "invalid_model_citations_before": (len(invalid_model_citations)),
-        "valid_model_citations_preserved": (valid_model_citations_preserved),
-        "invalid_model_citations_removed": (invalid_model_citations_removed),
-        "lexical_repair_units": (lexical_repair_units),
+        "citations_injected": citations_injected,
+        "citations_replaced": citations_replaced,
+        "citations_pruned": citations_pruned,
+        "citation_count_before": citation_count_before,
+        "citation_count_after": citation_count_after,
+        "valid_model_citations_before": len(valid_model_citations),
+        "invalid_model_citations_before": len(invalid_model_citations),
+        "valid_model_citations_preserved": valid_model_citations_preserved,
+        "invalid_model_citations_removed": invalid_model_citations_removed,
+        "lexical_repair_units": lexical_repair_units,
         "units_processed": len(units),
-        "units_cited": (units_cited),
-        "units_without_match": (units_without_match),
-        "non_claim_units": (non_claim_units),
+        "units_cited": units_cited,
+        "units_without_match": units_without_match,
+        "non_claim_units": non_claim_units,
         "evidence_chunks": len(evidence),
         "valid_citation_ids": sorted(provenance.keys()),
         "selection_policy": {
-            "min_overlap": (MIN_CITATION_OVERLAP),
-            "min_density": (MIN_CITATION_DENSITY),
-            "second_citation_ratio": (SECOND_CITATION_RATIO),
-            "max_citations_per_sentence": (MAX_CITATIONS_PER_SENTENCE),
-            "phrase_match_bonus": (PHRASE_MATCH_BONUS),
-            "trigram_match_bonus": (TRIGRAM_MATCH_BONUS),
-            "coverage_bonus": (COVERAGE_BONUS),
+            "min_overlap": MIN_CITATION_OVERLAP,
+            "min_density": MIN_CITATION_DENSITY,
+            "second_citation_ratio": SECOND_CITATION_RATIO,
+            "max_citations_per_sentence": MAX_CITATIONS_PER_SENTENCE,
+            "phrase_match_bonus": PHRASE_MATCH_BONUS,
+            "trigram_match_bonus": TRIGRAM_MATCH_BONUS,
+            "coverage_bonus": COVERAGE_BONUS,
             "model_citations_trusted": True,
             "lexical_repair_is_fallback": True,
         },
@@ -1853,20 +1843,7 @@ def generate_node(
 
     web_search_used = bool(state.get("web_search_used"))
 
-    # ========================================================
-    # Exact evidence allowed into generation.
-    #
-    # IMPORTANT:
-    # This is the ONLY evidence path used by the LLM.
-    # ========================================================
-
     generation_documents = _get_documents_for_generation(state)
-
-    # ========================================================
-    # Complete historical evidence for audit.
-    #
-    # This is NEVER used directly for generation.
-    # ========================================================
 
     historical_documents = _get_historical_documents(state)
 
@@ -1876,17 +1853,27 @@ def generate_node(
 
     conversation_history = _build_conversation_history(state)
 
-    revision_feedback = _safe_list(state.get("grounding_feedback"))
+    revision_feedback = _get_revision_feedback(state)
 
     revision_prompt = _get_revision_prompt(state)
 
-    revision_count = int(
+    revision_count = _get_revision_count(state)
+
+    revision_requested = bool(
         state.get(
-            "revision_count",
-            0,
+            "revision_requested",
+            False,
         )
-        or 0
     )
+
+    # ========================================================
+    # IMPORTANT
+    #
+    # Only increment when the graph explicitly requests a
+    # revision.
+    # ========================================================
+
+    next_revision_count = revision_count + 1 if revision_requested else revision_count
 
     conversational = not bool(
         state.get(
@@ -1897,10 +1884,6 @@ def generate_node(
 
     # ========================================================
     # Evidence scope
-    #
-    # IMPORTANT:
-    # Scope is based on evidence actually supplied to the LLM,
-    # NOT merely evidence retrieved somewhere in graph state.
     # ========================================================
 
     if web_search_used and web_documents:
@@ -1913,30 +1896,7 @@ def generate_node(
         generation_evidence_scope = "none"
 
     # ========================================================
-    # DETERMINISTIC NO-EVIDENCE GATE
-    #
-    # Never call the LLM when there is no generation-approved
-    # evidence.
-    #
-    # This prevents:
-    #
-    #   grader failure
-    #       ↓
-    #   unverified private docs
-    #       ↓
-    #   LLM generation
-    #
-    # and:
-    #
-    #   empty web fallback
-    #       ↓
-    #   LLM generation from outside knowledge
-    #
-    # Instead:
-    #
-    #   no approved evidence
-    #       ↓
-    #   fail closed
+    # No-evidence gate
     # ========================================================
 
     if not generation_documents:
@@ -1986,7 +1946,7 @@ def generate_node(
                 "valid_model_citations_preserved": 0,
                 "invalid_model_citations_removed": 0,
                 "lexical_repair_units": 0,
-                "generation_evidence_scope": (generation_evidence_scope),
+                "generation_evidence_scope": generation_evidence_scope,
                 "selection_policy": {
                     "model_citations_trusted": True,
                     "lexical_repair_is_fallback": True,
@@ -2000,12 +1960,15 @@ def generate_node(
                     False,
                 )
             ),
-            "web_search_used": (web_search_used),
-            "revision_prompt": (revision_prompt),
-            "unsupported_atomic_claims": (
-                _safe_list(state.get("unsupported_atomic_claims"))
+            "web_search_used": web_search_used,
+            "revision_prompt": revision_prompt,
+            "revision_requested": False,
+            "answer_revision_count": next_revision_count,
+            "revision_count": next_revision_count,
+            "unsupported_atomic_claims": _safe_list(
+                state.get("unsupported_atomic_claims")
             ),
-            "all_documents": (historical_documents),
+            "all_documents": historical_documents,
             "generation_documents": [],
             "grader_status": state.get("grader_status"),
             "grader_error_type": state.get("grader_error_type"),
@@ -2056,12 +2019,13 @@ def generate_node(
 
     generation_prompt = _build_generation_prompt(
         query=query,
-        technical_context=(technical_context),
-        conversation_history=(conversation_history),
-        previous_answer=(previous_answer),
-        revision_feedback=(revision_feedback),
-        revision_prompt=(revision_prompt),
-        conversational=(conversational),
+        technical_context=technical_context,
+        conversation_history=conversation_history,
+        previous_answer=previous_answer,
+        revision_feedback=revision_feedback,
+        revision_prompt=revision_prompt,
+        conversational=conversational,
+        revision_count=next_revision_count,
     )
 
     # ========================================================
@@ -2076,39 +2040,32 @@ def generate_node(
         generation_documents=len(generation_documents),
         historical_documents=len(historical_documents),
         generation_evidence_scope=(generation_evidence_scope),
-        revision_count=revision_count,
+        revision_count=(next_revision_count),
+        revision_requested=(revision_requested),
         has_revision_feedback=bool(revision_feedback),
         has_revision_prompt=bool(revision_prompt),
         unsupported_atomic_claims=len(
             _safe_list(state.get("unsupported_atomic_claims"))
         ),
         context_quality=state.get("context_quality"),
-        web_search_used=(web_search_used),
+        web_search_used=web_search_used,
     ):
         try:
-            response = portkey_client.chat.completions.create(
-                model=PORTKEY_PRIMARY_MODEL,
+            response = create_chat_completion(
                 messages=[
                     {
                         "role": "system",
-                        "content": (system_prompt),
+                        "content": system_prompt,
                     },
                     {
                         "role": "user",
-                        "content": (generation_prompt),
+                        "content": generation_prompt,
                     },
                 ],
                 temperature=0.1,
             )
 
             raw_answer_text = _extract_response_text(response)
-
-            # ------------------------------------------------
-            # Remove only citation markers that do not exist
-            # in current provenance.
-            #
-            # Valid model citations remain intact.
-            # ------------------------------------------------
 
             raw_answer_text = _strip_invalid_citation_markers(
                 raw_answer_text,
@@ -2117,15 +2074,6 @@ def generate_node(
 
             if not raw_answer_text:
                 raise RuntimeError("Portkey returned an empty response.")
-
-            # ------------------------------------------------
-            # Deterministic citation alignment
-            #
-            # 1. Preserve valid model citations.
-            # 2. Remove invalid citations.
-            # 3. Lexically repair only units with no valid
-            #    model citation.
-            # ------------------------------------------------
 
             (
                 answer_text,
@@ -2159,56 +2107,34 @@ def generate_node(
                 "Final response generated",
                 answer_chars=len(answer_text),
                 raw_answer_chars=len(raw_answer_text),
-                citation_count=(citation_count),
+                citation_count=citation_count,
                 has_valid_citation=(has_valid_citation),
                 generation_evidence_scope=(generation_evidence_scope),
-                citations_injected=(
-                    citation_enforcement.get(
-                        "citations_injected",
-                        0,
-                    )
+                revision_count=(next_revision_count),
+                revision_requested=(revision_requested),
+                citations_injected=citation_enforcement.get(
+                    "citations_injected",
+                    0,
                 ),
-                citations_replaced=(
-                    citation_enforcement.get(
-                        "citations_replaced",
-                        0,
-                    )
+                valid_model_citations_preserved=citation_enforcement.get(
+                    "valid_model_citations_preserved",
+                    0,
                 ),
-                valid_model_citations_preserved=(
-                    citation_enforcement.get(
-                        "valid_model_citations_preserved",
-                        0,
-                    )
+                invalid_model_citations_removed=citation_enforcement.get(
+                    "invalid_model_citations_removed",
+                    0,
                 ),
-                invalid_model_citations_removed=(
-                    citation_enforcement.get(
-                        "invalid_model_citations_removed",
-                        0,
-                    )
+                lexical_repair_units=citation_enforcement.get(
+                    "lexical_repair_units",
+                    0,
                 ),
-                lexical_repair_units=(
-                    citation_enforcement.get(
-                        "lexical_repair_units",
-                        0,
-                    )
+                citations_pruned=citation_enforcement.get(
+                    "citations_pruned",
+                    0,
                 ),
-                citations_pruned=(
-                    citation_enforcement.get(
-                        "citations_pruned",
-                        0,
-                    )
-                ),
-                citation_units_without_match=(
-                    citation_enforcement.get(
-                        "units_without_match",
-                        0,
-                    )
-                ),
-                non_claim_units=(
-                    citation_enforcement.get(
-                        "non_claim_units",
-                        0,
-                    )
+                citation_units_without_match=citation_enforcement.get(
+                    "units_without_match",
+                    0,
                 ),
                 cache_status=cache_status,
                 latency_ms=round(
@@ -2217,32 +2143,31 @@ def generate_node(
                 ),
             )
 
-            # ------------------------------------------------
-            # SUCCESS
-            # ------------------------------------------------
-
             return {
                 "final_answer": answer_text,
                 "candidate_answer": answer_text,
-                "merged_context": (technical_context),
-                "technical_context": (technical_context),
-                "citation_provenance": (citation_provenance),
-                "citation_enforcement": (citation_enforcement),
-                "context_quality": (state.get("context_quality")),
-                "context_reason": (state.get("context_reason")),
+                "merged_context": technical_context,
+                "technical_context": technical_context,
+                "citation_provenance": citation_provenance,
+                "citation_enforcement": citation_enforcement,
+                "context_quality": state.get("context_quality"),
+                "context_reason": state.get("context_reason"),
                 "should_search_web": bool(
                     state.get(
                         "should_search_web",
                         False,
                     )
                 ),
-                "web_search_used": (web_search_used),
-                "revision_prompt": (revision_prompt),
-                "unsupported_atomic_claims": (
-                    _safe_list(state.get("unsupported_atomic_claims"))
+                "web_search_used": web_search_used,
+                "revision_prompt": "",
+                "revision_requested": False,
+                "answer_revision_count": next_revision_count,
+                "revision_count": next_revision_count,
+                "unsupported_atomic_claims": _safe_list(
+                    state.get("unsupported_atomic_claims")
                 ),
-                "all_documents": (historical_documents),
-                "generation_documents": (generation_documents),
+                "all_documents": historical_documents,
+                "generation_documents": generation_documents,
                 "grader_status": state.get("grader_status"),
                 "grader_error_type": state.get("grader_error_type"),
                 "grading_mode": state.get("grading_mode"),
@@ -2307,11 +2232,11 @@ def generate_node(
             )
 
             return {
-                "final_answer": (fallback_answer),
-                "candidate_answer": (fallback_answer),
-                "merged_context": (technical_context),
-                "technical_context": (technical_context),
-                "citation_provenance": (citation_provenance),
+                "final_answer": fallback_answer,
+                "candidate_answer": fallback_answer,
+                "merged_context": technical_context,
+                "technical_context": technical_context,
+                "citation_provenance": citation_provenance,
                 "citation_enforcement": {
                     "enabled": True,
                     "citations_injected": 0,
@@ -2339,21 +2264,24 @@ def generate_node(
                     },
                     "error": str(exc),
                 },
-                "context_quality": (state.get("context_quality")),
-                "context_reason": (state.get("context_reason")),
+                "context_quality": state.get("context_quality"),
+                "context_reason": state.get("context_reason"),
                 "should_search_web": bool(
                     state.get(
                         "should_search_web",
                         False,
                     )
                 ),
-                "web_search_used": (web_search_used),
-                "revision_prompt": (revision_prompt),
-                "unsupported_atomic_claims": (
-                    _safe_list(state.get("unsupported_atomic_claims"))
+                "web_search_used": web_search_used,
+                "revision_prompt": "",
+                "revision_requested": False,
+                "answer_revision_count": next_revision_count,
+                "revision_count": next_revision_count,
+                "unsupported_atomic_claims": _safe_list(
+                    state.get("unsupported_atomic_claims")
                 ),
-                "all_documents": (historical_documents),
-                "generation_documents": (generation_documents),
+                "all_documents": historical_documents,
+                "generation_documents": generation_documents,
                 "grader_status": state.get("grader_status"),
                 "grader_error_type": state.get("grader_error_type"),
                 "grading_mode": state.get("grading_mode"),
@@ -2373,7 +2301,7 @@ def generate_node(
                 ),
                 "status": status,
                 "generation_failed": True,
-                "generation_rate_limited": (rate_limited),
+                "generation_rate_limited": rate_limited,
                 "generation_latency_ms": round(
                     elapsed_ms,
                     2,

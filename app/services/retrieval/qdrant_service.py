@@ -1,26 +1,45 @@
 """
-Qdrant vector search over the enterprise knowledge base.
+Enterprise knowledge retrieval backed by Qdrant.
 
-Responsibilities:
-    - Embed the incoming query using the canonical embedding service.
-    - Search Qdrant with optional source_type and score filtering.
-    - Retry transient embedding/Qdrant failures with exponential backoff.
-    - Return stable retrieval metadata required by reranking, citations,
-      evaluation, tracing, and downstream agents.
+Retrieval contract:
 
-Performance instrumentation:
+    query
+      ↓
+    canonical embedding
+      ↓
+    optional metadata filter
+      ↓
+    Qdrant vector search
+      ↓
+    canonical SearchResult objects
+
+The function intentionally distinguishes two states:
+
+    1. Successful retrieval with zero matches
+       → returns []
+
+    2. Retrieval infrastructure failure
+       → raises the underlying failure after bounded retries
+
+This distinction is required by downstream agents. An empty result set
+means retrieval completed but found no usable matches; an exception means
+retrieval was unavailable and must be handled explicitly by the graph.
+
+Observability records:
+
     - embedding_ms
     - qdrant_query_ms
-    - payload_normalization_ms
+    - filter_ms
+    - normalization_ms
     - total_retrieval_ms
 
-The instrumentation is intentionally non-invasive:
-    retrieval behavior, embedding model, Qdrant collection, filters,
-    limits, and returned metadata remain unchanged.
+The instrumentation does not modify retrieval parameters, ranking,
+embedding behavior, filters, limits, or returned metadata.
 """
 
 from __future__ import annotations
 
+import logging
 import time
 from typing import List, Optional, TypedDict
 
@@ -32,17 +51,12 @@ from app.config import settings
 from app.services.retrieval.embedding import embed_query
 
 
-# ============================================================
-# Retry configuration
-# ============================================================
+logger = logging.getLogger("knowledgemesh")
+
 
 MAX_RETRIES = 3
 RETRY_BASE_DELAY_SECONDS = 0.5
 
-
-# ============================================================
-# Qdrant client
-# ============================================================
 
 client = QdrantClient(
     url=settings.QDRANT_URL,
@@ -50,15 +64,8 @@ client = QdrantClient(
 )
 
 
-# ============================================================
-# Stable retrieval contract
-# ============================================================
-
-
 class SearchResult(TypedDict):
-    """
-    Canonical result returned by enterprise retrieval.
-    """
+    """Canonical retrieval result consumed by downstream agents."""
 
     id: str
     document_id: str
@@ -70,15 +77,8 @@ class SearchResult(TypedDict):
     score: float
 
 
-# ============================================================
-# Retry helper
-# ============================================================
-
-
 def _retry(fn, *args, what: str, **kwargs):
-    """
-    Execute a callable with bounded exponential-backoff retries.
-    """
+    """Execute an operation with bounded exponential-backoff retries."""
 
     last_exc: Optional[Exception] = None
 
@@ -102,18 +102,13 @@ def _retry(fn, *args, what: str, **kwargs):
 
             time.sleep(delay)
 
-    raise RuntimeError(f"{what} failed after {MAX_RETRIES} attempts") from last_exc
-
-
-# ============================================================
-# Payload normalization
-# ============================================================
+    raise RuntimeError(
+        f"{what} failed after {MAX_RETRIES} attempts"
+    ) from last_exc
 
 
 def _safe_int(value, default: int = 0) -> int:
-    """
-    Safely convert a Qdrant payload value to int.
-    """
+    """Convert a payload value to int without failing normalization."""
 
     try:
         return int(value)
@@ -122,19 +117,12 @@ def _safe_int(value, default: int = 0) -> int:
 
 
 def _safe_str(value, default: str = "") -> str:
-    """
-    Safely convert a Qdrant payload value to string.
-    """
+    """Convert a payload value to string without failing normalization."""
 
     if value is None:
         return default
 
     return str(value)
-
-
-# ============================================================
-# Enterprise retrieval
-# ============================================================
 
 
 def search_enterprise_knowledge(
@@ -146,15 +134,37 @@ def search_enterprise_knowledge(
     """
     Search the enterprise Qdrant knowledge base.
 
+    Args:
+        query:
+            Natural-language retrieval query.
+
+        limit:
+            Maximum number of Qdrant points to return.
+
+        source_type:
+            Optional payload filter restricting results to a source type.
+
+        score_threshold:
+            Optional minimum Qdrant similarity score.
+
     Returns:
-        List of SearchResult objects.
+        Canonical SearchResult objects.
 
-    Performance instrumentation does not change retrieval behavior.
+        An empty list means retrieval succeeded but Qdrant returned no
+        matching points.
+
+    Raises:
+        ValueError:
+            If the query or retrieval parameters are invalid.
+
+        RuntimeError:
+            If embedding or Qdrant retrieval fails after all retries.
+
+        Exception:
+            Any unexpected failure during retrieval is re-raised after
+            being logged. Retrieval failures must remain distinguishable
+            from an empty successful result set.
     """
-
-    # --------------------------------------------------------
-    # Validate input
-    # --------------------------------------------------------
 
     if not isinstance(query, str) or not query.strip():
         raise ValueError("query must be a non-empty string")
@@ -166,11 +176,9 @@ def search_enterprise_knowledge(
         score_threshold,
         (int, float),
     ):
-        raise ValueError("score_threshold must be numeric or None")
-
-    # --------------------------------------------------------
-    # Overall retrieval timer
-    # --------------------------------------------------------
+        raise ValueError(
+            "score_threshold must be numeric or None"
+        )
 
     total_start = time.perf_counter()
 
@@ -182,10 +190,9 @@ def search_enterprise_knowledge(
         score_threshold=score_threshold,
     ):
         try:
-            # =================================================
+            # ---------------------------------------------------------
             # 1. Embed query
-            # =================================================
-
+            # ---------------------------------------------------------
             embedding_start = time.perf_counter()
 
             with logfire.span(
@@ -199,12 +206,13 @@ def search_enterprise_knowledge(
                     what="Query embedding",
                 )
 
-            embedding_ms = (time.perf_counter() - embedding_start) * 1000
+            embedding_ms = (
+                time.perf_counter() - embedding_start
+            ) * 1000
 
-            # =================================================
-            # 2. Build optional source filter
-            # =================================================
-
+            # ---------------------------------------------------------
+            # 2. Build optional Qdrant filter
+            # ---------------------------------------------------------
             filter_start = time.perf_counter()
 
             query_filter = None
@@ -214,17 +222,20 @@ def search_enterprise_knowledge(
                     must=[
                         models.FieldCondition(
                             key="source_type",
-                            match=models.MatchValue(value=source_type),
+                            match=models.MatchValue(
+                                value=source_type
+                            ),
                         )
                     ]
                 )
 
-            filter_ms = (time.perf_counter() - filter_start) * 1000
+            filter_ms = (
+                time.perf_counter() - filter_start
+            ) * 1000
 
-            # =================================================
-            # 3. Query Qdrant
-            # =================================================
-
+            # ---------------------------------------------------------
+            # 3. Execute Qdrant search
+            # ---------------------------------------------------------
             qdrant_start = time.perf_counter()
 
             with logfire.span(
@@ -244,93 +255,130 @@ def search_enterprise_knowledge(
                     what="Qdrant query_points",
                 )
 
-            qdrant_ms = (time.perf_counter() - qdrant_start) * 1000
+            qdrant_ms = (
+                time.perf_counter() - qdrant_start
+            ) * 1000
 
-            # =================================================
-            # 4. Normalize Qdrant response
-            # =================================================
+            points = response.points
 
+            logger.info(
+                "Qdrant retrieval completed | "
+                "query=%r | collection=%s | "
+                "points=%d | limit=%d | "
+                "score_threshold=%s",
+                query,
+                settings.QDRANT_COLLECTION,
+                len(points),
+                limit,
+                score_threshold,
+            )
+
+            if points:
+                logger.debug(
+                    "Qdrant scores | scores=%s",
+                    [
+                        round(float(point.score), 6)
+                        for point in points
+                    ],
+                )
+            else:
+                logger.info(
+                    "Qdrant retrieval returned zero matches | "
+                    "query=%r | collection=%s",
+                    query,
+                    settings.QDRANT_COLLECTION,
+                )
+
+            # ---------------------------------------------------------
+            # 4. Normalize Qdrant payloads
+            # ---------------------------------------------------------
             normalization_start = time.perf_counter()
 
             results: List[SearchResult] = []
 
-            for point in response.points:
+            for point in points:
                 payload = point.payload or {}
 
-                result: SearchResult = {
-                    # Qdrant vector identity
-                    "id": str(point.id),
-                    # Corpus/document identity
-                    "document_id": _safe_str(
-                        payload.get("document_id"),
-                        default="",
-                    ),
-                    # Chunk identity
-                    "chunk_id": _safe_int(
-                        payload.get("chunk_id"),
-                        default=-1,
-                    ),
-                    # Document chunk count
-                    "total_chunks": _safe_int(
-                        payload.get("total_chunks"),
-                        default=0,
-                    ),
-                    # Actual text
-                    "content": _safe_str(
-                        payload.get("text"),
-                        default="",
-                    ),
-                    # Source metadata
-                    "source": _safe_str(
-                        payload.get("source"),
-                        default="Unknown",
-                    ),
-                    "source_type": _safe_str(
-                        payload.get("source_type"),
-                        default="Unknown",
-                    ),
-                    # Similarity
-                    "score": float(point.score),
-                }
+                results.append(
+                    {
+                        "id": str(point.id),
+                        "document_id": _safe_str(
+                            payload.get("document_id")
+                        ),
+                        "chunk_id": _safe_int(
+                            payload.get("chunk_id"),
+                            default=-1,
+                        ),
+                        "total_chunks": _safe_int(
+                            payload.get("total_chunks"),
+                            default=0,
+                        ),
+                        "content": _safe_str(
+                            payload.get("text")
+                        ),
+                        "source": _safe_str(
+                            payload.get("source"),
+                            default="Unknown",
+                        ),
+                        "source_type": _safe_str(
+                            payload.get("source_type"),
+                            default="Unknown",
+                        ),
+                        "score": float(point.score),
+                    }
+                )
 
-                results.append(result)
+            normalization_ms = (
+                time.perf_counter() - normalization_start
+            ) * 1000
 
-            normalization_ms = (time.perf_counter() - normalization_start) * 1000
-
-            # =================================================
-            # 5. Total timing
-            # =================================================
-
-            total_ms = (time.perf_counter() - total_start) * 1000
-
-            # =================================================
-            # 6. Structured observability
-            # =================================================
+            # ---------------------------------------------------------
+            # 5. Record retrieval metrics
+            # ---------------------------------------------------------
+            total_ms = (
+                time.perf_counter() - total_start
+            ) * 1000
 
             logfire.info(
-                "📊 Enterprise retrieval timing",
+                "Enterprise retrieval completed",
                 embedding_ms=round(embedding_ms, 2),
                 qdrant_query_ms=round(qdrant_ms, 2),
                 filter_ms=round(filter_ms, 2),
-                normalization_ms=round(
-                    normalization_ms,
-                    2,
-                ),
-                total_retrieval_ms=round(
-                    total_ms,
-                    2,
-                ),
+                normalization_ms=round(normalization_ms, 2),
+                total_retrieval_ms=round(total_ms, 2),
                 candidates=len(results),
                 limit=limit,
             )
 
-            logfire.info(f"Search returned {len(results)} result(s) for query.")
-
             return results
 
         except Exception as exc:  # noqa: BLE001
-            total_ms = (time.perf_counter() - total_start) * 1000
+            total_ms = (
+                time.perf_counter() - total_start
+            ) * 1000
 
-            logfire.exception(f"Qdrant search failed after {total_ms:.2f} ms: {exc}")
+            logger.exception(
+                "Qdrant retrieval failed | "
+                "query=%r | collection=%s | "
+                "limit=%d | score_threshold=%s | "
+                "elapsed_ms=%.2f",
+                query,
+                settings.QDRANT_COLLECTION,
+                limit,
+                score_threshold,
+                total_ms,
+            )
 
-            return []
+            try:
+                logfire.exception(
+                    "Enterprise retrieval failed",
+                    query=query,
+                    collection=settings.QDRANT_COLLECTION,
+                    limit=limit,
+                    score_threshold=score_threshold,
+                    elapsed_ms=round(total_ms, 2),
+                )
+            except Exception:
+                pass
+
+            raise
