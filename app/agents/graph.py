@@ -133,6 +133,8 @@ from app.agents.nodes.web_search_node import (
     web_search_node,
 )
 from app.agents.state import AgentState
+from app.evaluation.trace import append_trace_event
+from app.evaluation.trajectory import evaluate_trajectory
 
 
 # ============================================================
@@ -644,7 +646,17 @@ def prepare_revision_node(
             },
         )
 
+        trace_update = append_trace_event(
+            state,
+            step="revision",
+            status="blocked",
+            revision_count=current_count,
+            max_answer_revisions=MAX_ANSWER_REVISIONS,
+            reason="revision_budget_exhausted",
+        )
+
         return {
+            **trace_update,
             "revision_requested": False,
             "answer_revision_count": current_count,
             "revision_count": current_count,
@@ -727,7 +739,29 @@ def prepare_revision_node(
         grounding_feedback_count=len(grounding_feedback),
         has_revision_prompt=bool(revision_prompt),
     ):
+        revision_trigger = []
+
+        if citation_feedback:
+            revision_trigger.append("citation_failure")
+
+        if grounding_feedback:
+            revision_trigger.append("grounding_failure")
+
+        trace_update = append_trace_event(
+            state,
+            step="revision",
+            status="requested",
+            revision_count=next_count,
+            previous_revision_count=current_count,
+            max_answer_revisions=MAX_ANSWER_REVISIONS,
+            trigger=revision_trigger or ["validation_failure"],
+            has_citation_feedback=bool(citation_feedback),
+            grounding_feedback_count=len(grounding_feedback),
+            has_revision_prompt=bool(revision_prompt),
+        )
+
         return {
+            **trace_update,
             "revision_requested": True,
             # Canonical counter.
             "answer_revision_count": next_count,
@@ -748,6 +782,47 @@ def prepare_revision_node(
 # Graph construction
 # ============================================================
 
+
+def trajectory_evaluation_node(state: AgentState):
+    """
+    Evaluate the completed Agentic RAG trajectory.
+
+    This node is observational only.
+    It does not affect graph routing.
+    """
+
+    logger.info(
+        "TRAJECTORY EVALUATION START | "
+        "trace_events=%s | "
+        "citation_valid=%s | "
+        "grounding_valid=%s",
+        len(state.get("evaluation_trace") or []),
+        state.get("citation_valid"),
+        state.get("grounding_valid"),
+    )
+
+    evaluation = evaluate_trajectory(state)
+
+    logger.info(
+        "TRAJECTORY EVALUATION COMPLETE | "
+        "status=%s | "
+        "hop_count=%s | "
+        "required_hops=%s | "
+        "failures=%s",
+        evaluation.get("trajectory_status"),
+        evaluation.get("hop_count"),
+        evaluation.get("required_hops"),
+        evaluation.get("failure_taxonomy"),
+    )
+
+    return {
+        "trajectory_status": evaluation["trajectory_status"],
+        "hop_count": evaluation["hop_count"],
+        "required_hops": evaluation["required_hops"],
+        "failure_taxonomy": evaluation["failure_taxonomy"],
+        "trajectory_metrics": evaluation["metrics"],
+        "evaluation_trace": evaluation["evaluation_trace"],
+    }
 
 def build_graph():
     """
@@ -808,6 +883,10 @@ def build_graph():
     workflow.add_node(
         "grounding_critic",
         grounding_critic_node,
+    )
+    workflow.add_node(
+        "trajectory_evaluation",
+        trajectory_evaluation_node,
     )
 
     # ========================================================
@@ -925,7 +1004,7 @@ def build_graph():
         route_after_responder,
         {
             "citation_check": "citation_check",
-            "end": END,
+            "end": "trajectory_evaluation",
         },
     )
 
@@ -939,7 +1018,7 @@ def build_graph():
         {
             "grounding_critic": "grounding_critic",
             "revision": "prepare_revision",
-            "end": END,
+            "end": "trajectory_evaluation",
         },
     )
 
@@ -952,7 +1031,7 @@ def build_graph():
         route_after_grounding_critic,
         {
             "revision": "prepare_revision",
-            "end": END,
+            "end": "trajectory_evaluation",
         },
     )
 
@@ -962,19 +1041,23 @@ def build_graph():
 
     workflow.add_edge(
         "prepare_revision",
-        "revision",
+        "responder",
     )
 
     # ========================================================
     # Revision generation
     # ========================================================
 
+    # ========================================================
+    # ========================================================
+    # Trajectory evaluation
+    # ========================================================
+
     workflow.add_edge(
-        "revision",
-        "responder",
+        "trajectory_evaluation",
+        END,
     )
 
-    # ========================================================
     # Compile
     # ========================================================
 
@@ -986,3 +1069,7 @@ def build_graph():
 # ============================================================
 
 rag_agent = build_graph()
+
+
+
+

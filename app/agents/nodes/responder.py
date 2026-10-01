@@ -29,6 +29,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import logfire
 
 from app.agents.state import AgentState
+from app.evaluation.trace import append_trace_event
 from app.gateway import (
     create_chat_completion,
     extract_cache_status,
@@ -1873,7 +1874,7 @@ def generate_node(
     # revision.
     # ========================================================
 
-    next_revision_count = revision_count + 1 if revision_requested else revision_count
+    next_revision_count = revision_count
 
     conversational = not bool(
         state.get(
@@ -1923,7 +1924,16 @@ def generate_node(
             generation_documents=0,
         )
 
+        trace_update = append_trace_event(
+            state,
+            step="responder",
+            status="blocked",
+            generation_evidence_count=0,
+            reason="no_approved_evidence",
+        )
+
         return {
+            **trace_update,
             "final_answer": blocked_answer,
             "candidate_answer": blocked_answer,
             "merged_context": "",
@@ -2143,7 +2153,20 @@ def generate_node(
                 ),
             )
 
+            trace_update = append_trace_event(
+                state,
+                step="responder",
+                status=(
+                    "revised_generated"
+                    if next_revision_count > 0
+                    else "generated"
+                ),
+                generation_evidence_count=len(generation_documents),
+                revision_count=next_revision_count,
+            )
+
             return {
+                **trace_update,
                 "final_answer": answer_text,
                 "candidate_answer": answer_text,
                 "merged_context": technical_context,
@@ -2231,7 +2254,18 @@ def generate_node(
                 )
             )
 
+            trace_update = append_trace_event(
+                state,
+                step="responder",
+                status="fallback",
+                generation_evidence_count=len(generation_documents),
+                previous_answer_preserved=bool(previous_answer),
+                rate_limited=rate_limited,
+                error_type=type(exc).__name__,
+            )
+
             return {
+                **trace_update,
                 "final_answer": fallback_answer,
                 "candidate_answer": fallback_answer,
                 "merged_context": technical_context,
@@ -2307,3 +2341,5 @@ def generate_node(
                     2,
                 ),
             }
+
+
