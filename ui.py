@@ -38,6 +38,7 @@ import streamlit as st
 from dotenv import load_dotenv
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
+from fastapi.testclient import TestClient
 
 
 # ============================================================
@@ -54,7 +55,30 @@ if not os.path.exists(ENV_PATH):
 
 load_dotenv(dotenv_path=ENV_PATH, override=False)
 
-DEFAULT_BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000").rstrip("/")
+def _secret_or_env(name, default=None):
+    """Read a Streamlit secret first, then fall back to the environment."""
+    try:
+        value = st.secrets.get(name)
+        if value not in (None, ""):
+            return value
+    except Exception:
+        pass
+
+    return os.getenv(name, default)
+
+
+STREAMLIT_CLOUD_MODE = str(
+    _secret_or_env("STREAMLIT_CLOUD_MODE", "false")
+).strip().lower() in {"1", "true", "yes", "on"}
+
+if STREAMLIT_CLOUD_MODE:
+    DEFAULT_BACKEND_URL = "in-process://knowledgemesh"
+else:
+    DEFAULT_BACKEND_URL = os.getenv(
+        "BACKEND_URL",
+        "http://localhost:8000",
+    ).rstrip("/")
+
 BACKEND_TIMEOUT_SECONDS = int(os.getenv("BACKEND_TIMEOUT_SECONDS", "180"))
 DEBUG_UI = os.getenv("KM_DEBUG", "0").strip().lower() in {"1", "true", "yes"}
 
@@ -64,6 +88,35 @@ _STRETCH = (
     if "width" in inspect.signature(st.button).parameters
     else {"use_container_width": True}
 )
+
+
+@st.cache_resource(show_spinner=False)
+def get_inprocess_backend():
+    """Create a FastAPI TestClient for Streamlit Cloud mode."""
+    secret_names = (
+        "QDRANT_CLUSTER_ENDPOINT",
+        "QDRANT_API_KEY",
+        "GROQ_API_KEY",
+        "TAVILY_API_KEY",
+        "PORTKEY_API_KEY",
+        "PORTKEY_CONFIG_SLUG",
+        "GROQ_FALLBACK_API_KEY",
+        "LANGSMITH_API_KEY",
+        "LANGSMITH_PROJECT",
+        "LANGSMITH_ENDPOINT",
+        "LOGFIRE_TOKEN",
+    )
+
+    for name in secret_names:
+        value = _secret_or_env(name)
+
+        if value not in (None, ""):
+            os.environ[name] = str(value)
+
+    from app.main import app
+
+    return TestClient(app)
+
 
 
 # ============================================================
@@ -2002,27 +2055,39 @@ def transcript_markdown(messages):
 @st.cache_data(ttl=10, show_spinner=False)
 def check_backend_health(backend_url):
     try:
+        if STREAMLIT_CLOUD_MODE:
+            return get_inprocess_backend().get("/health").ok
+
         return requests.get(f"{backend_url}/health", timeout=4).ok
-    except requests.RequestException:
+
+    except Exception:
         return False
 
 
 @st.cache_data(ttl=10, show_spinner=False)
 def check_backend_ready(backend_url):
     try:
-        response = requests.get(f"{backend_url}/ready", timeout=4)
+        if STREAMLIT_CLOUD_MODE:
+            response = get_inprocess_backend().get("/ready")
+        else:
+            response = requests.get(f"{backend_url}/ready", timeout=4)
 
         return response.ok and response.json().get("status") == "ready"
 
     except (requests.RequestException, ValueError):
         return False
+    except Exception:
+        return False
 
 
 @st.cache_data(ttl=60, show_spinner=False)
 def fetch_kb_stats(backend_url):
-    """Optional GET /stats -> {collection, documents, chunks, last_indexed}."""
+    """Optional GET /stats -> backend status metadata."""
     try:
-        response = requests.get(f"{backend_url}/stats", timeout=4)
+        if STREAMLIT_CLOUD_MODE:
+            response = get_inprocess_backend().get("/stats")
+        else:
+            response = requests.get(f"{backend_url}/stats", timeout=4)
 
         if response.ok:
             payload = response.json()
@@ -2030,6 +2095,8 @@ def fetch_kb_stats(backend_url):
             return payload if isinstance(payload, dict) else None
 
     except (requests.RequestException, ValueError):
+        pass
+    except Exception:
         pass
 
     return None
@@ -2295,11 +2362,17 @@ def run_pending_query():
             payload = {"q": question, "thread_id": st.session_state.session_id}
 
             with _trace_context():
-                response = st.session_state.http_session.post(
-                    f"{backend_url}/query",
-                    json=payload,
-                    timeout=BACKEND_TIMEOUT_SECONDS,
-                )
+                if STREAMLIT_CLOUD_MODE:
+                    response = get_inprocess_backend().post(
+                        "/query",
+                        json=payload,
+                    )
+                else:
+                    response = st.session_state.http_session.post(
+                        f"{backend_url}/query",
+                        json=payload,
+                        timeout=BACKEND_TIMEOUT_SECONDS,
+                    )
 
             elapsed = time.perf_counter() - start_time
 
@@ -2376,14 +2449,21 @@ def run_pending_query():
             )
 
     except requests.exceptions.ConnectionError:
-        _assistant_error(
-            "**Unable to reach the KnowledgeMesh backend.**\n\n"
-            f"Could not connect to `{backend_url}`.\n\n"
-            "Check that FastAPI is running:\n\n"
-            "```bash\n"
-            "uvicorn app.main:app --reload --host 0.0.0.0 --port 8000\n"
-            "```"
-        )
+        if STREAMLIT_CLOUD_MODE:
+            _assistant_error(
+                "**KnowledgeMesh backend initialization failed.**\n\n"
+                "The in-process FastAPI backend could not be reached. "
+                "Check the Streamlit Cloud secrets and application logs."
+            )
+        else:
+            _assistant_error(
+                "**Unable to reach the KnowledgeMesh backend.**\n\n"
+                f"Could not connect to `{backend_url}`.\n\n"
+                "Check that FastAPI is running:\n\n"
+                "```bash\n"
+                "uvicorn app.main:app --reload --host 0.0.0.0 --port 8000\n"
+                "```"
+            )
 
     except requests.exceptions.Timeout:
         _assistant_error(
