@@ -2809,7 +2809,7 @@ def render_message(index: int, message: dict, last_index: int):
 
     display_html(render_run_banner(trace))
 
-    with st.expander("Execution details", expanded=(index == last_index)):
+    with st.expander("Execution details", expanded=False):
         display_html(render_latency_panel(trace))
         display_html(render_pipeline_rail(trace))
 
