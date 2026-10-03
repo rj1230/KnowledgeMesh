@@ -55,7 +55,8 @@ deepeval                    # Pytest-compatible test runner wrapping RAGAS & saf
 langfuse                    # Live production monitoring, tracing & user feedback collection
 
 # --- EMBEDDINGS (SENTENCE TRANSFORMERS) ---
-sentence-transformers       # Used by FlashRank reranker internally
+sentence-transformers
+transformers==4.39.3    # Used by FlashRank reranker internally
 langchain_google_genai
 
 langchain-google-vertexai
