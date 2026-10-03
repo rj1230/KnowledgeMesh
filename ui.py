@@ -2082,7 +2082,7 @@ def check_backend_ready(backend_url):
 
 @st.cache_data(ttl=60, show_spinner=False)
 def fetch_kb_stats(backend_url):
-    """Optional GET /stats -> backend status metadata."""
+    """GET /stats -> backend status and knowledge-base statistics."""
     try:
         if STREAMLIT_CLOUD_MODE:
             response = get_inprocess_backend().get("/stats")

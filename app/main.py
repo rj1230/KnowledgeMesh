@@ -89,6 +89,8 @@ from fastapi import FastAPI, Response
 from pydantic import BaseModel, Field
 
 from app.agents.graph import rag_agent
+from app.config import settings
+from app.services.retrieval.qdrant_service import client
 
 from app.guardrails import (
     guard,
@@ -1412,11 +1414,63 @@ def graph():
 
 @app.get("/stats")
 def stats() -> Dict[str, Any]:
+    """Return service status plus live knowledge-base statistics."""
+
+    documents = set()
+    last_indexed: Optional[str] = None
+
+    collection = client.get_collection(
+        collection_name=settings.QDRANT_COLLECTION,
+    )
+
+    chunks = int(
+        getattr(collection, "points_count", 0) or 0
+    )
+
+    offset = None
+
+    while True:
+        points, next_offset = client.scroll(
+            collection_name=settings.QDRANT_COLLECTION,
+            limit=256,
+            offset=offset,
+            with_payload=True,
+            with_vectors=False,
+        )
+
+        for point in points:
+            payload = point.payload or {}
+
+            document_id = payload.get("document_id")
+
+            if document_id:
+                documents.add(str(document_id))
+
+            ingested_at = payload.get("ingested_at")
+
+            if ingested_at:
+                ingested_at = str(ingested_at)
+
+                if (
+                    last_indexed is None
+                    or ingested_at > last_indexed
+                ):
+                    last_indexed = ingested_at
+
+        if next_offset is None:
+            break
+
+        offset = next_offset
+
     return {
         "status": "ok",
         "service": APP_NAME,
         "version": APP_VERSION,
         "guardrails_initialized": _guardrails_initialized,
+        "collection": settings.QDRANT_COLLECTION,
+        "documents": len(documents),
+        "chunks": chunks,
+        "last_indexed": last_indexed,
         "routes": {
             "root": "/",
             "health": "/health",
