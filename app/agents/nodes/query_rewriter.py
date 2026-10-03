@@ -11,6 +11,7 @@ import logging
 import re
 
 from app.gateway import create_chat_completion
+from app.evaluation.trace import append_trace_event
 
 logger = logging.getLogger(__name__)
 
@@ -78,16 +79,24 @@ knowledge base.
 
 Rules:
 
-1. Preserve the user's actual intent.
-2. Do not answer the question.
-3. Do not add facts that are not implied by the user's query.
-4. Expand ambiguous technical terminology when useful.
-5. Remove conversational wording.
-6. Make the query specific enough for semantic retrieval.
-7. Keep it concise.
-8. Return ONLY the rewritten search query.
-9. Do not include explanations.
-10. Do not include quotation marks.
+    1. Preserve the user's actual intent.
+    2. Do not answer the question.
+    3. Do not add unsupported facts, entities, or specific implementation details.
+    4. Preserve important technical entities, acronyms, model names, algorithm names,
+       component names, and domain-specific terminology from the original query.
+    5. Expand the query with technical terminology that is directly implied by the
+       subject and would plausibly appear in technical documentation.
+       For technical systems and mechanisms, include closely related concepts such
+       as the relevant component type, representation, operation, retrieval method,
+       algorithm family, or input/output terminology when strongly implied.
+    6. Preserve the original technical concept instead of replacing it with generic
+       words such as process, system, information, or method.
+    7. Remove conversational wording.
+    8. Make the query specific enough for semantic retrieval.
+    9. Keep the query concise and focused on the original intent.
+    10. Return ONLY the rewritten search query.
+    11. Do not include explanations.
+    12. Do not include quotation marks.
 
 Example:
 
@@ -147,7 +156,20 @@ Return only the search query.
         f"Query Rewrite: {rewritten_query}",
     ]
 
+    trace_update = append_trace_event(
+        state,
+        step="query_rewriter",
+        status=(
+            "rewritten"
+            if rewritten_query != current_query
+            else "retry_same_query"
+        ),
+        rewrite_count=revision_count + 1,
+        query_changed=rewritten_query != current_query,
+    )
+
     return {
+        **trace_update,
         "original_query": original_query,
         "rewritten_query": rewritten_query,
         "current_query": rewritten_query,
@@ -155,3 +177,4 @@ Return only the search query.
         "status": f"Retrying private KB with rewritten query: {rewritten_query}",
         "plan": plan,
     }
+

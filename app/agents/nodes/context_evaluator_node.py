@@ -6,6 +6,7 @@ import logfire
 
 from app.agents.context_evaluator import evaluate_context
 from app.agents.state import AgentState
+from app.evaluation.trace import append_trace_event
 
 
 logger = logging.getLogger("knowledgemesh")
@@ -79,7 +80,18 @@ def context_evaluator_node(state: AgentState):
             web_search_required=should_search_web,
         )
 
+    trace_update = append_trace_event(
+        state,
+        step="context_evaluator",
+        status=evaluation["quality"],
+        should_search_web=should_search_web,
+        reason=evaluation["reason"],
+        graded_documents=len(graded_documents),
+        generation_documents=len(generation_documents),
+    )
+
     return {
+        **trace_update,
         # ============================================================
         # CONTEXT EVALUATION
         # ============================================================

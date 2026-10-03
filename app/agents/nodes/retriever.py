@@ -7,6 +7,7 @@ import time
 import logfire
 
 from app.agents.state import AgentState
+from app.evaluation.trace import append_trace_event
 from app.services.retrieval.qdrant_service import (
     search_enterprise_knowledge,
 )
@@ -762,10 +763,26 @@ def retrieve_node(state: AgentState):
     ]
 
     # ========================================================
+    # TRAJECTORY TRACE
+    # ========================================================
+
+    trace_update = append_trace_event(
+        state,
+        step="private_retrieval",
+        status="success" if documents else "empty",
+        # Hop semantics are derived by the trajectory evaluator.
+        candidate_count=len(raw_results),
+        reranked_count=len(reranked_candidates),
+        selected_count=len(documents),
+        query=query,
+    )
+
+    # ========================================================
     # RETURN
     # ========================================================
 
     return {
+        **trace_update,
         "documents": documents,
         # Existing graph/state compatibility.
         "all_documents": documents,

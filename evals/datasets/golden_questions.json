@@ -1,62 +1,137 @@
 [
   {
-    "id": "g001",
-    "question": "What is the refund policy for enterprise customers?",
-    "relevant_chunk_ids": ["policy_doc_chunk_12", "policy_doc_chunk_13"],
-    "expected_answer_keypoints": ["30-day window", "prorated for annual plans"]
+    "id": "gp001",
+    "question": "What is retrieval-augmented generation and what two types of memory does it combine?",
+    "relevant_chunks": [
+      { "document_id": "89e40c0de3ce2081b9d726b9", "chunk_id": 0 },
+      { "document_id": "89e40c0de3ce2081b9d726b9", "chunk_id": 1 }
+    ],
+    "expected_answer_points": [
+      "RAG combines retrieval with language generation",
+      "RAG combines parametric memory and non-parametric memory"
+    ],
+    "expected_route": "private"
   },
   {
-    "id": "g002",
-    "question": "How is data encrypted at rest?",
-    "relevant_chunk_ids": ["security_doc_chunk_4"],
-    "expected_answer_keypoints": ["AES-256", "managed keys"]
+    "id": "gp002",
+    "question": "What are the main components of an LLM-based agent according to the survey?",
+    "relevant_chunks": [
+      { "document_id": "7ed18d7a17efb3ce8ec56478", "chunk_id": 9 }
+    ],
+    "expected_answer_points": ["brain", "perception", "action"],
+    "expected_route": "private"
   },
   {
-    "id": "g003",
-    "question": "What SLA uptime does the platform guarantee?",
-    "relevant_chunk_ids": ["sla_doc_chunk_1"],
-    "expected_answer_keypoints": ["99.9%", "monthly measurement window"]
+    "id": "gp003",
+    "question": "What memory capabilities does AutoGPT provide?",
+    "relevant_chunks": [
+      { "document_id": "7ed18d7a17efb3ce8ec56478", "chunk_id": 74 }
+    ],
+    "expected_answer_points": ["long-term memory", "short-term memory"],
+    "expected_route": "private"
   },
   {
-    "id": "g004",
-    "question": "Who is eligible for the partner discount program?",
-    "relevant_chunk_ids": ["partner_doc_chunk_7", "partner_doc_chunk_8"],
-    "expected_answer_keypoints": ["certified partners", "minimum annual spend"]
+    "id": "gp004",
+    "question": "What is the role of the brain in an LLM-based agent?",
+    "relevant_chunks": [
+      { "document_id": "7ed18d7a17efb3ce8ec56478", "chunk_id": 9 }
+    ],
+    "expected_answer_points": [
+      "stores memories, information, and knowledge",
+      "information processing",
+      "decision-making",
+      "reasoning",
+      "planning"
+    ],
+    "expected_route": "private"
   },
   {
-    "id": "g005",
-    "question": "What is the process for requesting a data export?",
-    "relevant_chunk_ids": ["ops_doc_chunk_19"],
-    "expected_answer_keypoints": ["support ticket", "48-hour turnaround"]
+    "id": "gp005",
+    "question": "How does the RAG retriever obtain documents for a query?",
+    "relevant_chunks": [
+      { "document_id": "89e40c0de3ce2081b9d726b9", "chunk_id": 2 },
+      { "document_id": "89e40c0de3ce2081b9d726b9", "chunk_id": 3 }
+    ],
+    "expected_answer_points": [
+      "retrieves top-k documents",
+      "uses a dense retriever",
+      "retrieval is conditioned on the input query"
+    ],
+    "expected_route": "private"
   },
   {
-    "id": "g006",
-    "question": "What authentication methods are supported for API access?",
-    "relevant_chunk_ids": ["security_doc_chunk_9", "security_doc_chunk_10"],
-    "expected_answer_keypoints": ["API keys", "OAuth 2.0", "rotation policy"]
+    "id": "gp006",
+    "question": "What BLEU score did the Transformer achieve on the WMT 2014 English-to-French translation task, and how long did it take to train?",
+    "relevant_chunks": [
+      { "document_id": "c5403b511fa73a2221411a42", "chunk_id": 1 }
+    ],
+    "expected_answer_points": [
+      "BLEU score of 41.8",
+      "trained for 3.5 days on eight GPUs"
+    ],
+    "expected_route": "private"
   },
   {
-    "id": "g007",
-    "question": "How are usage overages billed on the metered plan?",
-    "relevant_chunk_ids": ["billing_doc_chunk_3"],
-    "expected_answer_keypoints": ["per-unit rate", "billed monthly in arrears"]
+    "id": "gp007",
+    "question": "What is the formula for scaled dot-product attention, and how does it compare to additive attention?",
+    "relevant_chunks": [
+      { "document_id": "c5403b511fa73a2221411a42", "chunk_id": 6 },
+      { "document_id": "c5403b511fa73a2221411a42", "chunk_id": 7 }
+    ],
+    "expected_answer_points": [
+      "softmax of QK transpose divided by the square root of dk, times V",
+      "dot-product attention is faster and more space-efficient than additive attention"
+    ],
+    "expected_route": "private"
   },
   {
-    "id": "g008",
-    "question": "What is the process for reporting a security vulnerability?",
-    "relevant_chunk_ids": ["security_doc_chunk_21"],
-    "expected_answer_keypoints": ["security@ contact", "90-day disclosure window"]
+    "id": "gp008",
+    "question": "In the GPT-3 paper's human-detection experiment, how accurately could people distinguish GPT-3 175B-generated news articles from human-written ones, compared to the easy-to-spot control articles?",
+    "relevant_chunks": [
+      { "document_id": "3caf265f6ce786e3c2bd0ad6", "chunk_id": 58 }
+    ],
+    "expected_answer_points": [
+      "about 86% accuracy detecting the intentionally bad control articles",
+      "only about 52% accuracy detecting the 175B model's articles, barely above chance"
+    ],
+    "expected_route": "private"
   },
   {
-    "id": "g009",
-    "question": "What data retention period applies after account cancellation?",
-    "relevant_chunk_ids": ["policy_doc_chunk_30"],
-    "expected_answer_keypoints": ["30 days", "permanent deletion after"]
+    "id": "gp009",
+    "question": "How does the 1.3B parameter InstructGPT model compare to the 175B parameter GPT-3 model in human evaluations, and what improvements does InstructGPT show?",
+    "relevant_chunks": [
+      { "document_id": "c7cc94a4d3e661a199e0bb13", "chunk_id": 0 },
+      { "document_id": "c7cc94a4d3e661a199e0bb13", "chunk_id": 1 }
+    ],
+    "expected_answer_points": [
+      "1.3B parameter InstructGPT outputs are preferred over the 175B GPT-3 outputs despite 100x fewer parameters",
+      "improvements in truthfulness",
+      "reductions in toxic output generation"
+    ],
+    "expected_route": "private"
   },
   {
-    "id": "g010",
-    "question": "What regions are available for data residency?",
-    "relevant_chunk_ids": ["ops_doc_chunk_5", "ops_doc_chunk_6"],
-    "expected_answer_keypoints": ["US", "EU", "customer-selectable at signup"]
+    "id": "gp010",
+    "question": "How much does Agentic Harness Engineering (AHE) improve pass@1 on Terminal-Bench 2, and how does the evolved harness compare to the human-designed Codex harness?",
+    "relevant_chunks": [
+      { "document_id": "66f55cf4060534797ac59189", "chunk_id": 1 }
+    ],
+    "expected_answer_points": [
+      "lifts pass@1 on Terminal-Bench 2 from 69.7% to 77.0%",
+      "surpasses the human-designed Codex harness at 71.9%"
+    ],
+    "expected_route": "private"
+  },
+  {
+    "id": "gp011",
+    "question": "Does designing agent loops eliminate the need for prompt engineering, according to the paper?",
+    "relevant_chunks": [
+      { "document_id": "a26a0a845b9004cd2b884c79", "chunk_id": 1 }
+    ],
+    "expected_answer_points": [
+      "loops do not retire prompt engineering",
+      "loop and prompt are distinct tools with distinct uses"
+    ],
+    "expected_route": "private"
   }
 ]

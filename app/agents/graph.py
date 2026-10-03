@@ -114,6 +114,10 @@ from app.agents.nodes.grader import (
 from app.agents.nodes.grounding_critic import (
     grounding_critic_node,
 )
+from app.agents.nodes.answer_relevance import (
+    answer_abstention_node,
+    answer_relevance_node,
+)
 from app.agents.nodes.planner import (
     planner_node,
 )
@@ -362,10 +366,38 @@ def route_after_context_evaluator(
         return "responder"
 
     # --------------------------------------------------------
-    # 3. Explicit web requirement
+    # 3. Graded private context was insufficient
+    #
+    # Retry private retrieval with a rewritten query before
+    # escalating to web. This takes precedence over the generic
+    # web_search_required flag because insufficient private
+    # context sets that flag as well.
     # --------------------------------------------------------
 
-    if web_search_required or should_search_web:
+    if quality == "insufficient":
+        if rewrite_count >= MAX_RETRIEVAL_REWRITES:
+            logger.info(
+                "Retrieval rewrite budget exhausted; "
+                "routing to web_search."
+            )
+
+            return "web_search"
+
+        logger.info(
+            "Context route: query_rewriter | "
+            "graded private context insufficient | "
+            "rewrite_count=%s/%s",
+            rewrite_count,
+            MAX_RETRIEVAL_REWRITES,
+        )
+
+        return "query_rewriter"
+
+    # --------------------------------------------------------
+    # 3b. Explicit web requirement
+    # --------------------------------------------------------
+
+    if quality == "needs_web" or web_search_required:
         logger.info("Context route: web_search | explicit web requirement")
 
         return "web_search"
@@ -573,9 +605,9 @@ def route_after_grounding_critic(
     # --------------------------------------------------------
 
     if grounding_valid:
-        logger.info("Grounding route: end | grounding validation passed")
+        logger.info("Grounding route: answer_relevance | grounding validation passed")
 
-        return "end"
+        return "answer_relevance"
 
     # --------------------------------------------------------
     # Grounding FAIL + budget exhausted
@@ -611,6 +643,52 @@ def route_after_grounding_critic(
 # ============================================================
 
 
+# ============================================================
+# Answer relevance routing
+# ============================================================
+
+
+def route_after_answer_relevance(
+    state: AgentState,
+) -> str:
+    """
+    Route based on semantic answer-to-question relevance.
+
+    Relevant answer:
+        trajectory evaluation
+
+    Irrelevant answer with revision budget remaining:
+        bounded revision
+
+    Irrelevant answer with exhausted revision budget:
+        safe abstention
+    """
+
+    answer_useful = bool(state.get("answer_useful", False))
+    revision_count = _revision_count(state)
+
+    if answer_useful:
+        logger.info(
+            "Answer relevance route: end | answer usefulness passed"
+        )
+        return "end"
+
+    if revision_count >= MAX_ANSWER_REVISIONS:
+        logger.warning(
+            "Answer relevance failed and revision budget is exhausted. "
+            "Abstaining."
+        )
+        return "abstain"
+
+    logger.warning(
+        "Answer relevance route: revision | revisions=%s/%s",
+        revision_count,
+        MAX_ANSWER_REVISIONS,
+    )
+
+    return "revision"
+
+
 def prepare_revision_node(
     state: AgentState,
 ) -> Dict[str, Any]:
@@ -622,8 +700,8 @@ def prepare_revision_node(
         1. Read current revision count.
         2. Increment it exactly once.
         3. Preserve citation feedback.
-        4. Preserve grounding feedback.
-        5. Preserve grounding-generated revision_prompt.
+        4. Preserve grounding feedback when the current failure is grounding-related.
+        5. Replace stale grounding feedback with relevance-specific guidance when the current failure is answer relevance.
         6. Set revision_requested=True.
 
     The actual regenerated answer is produced by generate_node.
@@ -681,6 +759,28 @@ def prepare_revision_node(
     grounding_feedback = _normalise_feedback(state.get("grounding_feedback"))
 
     # --------------------------------------------------------
+    # Answer-relevance failure detection
+    #
+    # A relevance failure occurs after grounding has already
+    # passed. Do not let stale grounding feedback become the
+    # revision signal for this new failure.
+    # --------------------------------------------------------
+
+    answer_useful = bool(state.get("answer_useful", False))
+    grounding_valid = bool(
+        state.get("is_grounded", False)
+        or state.get("answer_supported", False)
+    )
+
+    answer_relevance_failure = (
+        not answer_useful
+        and grounding_valid
+    )
+
+    if answer_relevance_failure:
+        grounding_feedback = []
+
+    # --------------------------------------------------------
     # Combine feedback
     # --------------------------------------------------------
 
@@ -694,10 +794,24 @@ def prepare_revision_node(
     combined_feedback = "\n\n".join(feedback_parts)
 
     # --------------------------------------------------------
-    # Grounding-generated revision prompt
+    # Revision prompt
     # --------------------------------------------------------
 
     revision_prompt = str(state.get("revision_prompt") or "").strip()
+
+    if answer_relevance_failure:
+        revision_prompt = (
+            "ANSWER-RELEVANCE REVISION REQUIRED.\n\n"
+            "The previous answer was grounded in the supplied evidence "
+            "but did not directly answer the user's question.\n\n"
+            "Rewrite the answer so that it explicitly addresses every "
+            "material part of the user's question. Preserve only claims "
+            "supported by the supplied evidence. Do not substitute a "
+            "related model, experiment, metric, or comparison for the "
+            "specific one requested by the user. Clearly distinguish "
+            "different model sizes or experimental conditions when the "
+            "question asks for that distinction."
+        )
 
     if not revision_prompt:
         revision_prompt = (
@@ -746,6 +860,9 @@ def prepare_revision_node(
 
         if grounding_feedback:
             revision_trigger.append("grounding_failure")
+
+        if answer_relevance_failure:
+            revision_trigger.append("answer_relevance_failure")
 
         trace_update = append_trace_event(
             state,
@@ -890,6 +1007,16 @@ def build_graph():
     )
 
     # ========================================================
+    workflow.add_node(
+        "answer_relevance",
+        answer_relevance_node,
+    )
+
+    workflow.add_node(
+        "answer_abstention",
+        answer_abstention_node,
+    )
+
     # Revision preparation
     #
     # IMPORTANT:
@@ -1031,10 +1158,30 @@ def build_graph():
         route_after_grounding_critic,
         {
             "revision": "prepare_revision",
+            "answer_relevance": "answer_relevance",
             "end": "trajectory_evaluation",
         },
     )
 
+
+    # ========================================================
+    # Answer relevance validation
+    # ========================================================
+
+    workflow.add_conditional_edges(
+        "answer_relevance",
+        route_after_answer_relevance,
+        {
+            "revision": "prepare_revision",
+            "abstain": "answer_abstention",
+            "end": "trajectory_evaluation",
+        },
+    )
+
+    workflow.add_edge(
+        "answer_abstention",
+        "trajectory_evaluation",
+    )
     # ========================================================
     # Revision preparation
     # ========================================================
@@ -1069,6 +1216,8 @@ def build_graph():
 # ============================================================
 
 rag_agent = build_graph()
+
+
 
 
 

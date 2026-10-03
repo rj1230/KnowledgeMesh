@@ -47,7 +47,7 @@ load_dotenv(dotenv_path=ENV_PATH, override=False)
 
 DEFAULT_BACKEND_URL = os.getenv(
     "BACKEND_URL",
-    "http://127.0.0.1:8000",
+    "http://localhost:8000",
 ).rstrip("/")
 
 BACKEND_TIMEOUT_SECONDS = int(os.getenv("BACKEND_TIMEOUT_SECONDS", "180"))
@@ -177,6 +177,57 @@ def _trace_context():
         return logfire.span("KnowledgeMesh UI operation")
 
     return nullcontext()
+
+
+# ============================================================
+# ICONS
+# ============================================================
+# A small inline-SVG icon set used in place of emoji/unicode glyphs.
+# Every path inherits color via currentColor, so icons track the design
+# tokens defined in CUSTOM_CSS automatically.
+
+_ICON_PATHS = {
+    "search": '<circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.6-4.6"/>',
+    "layers": (
+        '<path d="M12 3.5 3.5 8 12 12.5 20.5 8z"/>'
+        '<path d="M3.5 13 12 17.5 20.5 13"/>'
+        '<path d="M3.5 18 12 22.5 20.5 18"/>'
+    ),
+    "settings": (
+        '<circle cx="12" cy="12" r="3"/>'
+        '<path d="M12 3v2.4M12 18.6V21M4.9 4.9l1.7 1.7'
+        "M17.4 17.4l1.7 1.7M3 12h2.4M18.6 12H21"
+        'M4.9 19.1l1.7-1.7M17.4 6.6l1.7-1.7"/>'
+    ),
+    "check": '<path d="M5 12.5 9.5 17 19 7"/>',
+    "refresh": (
+        '<path d="M4 12a8 8 0 0 1 14-5.3L20 8"/>'
+        '<path d="M20 4v4h-4"/>'
+        '<path d="M20 12a8 8 0 0 1-14 5.3L4 16"/>'
+        '<path d="M4 20v-4h4"/>'
+    ),
+    "cross": '<path d="M6 6l12 12"/><path d="M18 6 6 18"/>',
+    "dash": '<path d="M6 12h12"/>',
+    "dot": '<circle cx="12" cy="12" r="2.2" fill="currentColor" stroke="none"/>',
+    "warning": (
+        '<path d="M12 3.5 22 20.5H2z"/>'
+        '<path d="M12 9.5v5"/>'
+        '<circle cx="12" cy="17.4" r=".9" fill="currentColor" stroke="none"/>'
+    ),
+}
+
+
+def icon(name: str, size: int = 14) -> str:
+    """Renders a small trusted inline SVG icon from the KM icon set."""
+
+    paths = _ICON_PATHS.get(name, "")
+
+    return (
+        f'<svg class="km-icon" width="{size}" height="{size}" '
+        'viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+        'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" '
+        f'aria-hidden="true">{paths}</svg>'
+    )
 
 
 # ============================================================
@@ -758,11 +809,11 @@ def render_pipeline_rail(trace=None):
     statuses = stage_statuses(trace)
 
     icon_map = {
-        "success": "✓",
-        "fallback": "↻",
-        "failed": "✕",
-        "skipped": "—",
-        "pending": "·",
+        "success": icon("check", 12),
+        "fallback": icon("refresh", 12),
+        "failed": icon("cross", 12),
+        "skipped": icon("dash", 12),
+        "pending": icon("dot", 12),
     }
 
     nodes = []
@@ -776,7 +827,7 @@ def render_pipeline_rail(trace=None):
 
         state = normalize_stage_state(stage.get("state"))
         detail = stage.get("detail") or default_detail
-        icon = icon_map.get(state, "·")
+        icon_markup = icon_map.get(state, icon("dot", 12))
 
         connector = ""
 
@@ -787,7 +838,7 @@ def render_pipeline_rail(trace=None):
             f"""
             <div class="km-step {esc(state)}">
                 <div class="km-step-marker">
-                    <div class="km-step-dot">{esc(icon)}</div>
+                    <div class="km-step-dot">{icon_markup}</div>
                     {connector}
                 </div>
                 <div class="km-step-body">
@@ -848,7 +899,7 @@ def render_recovery_notice(trace: dict) -> str:
     return f"""
         <div class="km-recovery-card">
             <div class="km-recovery-title">
-                ⚠ Recovery or validation event
+                {icon("warning", 13)} Recovery or validation event
             </div>
             <div class="km-recovery-body">
                 {esc(" ".join(details))}
@@ -869,7 +920,12 @@ def render_quality_summary(trace: dict) -> str:
     support_score = trace.get("support_score")
     usefulness_score = trace.get("usefulness_score")
 
-    grounding_scores = trace.get("grounding_scores") or {}
+    grounding_details = trace.get("grounding_details") or {}
+
+    claim_count = grounding_details.get("claim_count")
+    atomic_claim_count = grounding_details.get("atomic_claim_count")
+    unsupported_atomic_count = grounding_details.get("unsupported_atomic_count")
+    entailment_threshold = grounding_details.get("entailment_threshold")
 
     chips = [
         tri_state_chip(
@@ -922,17 +978,35 @@ def render_quality_summary(trace: dict) -> str:
             "</span>"
         )
 
-    if isinstance(grounding_scores, dict):
-        for key, value in grounding_scores.items():
-            if isinstance(value, (int, float)):
-                readable_key = str(key).replace("_", " ").title()
+    if claim_count:
+        chips.append(
+            '<span class="km-chip">'
+            f'Claims checked <span class="num">{int(claim_count)}</span>'
+            "</span>"
+        )
 
-                chips.append(
-                    '<span class="km-chip">'
-                    f"{esc(readable_key)} "
-                    f'<span class="num">{float(value):.2f}</span>'
-                    "</span>"
-                )
+    if atomic_claim_count:
+        unsupported_class = " danger" if unsupported_atomic_count else ""
+
+        chips.append(
+            f'<span class="km-chip{unsupported_class}">'
+            f'Atomic claims <span class="num">{int(atomic_claim_count)}</span>'
+            "</span>"
+        )
+
+    if unsupported_atomic_count:
+        chips.append(
+            '<span class="km-chip danger">'
+            f'Unsupported <span class="num">{int(unsupported_atomic_count)}</span>'
+            "</span>"
+        )
+
+    if entailment_threshold is not None:
+        chips.append(
+            '<span class="km-chip">'
+            f'Entailment threshold <span class="num">'
+            f"{float(entailment_threshold):.2f}</span></span>"
+        )
 
     return "".join(chip for chip in chips if chip)
 
@@ -968,7 +1042,7 @@ def render_recovery_summary(trace: dict) -> str:
 def normalize_origin(value) -> str:
     value = str(value or "").strip().lower()
 
-    if value in {"private", "internal", "knowledge_base", "kb"}:
+    if value in {"private", "internal", "knowledge_base", "kb", "private_kb"}:
         return "private"
 
     if value in {"web", "external", "internet"}:
@@ -1188,7 +1262,15 @@ def render_citation_provenance_table(provenance_list):
 
         source = entry.get("source") or entry.get("name") or "—"
 
-        origin = str(entry.get("origin") or "—").upper()
+        origin_raw = entry.get("origin") or entry.get("source_type")
+        origin_key = normalize_origin(origin_raw)
+
+        if origin_key == "private":
+            origin = "PRIVATE"
+        elif origin_key == "web":
+            origin = "WEB"
+        else:
+            origin = str(origin_raw or "—").upper()
 
         document = entry.get("document") or entry.get("document_id") or "—"
 
@@ -1243,6 +1325,147 @@ def render_citation_provenance_table(provenance_list):
             </tbody>
         </table>
     """
+
+
+def render_latency_waterfall(trace: dict) -> str:
+    """
+    Renders a proportional stage-latency bar from the same
+    retrieval/rerank/grader/generation timings already shown as
+    raw numbers in the Performance tab.
+    """
+
+    trace = trace or {}
+
+    segments = [
+        ("Retrieval", trace.get("retrieval_latency_ms"), "var(--km-accent)"),
+        ("Reranking", trace.get("rerank_latency_ms"), "var(--km-success)"),
+        ("Grading", trace.get("grader_latency_ms"), "var(--km-warning)"),
+        ("Generation", trace.get("generation_latency_ms"), "var(--km-danger)"),
+    ]
+
+    numeric_segments = [
+        (label, float(value), color)
+        for label, value, color in segments
+        if isinstance(value, (int, float)) and value > 0
+    ]
+
+    if not numeric_segments:
+        return ""
+
+    total = sum(value for _, value, _ in numeric_segments)
+
+    bars = []
+    legend = []
+
+    for label, value, color in numeric_segments:
+        share = (value / total) * 100 if total else 0
+
+        bars.append(
+            f'<div class="km-waterfall-seg" style="width:{share:.2f}%;'
+            f'background:{color};" title="{esc(label)}: {esc(format_ms(value))}">'
+            "</div>"
+        )
+
+        legend.append(
+            f"""
+            <div class="km-waterfall-legend-item">
+                <span class="km-waterfall-swatch" style="background:{color};"></span>
+                <span>{esc(label)}</span>
+                <span class="km-waterfall-legend-value">{esc(format_ms(value))}</span>
+            </div>
+            """
+        )
+
+    return f"""
+        <div class="km-waterfall">
+            <div class="km-waterfall-bar">{"".join(bars)}</div>
+            <div class="km-waterfall-legend">{"".join(legend)}</div>
+        </div>
+    """
+
+
+def render_claims(claims, grounding_details=None) -> str:
+    """
+    Renders the Grounding Critic's per-claim entailment review.
+
+    The backend decomposes the answer into atomic claims and checks
+    each one for citation and entailment support (see
+    _normalize_grounding_scores / _extract_grounding_details on the
+    API side). This was already computed but not previously shown.
+    """
+
+    if not claims:
+        return ""
+
+    grounding_details = grounding_details or {}
+
+    uncited = set(grounding_details.get("uncited_claims") or [])
+    invalid_citations = set(grounding_details.get("invalid_citations") or [])
+
+    cards = []
+
+    for claim in claims:
+        if not isinstance(claim, dict):
+            continue
+
+        text = str(claim.get("claim") or "")
+
+        if not text:
+            continue
+
+        supported = claim.get("supported")
+        score = claim.get("score")
+        citations = claim.get("citations") or []
+
+        state = (
+            "supported" if supported else "unsupported" if supported is False else ""
+        )
+
+        badge = tri_state_chip(
+            "Supported",
+            "Unsupported",
+            "Unchecked",
+            supported,
+        )
+
+        chips = [badge]
+
+        if isinstance(score, (int, float)):
+            chips.append(
+                '<span class="km-chip">'
+                f'Entailment <span class="num">{float(score):.2f}</span>'
+                "</span>"
+            )
+
+        if text in uncited or not citations:
+            chips.append('<span class="km-chip danger">Uncited</span>')
+
+        if text in invalid_citations:
+            chips.append('<span class="km-chip danger">Invalid citation</span>')
+
+        citations_line = ""
+
+        if citations:
+            citation_labels = " · ".join(f"[{esc(c)}]" for c in citations)
+
+            citations_line = (
+                f'<div class="km-claim-citations">Cited: {citation_labels}</div>'
+            )
+
+        cards.append(
+            f"""
+            <div class="km-claim {esc(state)}">
+                <div class="km-claim-meta">{"".join(chips)}</div>
+                <div class="km-claim-text">{esc(text)}</div>
+                {citations_line}
+            </div>
+            """
+        )
+
+    if not cards:
+        return ""
+
+    return f'<div class="km-claims">{"".join(cards)}</div>'
 
 
 # ============================================================
@@ -1435,99 +1658,92 @@ if "http_session" not in st.session_state:
 CUSTOM_CSS = """
 <style>
 :root {
-    --km-bg: #0a0c11;
-    --km-panel: #11141c;
-    --km-panel-alt: #161a24;
-    --km-panel-raised: #1b202b;
+    --km-bg: #070a0f;
+    --km-bg-2: #0b1018;
+    --km-panel: #0e141d;
+    --km-panel-alt: #111923;
+    --km-panel-raised: #151f2c;
 
-    --km-border: #2a3040;
-    --km-border-soft: #202633;
+    --km-border: #243143;
+    --km-border-soft: #1a2634;
+    --km-border-strong: #314158;
 
-    --km-text: #f1f3f8;
-    --km-muted: #9aa2b4;
-    --km-muted-soft: #6f778a;
+    --km-text: #f4f7fb;
+    --km-text-soft: #c6cfdb;
+    --km-muted: #8996a8;
+    --km-muted-soft: #5f6d80;
 
-    --km-accent: #7c86f5;
-    --km-accent-strong: #adb5ff;
-    --km-accent-soft: rgba(124, 134, 245, .14);
-    --km-accent-border: rgba(124, 134, 245, .40);
+    --km-accent: #6d8cff;
+    --km-accent-strong: #9db2ff;
+    --km-accent-soft: rgba(109, 140, 255, .11);
+    --km-accent-border: rgba(109, 140, 255, .34);
 
-    --km-success: #58d6a0;
-    --km-success-soft: rgba(88, 214, 160, .13);
+    --km-success: #48c997;
+    --km-success-soft: rgba(72, 201, 151, .10);
+    --km-warning: #e5aa5a;
+    --km-warning-soft: rgba(229, 170, 90, .10);
+    --km-danger: #ee7180;
+    --km-danger-soft: rgba(238, 113, 128, .10);
 
-    --km-warning: #e5ad5d;
-    --km-warning-soft: rgba(229, 173, 93, .13);
+    --km-radius-xs: 6px;
+    --km-radius-sm: 9px;
+    --km-radius-md: 13px;
+    --km-radius-lg: 17px;
 
-    --km-danger: #ef737e;
-    --km-danger-soft: rgba(239, 115, 126, .13);
-
-    --km-radius-sm: 8px;
-    --km-radius-md: 12px;
-    --km-radius-lg: 16px;
-
-    --km-shadow:
-        0 1px 2px rgba(0, 0, 0, .32),
-        0 10px 28px -16px rgba(0, 0, 0, .70);
+    --km-shadow-sm: 0 2px 8px rgba(0, 0, 0, .20);
+    --km-shadow-md: 0 10px 30px rgba(0, 0, 0, .20);
 }
 
-html,
-body,
-[class*="css"] {
-    font-family:
-        "Inter",
-        -apple-system,
-        BlinkMacSystemFont,
-        "Segoe UI",
-        sans-serif;
+html, body, [class*="css"] {
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 .stApp {
     background:
-        radial-gradient(
-            1050px 520px at 12% -10%,
-            rgba(124, 134, 245, .08),
-            transparent 62%
-        ),
+        radial-gradient(circle at 78% 0%, rgba(109, 140, 255, .055), transparent 27rem),
+        radial-gradient(circle at 15% 20%, rgba(72, 201, 151, .025), transparent 22rem),
         var(--km-bg);
     color: var(--km-text);
 }
 
 header[data-testid="stHeader"] {
-    background: transparent;
+    background: rgba(7, 10, 15, .72);
 }
 
-#MainMenu,
-footer {
+#MainMenu, footer {
     visibility: hidden;
 }
 
 ::selection {
-    background: var(--km-accent-soft);
+    background: rgba(109, 140, 255, .24);
 }
 
 @keyframes kmFadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(5px);
-    }
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
 
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+@keyframes kmPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(72, 201, 151, .0); }
+    50% { box-shadow: 0 0 0 5px rgba(72, 201, 151, .08); }
+}
+
+.km-icon {
+    flex: none;
+    vertical-align: -2px;
 }
 
 /* ============================================================
-   SIDEBAR
+   SIDEBAR — compact product navigation
    ============================================================ */
 
 section[data-testid="stSidebar"] {
-    background: var(--km-panel);
+    background: linear-gradient(180deg, #0c121a 0%, #0a0f16 100%);
     border-right: 1px solid var(--km-border-soft);
 }
 
 section[data-testid="stSidebar"] > div {
-    padding-top: .65rem;
+    padding-top: .8rem;
 }
 
 section[data-testid="stSidebar"] * {
@@ -1538,8 +1754,8 @@ section[data-testid="stSidebar"] * {
     display: flex;
     align-items: center;
     gap: 11px;
-    padding: 6px 0 18px;
-    margin-bottom: 18px;
+    padding: 4px 2px 18px;
+    margin-bottom: 17px;
     border-bottom: 1px solid var(--km-border-soft);
 }
 
@@ -1548,19 +1764,20 @@ section[data-testid="stSidebar"] * {
     place-items: center;
     width: 34px;
     height: 34px;
-    border-radius: 9px;
-    background: linear-gradient(150deg, var(--km-accent), #5d65ce);
-    box-shadow: 0 4px 14px -4px rgba(124, 134, 245, .60);
-    color: #0a0c11;
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 10px;
+    background: linear-gradient(145deg, #718dff, #526fdf);
+    color: #fff;
     font-size: 15px;
-    font-weight: 850;
+    font-weight: 800;
+    box-shadow: 0 7px 20px rgba(82, 111, 223, .22);
 }
 
 .km-brand strong {
     display: block;
-    color: #ffffff;
-    font-size: 14.5px;
-    font-weight: 720;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 760;
     letter-spacing: -.01em;
 }
 
@@ -1568,23 +1785,24 @@ section[data-testid="stSidebar"] * {
     display: block;
     margin-top: 2px;
     color: var(--km-muted-soft);
-    font-size: 10.5px;
+    font-size: 10px;
 }
 
 .km-rail-label {
-    margin: 20px 0 9px 1px;
-    color: var(--km-muted-soft);
-    font-size: 10px;
+    margin: 19px 0 8px 1px;
+    color: #647287;
+    font-size: 9.5px;
     font-weight: 750;
-    letter-spacing: .09em;
+    letter-spacing: .10em;
     text-transform: uppercase;
 }
 
 .km-status-card {
-    padding: 12px 13px;
+    padding: 10px 12px;
     border: 1px solid var(--km-border-soft);
     border-radius: var(--km-radius-md);
-    background: var(--km-panel-alt);
+    background: rgba(17, 25, 35, .78);
+    box-shadow: var(--km-shadow-sm);
 }
 
 .km-status-row {
@@ -1592,24 +1810,24 @@ section[data-testid="stSidebar"] * {
     align-items: center;
     justify-content: space-between;
     gap: 8px;
-    padding: 5px 0;
-    font-size: 11px;
+    padding: 6px 0;
+    font-size: 10.5px;
 }
 
 .km-status-row + .km-status-row {
-    border-top: 1px solid var(--km-border-soft);
+    border-top: 1px solid rgba(36, 49, 67, .58);
 }
 
 .km-status-row .label {
-    color: var(--km-muted-soft);
+    color: var(--km-muted);
 }
 
 .km-status-row .value {
-    max-width: 150px;
+    max-width: 155px;
     overflow: hidden;
-    color: var(--km-text);
+    color: var(--km-text-soft);
     font-family: "SF Mono", "JetBrains Mono", monospace;
-    font-size: 10px;
+    font-size: 9.5px;
     text-align: right;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -1617,15 +1835,23 @@ section[data-testid="stSidebar"] * {
 
 .km-capability-list {
     display: grid;
-    gap: 7px;
+    gap: 2px;
 }
 
 .km-capability-row {
     display: flex;
     align-items: center;
     gap: 8px;
+    padding: 5px 6px;
+    border-radius: 7px;
     color: var(--km-muted);
-    font-size: 11px;
+    font-size: 10.5px;
+    transition: background .15s ease, color .15s ease;
+}
+
+.km-capability-row:hover {
+    background: rgba(255,255,255,.025);
+    color: var(--km-text-soft);
 }
 
 .km-capability-row .mark {
@@ -1635,25 +1861,25 @@ section[data-testid="stSidebar"] * {
 
 .km-rail-footer {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 10px;
-    margin-top: 22px;
-    padding-top: 16px;
+    margin-top: 20px;
+    padding: 13px 0 0;
     border-top: 1px solid var(--km-border-soft);
 }
 
 .km-rail-footer strong {
     display: block;
-    color: var(--km-text);
-    font-size: 11.5px;
-    font-weight: 650;
+    color: var(--km-text-soft);
+    font-size: 10.5px;
+    font-weight: 700;
 }
 
 .km-rail-footer small {
     display: block;
     margin-top: 3px;
     color: var(--km-muted-soft);
-    font-size: 9.5px;
+    font-size: 9px;
     line-height: 1.5;
 }
 
@@ -1668,188 +1894,175 @@ section[data-testid="stSidebar"] * {
 
 .km-dot.success {
     background: var(--km-success);
-    box-shadow: 0 0 10px var(--km-success-soft);
+    animation: kmPulse 2.4s infinite;
 }
 
-.km-dot.warning {
-    background: var(--km-warning);
-    box-shadow: 0 0 10px var(--km-warning-soft);
-}
+.km-dot.warning { background: var(--km-warning); }
+.km-dot.danger { background: var(--km-danger); }
 
-.km-dot.danger {
-    background: var(--km-danger);
-    box-shadow: 0 0 10px var(--km-danger-soft);
-}
-
-section[data-testid="stSidebar"] button {
+section[data-testid="stSidebar"] button,
+section[data-testid="stSidebar"] .stDownloadButton button {
+    min-height: 34px;
     border: 1px solid var(--km-border) !important;
     border-radius: 8px !important;
-    background: var(--km-panel-raised) !important;
-    color: var(--km-text) !important;
-    font-size: 11.5px !important;
+    background: #121b27 !important;
+    color: var(--km-text-soft) !important;
+    font-size: 10.5px !important;
+    font-weight: 600 !important;
+    transition: border-color .15s ease, background .15s ease;
 }
 
-section[data-testid="stSidebar"] button:hover {
+section[data-testid="stSidebar"] button:hover,
+section[data-testid="stSidebar"] .stDownloadButton button:hover {
     border-color: var(--km-accent-border) !important;
+    background: #172235 !important;
 }
 
 section[data-testid="stSidebar"] input,
 section[data-testid="stSidebar"] div[data-baseweb="input"] {
     border-color: var(--km-border) !important;
-    background: var(--km-panel-raised) !important;
+    background: #101823 !important;
     color: var(--km-text) !important;
     font-family: "SF Mono", "JetBrains Mono", monospace !important;
-    font-size: 10.5px !important;
+    font-size: 9.5px !important;
 }
 
 /* ============================================================
-   TOPBAR
+   TOP HEADER — product identity
    ============================================================ */
 
 .km-topbar {
-    padding-top: 3px;
+    position: relative;
+    padding: 7px 0 0;
 }
 
-.km-kicker {
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
-    margin-bottom: 10px;
-    color: var(--km-accent-strong);
-    font-family: "SF Mono", "JetBrains Mono", monospace;
-    font-size: 10.5px;
-    font-weight: 700;
-    letter-spacing: .08em;
-    text-transform: uppercase;
-}
-
-.km-kicker::before {
+.km-topbar::before {
     content: "";
-    width: 14px;
-    height: 1px;
-    background: var(--km-accent);
+    display: block;
+    width: 42px;
+    height: 3px;
+    margin-bottom: 15px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--km-accent), #8ca4ff);
 }
 
 .km-topbar h1 {
-    margin: 0 0 9px;
-    color: #ffffff;
-    font-size: 27px;
-    font-weight: 760;
-    letter-spacing: -.03em;
+    margin: 0 0 7px;
+    color: #fff;
+    font-size: 29px;
+    font-weight: 790;
+    letter-spacing: -.035em;
 }
 
 .km-topbar p {
-    max-width: 780px;
+    max-width: 820px;
     margin: 0;
     color: var(--km-muted);
-    font-size: 13px;
-    line-height: 1.65;
-}
-
-.km-engine-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 9px;
-    margin-top: 14px;
-    padding: 7px 13px;
-    border: 1px solid var(--km-border);
-    border-radius: 999px;
-    background: var(--km-panel-alt);
-    color: var(--km-muted);
-    font-family: "SF Mono", "JetBrains Mono", monospace;
-    font-size: 10px;
+    font-size: 12.5px;
+    line-height: 1.7;
 }
 
 /* ============================================================
-   CONSOLE
+   CONSOLE HEADER
    ============================================================ */
 
 .km-console-head {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 2px 12px;
-    margin: 24px 0 16px;
-    border-bottom: 1px solid var(--km-border-soft);
+    padding: 10px 12px;
+    margin: 24px 0 13px;
+    border: 1px solid var(--km-border-soft);
+    border-radius: var(--km-radius-md);
+    background: rgba(14, 20, 29, .72);
+    box-shadow: var(--km-shadow-sm);
 }
 
 .km-console-live {
     display: flex;
     align-items: center;
     gap: 8px;
-    color: var(--km-text);
-    font-size: 12.5px;
-    font-weight: 650;
+    color: var(--km-text-soft);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .02em;
 }
 
 .km-session-id {
+    padding: 4px 7px;
+    border: 1px solid var(--km-border);
+    border-radius: 6px;
+    background: #0b1119;
     color: var(--km-muted-soft);
     font-family: "SF Mono", "JetBrains Mono", monospace;
-    font-size: 10px;
+    font-size: 8.5px;
+    letter-spacing: .06em;
 }
 
 .km-msg-row {
     display: flex;
     align-items: center;
-    gap: 10px;
-    margin-bottom: 6px;
+    gap: 9px;
+    margin: 18px 0 6px;
 }
 
 .km-msg-row.user {
     justify-content: flex-end;
+    margin-top: 20px;
 }
 
 .km-msg-avatar {
     display: grid;
     place-items: center;
-    width: 26px;
-    height: 26px;
-    border-radius: 7px;
-    background: linear-gradient(150deg, var(--km-accent), #5d65ce);
-    color: #0a0c11;
+    width: 25px;
+    height: 25px;
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 8px;
+    background: linear-gradient(145deg, #718dff, #526fdf);
+    color: #fff;
     font-family: "SF Mono", "JetBrains Mono", monospace;
-    font-size: 11px;
-    font-weight: 850;
+    font-size: 9px;
+    font-weight: 800;
+    box-shadow: 0 5px 16px rgba(82,111,223,.18);
 }
 
 .km-msg-label {
-    color: var(--km-muted-soft);
+    color: #748297;
     font-size: 10px;
     font-weight: 700;
-    letter-spacing: .05em;
-    text-transform: uppercase;
 }
 
 .km-msg-label.user {
+    color: #8e9db1;
     text-align: right;
 }
 
 [class*="st-key-km_bubble_"] {
-    max-width: min(860px, 92%);
-    padding: 15px 17px;
+    max-width: min(900px, 94%);
+    padding: 17px 19px;
     border: 1px solid var(--km-border-soft);
-    border-radius: 4px 14px 14px 14px;
-    background: var(--km-panel-alt);
+    border-radius: 5px 15px 15px 15px;
+    background:
+        linear-gradient(180deg, rgba(17,25,35,.96), rgba(14,20,29,.96));
     color: var(--km-text);
-    font-size: 13.5px;
-    line-height: 1.7;
-    box-shadow: var(--km-shadow);
-    animation: kmFadeIn .24s ease both;
+    font-size: 13.2px;
+    line-height: 1.75;
+    box-shadow: var(--km-shadow-md);
+    animation: kmFadeIn .22s ease both;
 }
 
 [class*="st-key-km_user_bubble_"] {
     margin-left: auto;
-    border-radius: 14px 4px 14px 14px;
-    background: var(--km-panel-raised);
+    border-radius: 15px 5px 15px 15px;
+    border-color: #2c3a4e;
+    background: #131d2a;
+    box-shadow: var(--km-shadow-sm);
 }
 
 [class*="st-key-km_bubble_intro"] {
+    max-width: 900px;
     border-left: 2px solid var(--km-accent);
-    background: linear-gradient(
-        180deg,
-        var(--km-accent-soft),
-        var(--km-panel-alt) 60%
-    );
+    background: linear-gradient(135deg, rgba(17,25,35,.98), rgba(13,19,28,.98));
 }
 
 [class*="st-key-km_bubble_"] p {
@@ -1861,49 +2074,36 @@ section[data-testid="stSidebar"] div[data-baseweb="input"] {
 }
 
 [class*="st-key-km_bubble_"] code {
-    padding: 2px 5px;
+    padding: 2px 6px;
     border: 1px solid var(--km-border);
-    border-radius: 4px;
-    background: var(--km-panel);
-    font-size: 12px;
+    border-radius: 5px;
+    background: #0a1018;
+    color: var(--km-accent-strong);
+    font-size: 11.5px;
 }
 
 /* ============================================================
-   RUN SUMMARY
+   RUN SUMMARY — executive status card
    ============================================================ */
 
 .km-run-banner {
     display: flex;
     align-items: stretch;
     justify-content: space-between;
-    gap: 22px;
-    margin: 16px 0;
-    padding: 16px 18px;
+    gap: 20px;
+    margin: 15px 0 12px;
+    padding: 15px 17px;
     border: 1px solid var(--km-border-soft);
     border-radius: var(--km-radius-md);
-    background: linear-gradient(
-        115deg,
-        var(--km-panel-alt),
-        var(--km-panel)
-    );
-    box-shadow: var(--km-shadow);
+    background: linear-gradient(135deg, #101822, #0d141d);
+    box-shadow: var(--km-shadow-sm);
+    animation: kmFadeIn .2s ease both;
 }
 
-.km-run-banner.success {
-    border-left: 3px solid var(--km-success);
-}
-
-.km-run-banner.ok {
-    border-left: 3px solid var(--km-accent);
-}
-
-.km-run-banner.warning {
-    border-left: 3px solid var(--km-warning);
-}
-
-.km-run-banner.danger {
-    border-left: 3px solid var(--km-danger);
-}
+.km-run-banner.success { border-left: 3px solid var(--km-success); }
+.km-run-banner.ok { border-left: 3px solid var(--km-accent); }
+.km-run-banner.warning { border-left: 3px solid var(--km-warning); }
+.km-run-banner.danger { border-left: 3px solid var(--km-danger); }
 
 .km-run-banner-main {
     min-width: 0;
@@ -1915,68 +2115,52 @@ section[data-testid="stSidebar"] div[data-baseweb="input"] {
     align-items: center;
     gap: 8px;
     color: var(--km-text);
-    font-size: 13px;
+    font-size: 12.5px;
     font-weight: 750;
 }
 
 .km-run-indicator {
-    display: inline-block;
-    width: 8px;
-    height: 8px;
+    width: 7px;
+    height: 7px;
     flex: none;
     border-radius: 50%;
     background: var(--km-accent);
 }
 
-.km-run-banner.success .km-run-indicator {
-    background: var(--km-success);
-    box-shadow: 0 0 12px var(--km-success-soft);
-}
-
-.km-run-banner.ok .km-run-indicator {
-    background: var(--km-accent);
-    box-shadow: 0 0 12px var(--km-accent-soft);
-}
-
-.km-run-banner.warning .km-run-indicator {
-    background: var(--km-warning);
-    box-shadow: 0 0 12px var(--km-warning-soft);
-}
-
-.km-run-banner.danger .km-run-indicator {
-    background: var(--km-danger);
-    box-shadow: 0 0 12px var(--km-danger-soft);
-}
+.km-run-banner.success .km-run-indicator { background: var(--km-success); }
+.km-run-banner.ok .km-run-indicator { background: var(--km-accent); }
+.km-run-banner.warning .km-run-indicator { background: var(--km-warning); }
+.km-run-banner.danger .km-run-indicator { background: var(--km-danger); }
 
 .km-run-banner-description {
-    max-width: 520px;
+    max-width: 540px;
     margin-top: 5px;
     color: var(--km-muted);
-    font-size: 11px;
+    font-size: 10px;
     line-height: 1.55;
 }
 
 .km-run-banner-stats {
     display: grid;
-    grid-template-columns: repeat(5, minmax(72px, 1fr));
+    grid-template-columns: repeat(5, minmax(66px, 1fr));
     align-items: center;
-    gap: 14px;
-    min-width: 430px;
+    gap: 12px;
+    min-width: 440px;
 }
 
 .km-run-stat {
     min-width: 0;
-    padding-left: 12px;
+    padding-left: 11px;
     border-left: 1px solid var(--km-border-soft);
 }
 
 .km-run-stat span {
     display: block;
     overflow: hidden;
-    color: var(--km-muted-soft);
-    font-size: 9px;
-    font-weight: 700;
-    letter-spacing: .04em;
+    color: #68778b;
+    font-size: 8px;
+    font-weight: 750;
+    letter-spacing: .08em;
     text-overflow: ellipsis;
     text-transform: uppercase;
     white-space: nowrap;
@@ -1986,28 +2170,29 @@ section[data-testid="stSidebar"] div[data-baseweb="input"] {
     display: block;
     margin-top: 4px;
     overflow: hidden;
-    color: var(--km-text);
+    color: var(--km-text-soft);
     font-family: "SF Mono", "JetBrains Mono", monospace;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 700;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
 /* ============================================================
-   PIPELINE
+   PIPELINE — visual agent execution timeline
    ============================================================ */
 
 .km-pipeline {
     display: flex;
     width: 100%;
-    margin: 18px 0;
-    padding: 16px 18px;
+    margin: 13px 0;
+    padding: 15px 16px 14px;
     border: 1px solid var(--km-border-soft);
     border-radius: var(--km-radius-lg);
-    background: var(--km-panel);
-    box-shadow: var(--km-shadow);
+    background: linear-gradient(180deg, #0f161f, #0c121a);
+    box-shadow: var(--km-shadow-md);
     overflow-x: auto;
+    animation: kmFadeIn .2s ease both;
 }
 
 .km-step {
@@ -2015,17 +2200,15 @@ section[data-testid="stSidebar"] div[data-baseweb="input"] {
     flex: 1;
     flex-direction: column;
     align-items: flex-start;
-    gap: 8px;
-    min-width: 108px;
-    opacity: .45;
+    gap: 7px;
+    min-width: 105px;
+    opacity: .38;
 }
 
 .km-step.success,
 .km-step.fallback,
 .km-step.failed,
-.km-step.skipped {
-    opacity: 1;
-}
+.km-step.skipped { opacity: 1; }
 
 .km-step-marker {
     display: flex;
@@ -2036,42 +2219,40 @@ section[data-testid="stSidebar"] div[data-baseweb="input"] {
 .km-step-dot {
     display: grid;
     place-items: center;
-    width: 26px;
-    height: 26px;
+    width: 27px;
+    height: 27px;
     flex: none;
-    border: 1px solid var(--km-border);
+    border: 1px solid #2b394c;
     border-radius: 50%;
-    background: var(--km-panel-alt);
-    color: var(--km-muted-soft);
+    background: #111923;
+    color: #657387;
     font-family: "SF Mono", "JetBrains Mono", monospace;
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 850;
 }
 
 .km-step.success .km-step-dot {
-    border-color: rgba(88, 214, 160, .6);
+    border-color: rgba(72,201,151,.8);
     background: var(--km-success);
-    color: #0a0c11;
-    box-shadow: 0 0 0 4px var(--km-success-soft);
+    color: #06110c;
+    box-shadow: 0 0 0 3px var(--km-success-soft);
 }
 
 .km-step.fallback .km-step-dot {
-    border-color: rgba(229, 173, 93, .6);
+    border-color: rgba(229,170,90,.8);
     background: var(--km-warning);
-    color: #0a0c11;
-    box-shadow: 0 0 0 4px var(--km-warning-soft);
+    color: #171006;
+    box-shadow: 0 0 0 3px var(--km-warning-soft);
 }
 
 .km-step.failed .km-step-dot {
-    border-color: rgba(239, 115, 126, .7);
+    border-color: rgba(238,113,128,.8);
     background: var(--km-danger);
-    color: #0a0c11;
-    box-shadow: 0 0 0 4px var(--km-danger-soft);
+    color: #17080b;
+    box-shadow: 0 0 0 3px var(--km-danger-soft);
 }
 
-.km-step.skipped {
-    opacity: .58;
-}
+.km-step.skipped { opacity: .52; }
 
 .km-step.skipped .km-step-dot {
     border-style: dashed;
@@ -2082,115 +2263,94 @@ section[data-testid="stSidebar"] div[data-baseweb="input"] {
     flex: 1;
     height: 1px;
     margin: 0 6px;
-    background: var(--km-border);
+    background: #263448;
 }
 
-.km-step-line.success {
-    background: rgba(88, 214, 160, .52);
-}
-
-.km-step-line.fallback {
-    background: rgba(229, 173, 93, .55);
-}
-
-.km-step-line.failed {
-    background: rgba(239, 115, 126, .55);
-}
-
+.km-step-line.success { background: rgba(72,201,151,.48); }
+.km-step-line.fallback { background: rgba(229,170,90,.48); }
+.km-step-line.failed { background: rgba(238,113,128,.48); }
 .km-step-line.skipped,
-.km-step-line.pending {
-    background: var(--km-border);
-}
+.km-step-line.pending { background: #243143; }
 
 .km-step-body strong {
     display: block;
-    color: var(--km-text);
-    font-size: 11.5px;
+    color: var(--km-text-soft);
+    font-size: 10.5px;
     font-weight: 700;
 }
 
-.km-step.success .km-step-body strong {
-    color: var(--km-success);
-}
-
-.km-step.fallback .km-step-body strong {
-    color: var(--km-warning);
-}
-
-.km-step.failed .km-step-body strong {
-    color: var(--km-danger);
-}
+.km-step.success .km-step-body strong { color: var(--km-success); }
+.km-step.fallback .km-step-body strong { color: var(--km-warning); }
+.km-step.failed .km-step-body strong { color: var(--km-danger); }
 
 .km-step-body span {
     display: block;
     margin-top: 2px;
-    color: var(--km-muted-soft);
-    font-size: 9.5px;
+    color: #637187;
+    font-size: 8.5px;
     line-height: 1.4;
 }
 
 /* ============================================================
-   RECOVERY + TABS
+   RECOVERY / TABS / INFORMATION
    ============================================================ */
 
 .km-recovery-card {
-    margin: 12px 0;
-    padding: 11px 13px;
-    border: 1px solid rgba(229, 173, 93, .35);
+    margin: 11px 0;
+    padding: 10px 12px;
+    border: 1px solid rgba(229,170,90,.27);
     border-radius: var(--km-radius-sm);
     background: var(--km-warning-soft);
 }
 
 .km-recovery-title {
     color: var(--km-warning);
-    font-size: 11.5px;
+    font-size: 10.5px;
     font-weight: 700;
 }
 
 .km-recovery-body {
     margin-top: 4px;
     color: var(--km-muted);
-    font-size: 10.5px;
+    font-size: 10px;
     line-height: 1.55;
 }
 
 .km-tab-panel {
-    padding: 14px;
-    margin: 8px 0 10px;
+    padding: 13px;
+    margin: 7px 0 9px;
     border: 1px solid var(--km-border-soft);
     border-radius: var(--km-radius-sm);
-    background: var(--km-panel);
+    background: #0d141d;
 }
 
 .km-tab-heading {
-    margin-bottom: 10px;
-    color: var(--km-muted-soft);
-    font-size: 9.5px;
+    margin-bottom: 9px;
+    color: #738197;
+    font-size: 9px;
     font-weight: 750;
-    letter-spacing: .08em;
+    letter-spacing: .09em;
     text-transform: uppercase;
 }
 
 .km-info-card {
-    padding: 12px 13px;
-    margin: 10px 0;
+    padding: 11px 12px;
+    margin: 9px 0;
     border: 1px solid var(--km-border-soft);
     border-radius: var(--km-radius-sm);
-    background: var(--km-panel-alt);
+    background: #111923;
 }
 
 .km-info-card-title {
-    margin-bottom: 6px;
+    margin-bottom: 5px;
     color: var(--km-accent-strong);
     font-size: 10px;
     font-weight: 700;
-    letter-spacing: .04em;
-    text-transform: uppercase;
 }
 
 .km-info-card-body {
     color: var(--km-muted);
-    font-size: 11.5px;
+    font-size: 10.5px;
     line-height: 1.6;
 }
 
@@ -2198,20 +2358,20 @@ section[data-testid="stSidebar"] div[data-baseweb="input"] {
     padding: 3px 6px;
     border: 1px solid var(--km-border);
     border-radius: 5px;
-    background: var(--km-panel-raised);
-    color: var(--km-text);
-    font-size: 10.5px;
+    background: #0a1018;
+    color: var(--km-text-soft);
+    font-size: 10px;
 }
 
 .km-status-note {
-    margin: 11px 0 0;
+    margin: 10px 0 0;
     color: var(--km-muted-soft);
-    font-size: 10.5px;
+    font-size: 9.5px;
     line-height: 1.55;
 }
 
 /* ============================================================
-   CHIPS + EVIDENCE
+   CHIPS / EVIDENCE
    ============================================================ */
 
 .km-signal-row {
@@ -2224,21 +2384,21 @@ section[data-testid="stSidebar"] div[data-baseweb="input"] {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 5px 10px;
+    padding: 4px 8px;
     border: 1px solid var(--km-border);
     border-radius: 999px;
-    background: var(--km-panel-raised);
-    color: var(--km-muted);
-    font-size: 10.5px;
-    font-weight: 500;
+    background: #121b26;
+    color: #8997aa;
+    font-size: 9.5px;
+    font-weight: 550;
 }
 
 .km-chip::before {
     content: "";
-    width: 5px;
-    height: 5px;
+    width: 4px;
+    height: 4px;
     border-radius: 50%;
-    background: var(--km-muted-soft);
+    background: #647287;
 }
 
 .km-chip.ok {
@@ -2247,71 +2407,67 @@ section[data-testid="stSidebar"] div[data-baseweb="input"] {
     color: var(--km-accent-strong);
 }
 
-.km-chip.ok::before {
-    background: var(--km-accent);
-}
+.km-chip.ok::before { background: var(--km-accent); }
 
 .km-chip.success {
-    border-color: rgba(88, 214, 160, .35);
+    border-color: rgba(72,201,151,.30);
     background: var(--km-success-soft);
     color: var(--km-success);
 }
 
-.km-chip.success::before {
-    background: var(--km-success);
-}
+.km-chip.success::before { background: var(--km-success); }
 
 .km-chip.warning {
-    border-color: rgba(229, 173, 93, .35);
+    border-color: rgba(229,170,90,.30);
     background: var(--km-warning-soft);
     color: var(--km-warning);
 }
 
-.km-chip.warning::before {
-    background: var(--km-warning);
-}
+.km-chip.warning::before { background: var(--km-warning); }
 
 .km-chip.danger {
-    border-color: rgba(239, 115, 126, .35);
+    border-color: rgba(238,113,128,.30);
     background: var(--km-danger-soft);
     color: var(--km-danger);
 }
 
-.km-chip.danger::before {
-    background: var(--km-danger);
-}
+.km-chip.danger::before { background: var(--km-danger); }
 
 .km-chip .num {
+    color: inherit;
     font-family: "SF Mono", "JetBrains Mono", monospace;
-    font-weight: 700;
+    font-weight: 750;
 }
 
 .km-sources {
     display: grid;
-    gap: 8px;
-    margin-top: 10px;
+    gap: 7px;
+    margin-top: 9px;
 }
 
 .km-source {
-    padding: 12px 13px;
+    padding: 11px 12px;
     border: 1px solid var(--km-border-soft);
     border-radius: var(--km-radius-sm);
-    background: var(--km-panel-raised);
+    background: #111923;
+    animation: kmFadeIn .2s ease both;
+    transition: border-color .15s ease, transform .15s ease;
 }
 
 .km-source:hover {
-    border-color: var(--km-border);
+    border-color: #2c3b50;
+    transform: translateY(-1px);
 }
 
 .km-source-meta {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 8px;
-    margin-bottom: 8px;
+    gap: 7px;
+    margin-bottom: 7px;
     color: var(--km-muted);
     font-family: "SF Mono", "JetBrains Mono", monospace;
-    font-size: 10px;
+    font-size: 9px;
 }
 
 .km-source-number {
@@ -2320,82 +2476,75 @@ section[data-testid="stSidebar"] div[data-baseweb="input"] {
 }
 
 .km-source-name {
-    color: var(--km-text);
+    color: var(--km-text-soft);
     font-weight: 700;
 }
 
 .km-source-type {
-    padding: 2px 7px;
+    padding: 2px 6px;
     border: 1px solid var(--km-border);
     border-radius: 999px;
-    background: var(--km-panel);
+    background: #0d141d;
     color: var(--km-muted);
 }
 
-.km-origin-badge {
-    padding: 2px 8px;
-}
-
-.km-source-score {
-    color: var(--km-muted-soft);
-}
+.km-origin-badge { padding: 2px 7px; }
+.km-source-score { color: #68778b; }
 
 .km-source-body {
     max-height: 190px;
     overflow-y: auto;
-    color: var(--km-muted);
-    font-size: 11.5px;
+    color: #9aa7b8;
+    font-size: 10.5px;
     line-height: 1.6;
 }
 
 .km-source-reason {
     margin-top: 7px;
     color: var(--km-muted-soft);
-    font-size: 10px;
+    font-size: 9px;
 }
 
 .km-source-id {
-    margin-top: 8px;
-    color: var(--km-muted-soft);
+    margin-top: 7px;
+    color: #566477;
     font-family: "SF Mono", "JetBrains Mono", monospace;
-    font-size: 9px;
+    font-size: 8.5px;
     word-break: break-all;
 }
 
 .km-source-link {
     color: var(--km-accent-strong);
-    font-weight: 600;
+    font-weight: 650;
     text-decoration: none;
 }
 
-.km-source-link:hover {
-    text-decoration: underline;
-}
+.km-source-link:hover { text-decoration: underline; }
 
 .km-empty-note {
-    margin-top: 10px;
-    padding: 10px 11px;
-    border: 1px dashed var(--km-border);
+    margin-top: 9px;
+    padding: 9px 10px;
+    border: 1px dashed #2b394b;
     border-radius: var(--km-radius-sm);
     color: var(--km-muted-soft);
-    font-size: 10.5px;
+    font-size: 9.5px;
     line-height: 1.55;
 }
 
 .km-provenance-table {
     width: 100%;
-    margin-top: 10px;
+    margin-top: 9px;
     border-collapse: collapse;
-    font-size: 10.5px;
+    font-size: 9.5px;
 }
 
 .km-provenance-table th {
     padding: 7px 8px;
     border-bottom: 1px solid var(--km-border);
-    color: var(--km-muted-soft);
-    font-size: 9px;
-    font-weight: 700;
-    letter-spacing: .04em;
+    color: #66758a;
+    font-size: 8px;
+    font-weight: 750;
+    letter-spacing: .08em;
     text-align: left;
     text-transform: uppercase;
 }
@@ -2403,49 +2552,142 @@ section[data-testid="stSidebar"] div[data-baseweb="input"] {
 .km-provenance-table td {
     padding: 7px 8px;
     border-bottom: 1px solid var(--km-border-soft);
-    color: var(--km-muted);
+    color: #8997a9;
     font-family: "SF Mono", "JetBrains Mono", monospace;
 }
 
 /* ============================================================
-   TRACE + NATIVE STREAMLIT WIDGETS
+   PERFORMANCE / CLAIMS / TRACE
    ============================================================ */
 
-.km-trace-list {
-    margin: 9px 0 0;
-    padding-left: 20px;
+.km-waterfall {
+    margin: 2px 0 18px;
+}
+
+.km-waterfall-bar {
+    display: flex;
+    height: 9px;
+    overflow: hidden;
+    border: 1px solid var(--km-border-soft);
+    border-radius: 999px;
+    background: #121b26;
+}
+
+.km-waterfall-seg { height: 100%; }
+.km-waterfall-seg + .km-waterfall-seg {
+    border-left: 1px solid var(--km-bg);
+}
+
+.km-waterfall-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    margin-top: 9px;
+}
+
+.km-waterfall-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
     color: var(--km-muted);
-    font-size: 11.5px;
+    font-size: 9.5px;
+}
+
+.km-waterfall-swatch {
+    width: 7px;
+    height: 7px;
+    flex: none;
+    border-radius: 2px;
+}
+
+.km-waterfall-legend-value {
+    color: var(--km-text-soft);
+    font-family: "SF Mono", "JetBrains Mono", monospace;
+    font-weight: 700;
+}
+
+.km-claims {
+    display: grid;
+    gap: 7px;
+    margin-top: 9px;
+}
+
+.km-claim {
+    padding: 10px 12px;
+    border: 1px solid var(--km-border-soft);
+    border-left: 2px solid #2a394d;
+    border-radius: var(--km-radius-sm);
+    background: #111923;
+}
+
+.km-claim.supported { border-left-color: var(--km-success); }
+.km-claim.unsupported { border-left-color: var(--km-danger); }
+
+.km-claim-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 7px;
+    margin-bottom: 5px;
+}
+
+.km-claim-text {
+    color: var(--km-text-soft);
+    font-size: 10.5px;
+    line-height: 1.55;
+}
+
+.km-claim-citations {
+    margin-top: 6px;
+    color: #637187;
+    font-family: "SF Mono", "JetBrains Mono", monospace;
+    font-size: 8.5px;
+}
+
+.km-trace-list {
+    margin: 8px 0 0;
+    padding-left: 19px;
+    color: #8997a9;
+    font-size: 10.5px;
     line-height: 1.75;
 }
 
-.km-trace-list b {
-    color: var(--km-accent-strong);
-}
+.km-trace-list b { color: var(--km-accent-strong); }
+
+/* ============================================================
+   STREAMLIT NATIVE WIDGETS
+   ============================================================ */
 
 div[data-testid="stMetric"] {
-    padding: 12px;
+    min-height: 75px;
+    padding: 11px 12px;
     border: 1px solid var(--km-border-soft);
     border-radius: var(--km-radius-sm);
-    background: var(--km-panel);
+    background: linear-gradient(180deg, #101822, #0d141d);
+    box-shadow: var(--km-shadow-sm);
 }
 
 div[data-testid="stMetricLabel"] {
-    color: var(--km-muted-soft) !important;
-    font-size: 10px !important;
+    color: #6f7e92 !important;
+    font-size: 9px !important;
+    font-weight: 650 !important;
+    letter-spacing: .04em;
+    text-transform: uppercase;
 }
 
 div[data-testid="stMetricValue"] {
-    color: var(--km-text) !important;
+    color: var(--km-text-soft) !important;
     font-family: "SF Mono", "JetBrains Mono", monospace;
-    font-size: 18px !important;
+    font-size: 17px !important;
 }
 
 button[data-baseweb="tab"] {
-    height: 38px;
-    padding: 0 13px;
-    color: var(--km-muted) !important;
-    font-size: 11.5px !important;
+    height: 37px;
+    padding: 0 12px;
+    border-radius: 7px 7px 0 0;
+    color: #6f7e92 !important;
+    font-size: 10.5px !important;
+    font-weight: 650 !important;
 }
 
 button[data-baseweb="tab"][aria-selected="true"] {
@@ -2457,39 +2699,58 @@ div[data-baseweb="tab-highlight"] {
 }
 
 .stButton > button {
+    min-height: 35px;
     border: 1px solid var(--km-border) !important;
     border-radius: 8px !important;
-    background: var(--km-panel-raised) !important;
-    color: var(--km-text) !important;
-    font-size: 12px !important;
-    font-weight: 500 !important;
+    background: #121b27 !important;
+    color: var(--km-text-soft) !important;
+    font-size: 10.5px !important;
+    font-weight: 650 !important;
+    transition: all .15s ease;
 }
 
 .stButton > button:hover {
     border-color: var(--km-accent-border) !important;
+    background: #172235 !important;
+    color: #fff !important;
+    transform: translateY(-1px);
 }
 
 div[data-testid="stChatInput"] {
     border-top: 1px solid var(--km-border-soft);
-    background: var(--km-panel);
+    background: linear-gradient(180deg, rgba(7,10,15,.86), rgba(7,10,15,.98));
+    padding-top: 10px;
 }
 
 div[data-testid="stChatInput"] textarea {
-    border: 1px solid var(--km-border) !important;
-    border-radius: 10px !important;
-    background: var(--km-panel-raised) !important;
+    min-height: 48px !important;
+    border: 1px solid #2a394c !important;
+    border-radius: 12px !important;
+    background: #101923 !important;
     color: var(--km-text) !important;
+    box-shadow: 0 8px 28px rgba(0,0,0,.18);
+}
+
+div[data-testid="stChatInput"] textarea::placeholder {
+    color: #66758a !important;
 }
 
 div[data-testid="stChatInput"] textarea:focus {
     border-color: var(--km-accent) !important;
-    box-shadow: 0 0 0 1px var(--km-accent-soft) !important;
+    box-shadow: 0 0 0 3px rgba(109,140,255,.10) !important;
 }
 
 div[data-testid="stExpander"] {
     border: 1px solid var(--km-border-soft);
-    border-radius: var(--km-radius-sm);
-    background: var(--km-panel);
+    border-radius: var(--km-radius-md);
+    background: #0d141d;
+    box-shadow: var(--km-shadow-sm);
+}
+
+div[data-testid="stExpander"] summary {
+    color: var(--km-text-soft);
+    font-size: 10.5px;
+    font-weight: 700;
 }
 
 /* ============================================================
@@ -2498,28 +2759,43 @@ div[data-testid="stExpander"] {
 
 .km-starter-card {
     height: 100%;
-    padding: 14px 15px;
+    min-height: 125px;
+    padding: 15px;
     border: 1px solid var(--km-border-soft);
     border-radius: var(--km-radius-md);
-    background: var(--km-panel-alt);
+    background: linear-gradient(145deg, #111923, #0d141d);
+    box-shadow: var(--km-shadow-sm);
+    transition: transform .15s ease, border-color .15s ease;
+}
+
+.km-starter-card:hover {
+    border-color: #2c3b50;
+    transform: translateY(-2px);
 }
 
 .km-starter-card .icon {
-    margin-bottom: 6px;
-    font-size: 17px;
+    display: grid;
+    place-items: center;
+    width: 31px;
+    height: 31px;
+    margin-bottom: 10px;
+    border: 1px solid var(--km-accent-border);
+    border-radius: 9px;
+    background: var(--km-accent-soft);
+    color: var(--km-accent-strong);
 }
 
 .km-starter-card .title {
-    margin-bottom: 3px;
-    color: var(--km-text);
-    font-size: 12px;
-    font-weight: 650;
+    margin-bottom: 4px;
+    color: var(--km-text-soft);
+    font-size: 11px;
+    font-weight: 700;
 }
 
 .km-starter-card .desc {
-    color: var(--km-muted-soft);
-    font-size: 10.5px;
-    line-height: 1.5;
+    color: #718095;
+    font-size: 9.5px;
+    line-height: 1.55;
 }
 
 /* ============================================================
@@ -2540,18 +2816,14 @@ div[data-testid="stExpander"] {
 }
 
 @media (max-width: 900px) {
-    .km-topbar h1 {
-        font-size: 22px;
-    }
+    .km-topbar h1 { font-size: 24px; }
 
     .km-pipeline {
-        padding: 14px;
+        padding: 13px;
         overflow-x: auto;
     }
 
-    .km-step {
-        min-width: 108px;
-    }
+    .km-step { min-width: 105px; }
 
     [class*="st-key-km_bubble_"] {
         max-width: 100%;
@@ -2567,6 +2839,8 @@ div[data-testid="stExpander"] {
         padding-left: 0;
         border-left: 0;
     }
+
+    .km-topbar h1 { font-size: 22px; }
 }
 </style>
 """
@@ -2733,7 +3007,6 @@ def ask(question: str):
             context_reason = data.get("context_reason")
 
             should_search_web = data.get("should_search_web")
-            web_search_required = data.get("web_search_required")
 
             web_search_used = bool(data.get("web_search_used", False))
 
@@ -2750,6 +3023,8 @@ def ask(question: str):
 
             grounding_scores = data.get("grounding_scores")
             grounding_feedback = data.get("grounding_feedback")
+            grounding_details = data.get("grounding_details") or {}
+            claims = data.get("claims") or []
 
             revision_count = data.get("revision_count")
             support_retry_count = data.get("support_retry_count")
@@ -2758,7 +3033,18 @@ def ask(question: str):
 
             web_rewrite_count = data.get("web_rewrite_count")
 
-            citation_provenance = data.get("citation_provenance") or []
+            # The backend returns citation_provenance as a dict keyed by
+            # citation id (see _normalize_citation_provenance in the API),
+            # not a list — normalize it here so the provenance table and
+            # claim citations below can rely on a consistent list shape.
+            raw_citation_provenance = data.get("citation_provenance") or {}
+
+            if isinstance(raw_citation_provenance, dict):
+                citation_provenance = list(raw_citation_provenance.values())
+            elif isinstance(raw_citation_provenance, list):
+                citation_provenance = raw_citation_provenance
+            else:
+                citation_provenance = []
 
             thought_process = data.get("thought_process", []) or []
 
@@ -2875,7 +3161,6 @@ def ask(question: str):
             "context_quality": context_quality,
             "context_reason": context_reason,
             "should_search_web": should_search_web,
-            "web_search_required": web_search_required,
             "web_search_used": web_search_used,
             "private_retrieval_status": private_retrieval_status,
             "citation_valid": citation_valid,
@@ -2886,6 +3171,8 @@ def ask(question: str):
             "usefulness_score": usefulness_score,
             "grounding_scores": grounding_scores,
             "grounding_feedback": grounding_feedback,
+            "grounding_details": grounding_details,
+            "claims": claims,
             "revision_count": revision_count,
             "support_retry_count": support_retry_count,
             "retrieval_rewrite_count": retrieval_rewrite_count,
@@ -3093,7 +3380,7 @@ with st.sidebar:
         value=st.session_state.backend_url,
         label_visibility="collapsed",
         key="km_backend_url_input",
-        placeholder="http://127.0.0.1:8000",
+        placeholder="http://localhost:8000",
     ).rstrip("/")
 
     if backend_url_input != st.session_state.backend_url:
@@ -3129,37 +3416,37 @@ with st.sidebar:
         )
 
     display_html(
-        """
+        f"""
         <div class="km-rail-label">Agentic workflow</div>
 
         <div class="km-capability-list">
             <div class="km-capability-row">
-                <span class="mark">✓</span>
+                <span class="mark">{icon("check", 12)}</span>
                 <span>Intent-aware planning</span>
             </div>
 
             <div class="km-capability-row">
-                <span class="mark">✓</span>
+                <span class="mark">{icon("check", 12)}</span>
                 <span>Private knowledge retrieval</span>
             </div>
 
             <div class="km-capability-row">
-                <span class="mark">✓</span>
+                <span class="mark">{icon("check", 12)}</span>
                 <span>Semantic reranking</span>
             </div>
 
             <div class="km-capability-row">
-                <span class="mark">✓</span>
+                <span class="mark">{icon("check", 12)}</span>
                 <span>Evidence and context grading</span>
             </div>
 
             <div class="km-capability-row">
-                <span class="mark">✓</span>
+                <span class="mark">{icon("check", 12)}</span>
                 <span>External web fallback</span>
             </div>
 
             <div class="km-capability-row">
-                <span class="mark">✓</span>
+                <span class="mark">{icon("check", 12)}</span>
                 <span>Citation and grounding review</span>
             </div>
         </div>
@@ -3185,21 +3472,14 @@ with st.sidebar:
 display_html(
     """
     <div class="km-topbar">
-        <div class="km-kicker">KnowledgeMesh</div>
-
         <h1>Agentic RAG Console</h1>
 
         <p>
-            Ask questions over private knowledge. KnowledgeMesh plans the
-            request, retrieves and reranks evidence, evaluates context,
-            activates web fallback only when needed, and reviews citations
-            and grounding before presenting the final answer.
+            Ask questions over your private knowledge base. Each answer is
+            planned, retrieved, reranked, and graded — then, only when local
+            evidence falls short, supplemented with a web search — before
+            citations and grounding are checked against the final answer.
         </p>
-
-        <div class="km-engine-pill">
-            <span class="km-dot success"></span>
-            Private retrieval · Evidence grading · Web fallback · Validation
-        </div>
     </div>
     """
 )
@@ -3266,17 +3546,17 @@ Each response includes a concise run summary, an agentic pipeline timeline, evid
 
     starter_prompts = [
         (
-            "🔎",
+            "search",
             "Explain a concept",
             "What is loop engineering?",
         ),
         (
-            "📚",
+            "layers",
             "Summarize documentation",
             "Summarize the key points from our documentation.",
         ),
         (
-            "🛠️",
+            "settings",
             "Troubleshoot",
             "What does the documentation say about rate limiting?",
         ),
@@ -3284,7 +3564,7 @@ Each response includes a concise run summary, an agentic pipeline timeline, evid
 
     starter_columns = st.columns(len(starter_prompts))
 
-    for column, (icon, label, question) in zip(
+    for column, (icon_name, label, question) in zip(
         starter_columns,
         starter_prompts,
     ):
@@ -3292,7 +3572,7 @@ Each response includes a concise run summary, an agentic pipeline timeline, evid
             display_html(
                 f"""
                 <div class="km-starter-card">
-                    <div class="icon">{esc(icon)}</div>
+                    <div class="icon">{icon(icon_name, 18)}</div>
                     <div class="title">{esc(label)}</div>
                     <div class="desc">{esc(question)}</div>
                 </div>
@@ -3315,6 +3595,8 @@ Each response includes a concise run summary, an agentic pipeline timeline, evid
 # ============================================================
 
 else:
+    last_message_index = len(st.session_state.messages) - 1
+
     for index, message in enumerate(st.session_state.messages):
         role = message.get("role", "assistant")
 
@@ -3391,288 +3673,323 @@ else:
         # Professional summary immediately after the assistant answer.
         display_html(render_run_banner(trace))
 
-        # Clear visual representation of execution stages.
-        display_html(render_pipeline_rail(trace))
+        with st.expander(
+            "Execution details",
+            expanded=(index == last_message_index),
+        ):
+            # Clear visual representation of execution stages.
+            display_html(render_pipeline_rail(trace))
 
-        # Render only when fallback, recovery, or validation event occurred.
-        recovery_notice = render_recovery_notice(trace)
+            # Render only when fallback, recovery, or validation event occurred.
+            recovery_notice = render_recovery_notice(trace)
 
-        if recovery_notice:
-            display_html(recovery_notice)
+            if recovery_notice:
+                display_html(recovery_notice)
 
-        overview_tab, evidence_tab, quality_tab, performance_tab, trace_tab = st.tabs(
-            [
-                "Overview",
-                f"Evidence ({private_count + web_count})",
-                "Quality",
-                "Performance",
-                "Trace",
-            ]
-        )
-
-        with overview_tab:
-            overview_chips = [
-                (
-                    '<span class="km-chip">'
-                    f'Mode <span class="num">'
-                    f"{esc(query_type.title())}</span></span>"
-                ),
-                (
-                    '<span class="km-chip">'
-                    "Private retrieval "
-                    f'<span class="num">'
-                    f"{esc(trace.get('private_retrieval_status', 'Not reported'))}"
-                    "</span></span>"
-                ),
-                (
-                    '<span class="km-chip">'
-                    "Web fallback "
-                    f'<span class="num">'
-                    f"{'Used' if trace.get('web_search_used') else 'Not used'}"
-                    "</span></span>"
-                ),
-                (
-                    '<span class="km-chip">'
-                    f'Private sources <span class="num">'
-                    f"{private_count}</span></span>"
-                ),
-                (
-                    '<span class="km-chip">'
-                    f'Answer sources <span class="num">'
-                    f"{answer_count}</span></span>"
-                ),
-            ]
-
-            display_html(
-                """
-                <div class="km-tab-panel">
-                    <div class="km-tab-heading">Run overview</div>
-                    <div class="km-signal-row">
-                """
-                + "".join(overview_chips)
-                + """
-                    </div>
-                </div>
-                """
+            overview_tab, evidence_tab, quality_tab, performance_tab, trace_tab = (
+                st.tabs(
+                    [
+                        "Overview",
+                        f"Evidence ({private_count + web_count})",
+                        "Quality",
+                        "Performance",
+                        "Trace",
+                    ]
+                )
             )
 
-            if context_reason:
-                display_html(
-                    f"""
-                    <div class="km-info-card">
-                        <div class="km-info-card-title">
-                            Context evaluation
-                        </div>
-                        <div class="km-info-card-body">
-                            {esc(context_reason)}
-                        </div>
-                    </div>
-                    """
-                )
+            with overview_tab:
+                overview_chips = [
+                    (
+                        '<span class="km-chip">'
+                        f'Mode <span class="num">'
+                        f"{esc(query_type.title())}</span></span>"
+                    ),
+                    (
+                        '<span class="km-chip">'
+                        "Private retrieval "
+                        f'<span class="num">'
+                        f"{esc(trace.get('private_retrieval_status', 'Not reported'))}"
+                        "</span></span>"
+                    ),
+                    (
+                        '<span class="km-chip">'
+                        "Web fallback "
+                        f'<span class="num">'
+                        f"{'Used' if trace.get('web_search_used') else 'Not used'}"
+                        "</span></span>"
+                    ),
+                    (
+                        '<span class="km-chip">'
+                        f'Private sources <span class="num">'
+                        f"{private_count}</span></span>"
+                    ),
+                    (
+                        '<span class="km-chip">'
+                        f'Answer sources <span class="num">'
+                        f"{answer_count}</span></span>"
+                    ),
+                ]
 
-            if search_query:
-                display_html(
-                    f"""
-                    <div class="km-info-card">
-                        <div class="km-info-card-title">
-                            Planner search query
-                        </div>
-                        <div class="km-info-card-body">
-                            <code>{esc(search_query)}</code>
-                        </div>
-                    </div>
-                    """
-                )
-
-            if status_text:
-                display_html(
-                    f"""
-                    <div class="km-status-note">
-                        Status: {esc(status_text)}
-                    </div>
-                    """
-                )
-
-        with evidence_tab:
-            if private_source_list:
-                st.markdown("#### Private knowledge sources")
-
-                display_html(
-                    '<div class="km-sources">'
-                    f"{render_source_cards(private_source_list)}"
-                    "</div>"
-                )
-
-            if web_source_list:
-                st.markdown("#### Web fallback sources")
-
-                display_html(
-                    '<div class="km-sources">'
-                    f"{render_source_cards(web_source_list)}"
-                    "</div>"
-                )
-
-            if answer_source_list:
-                st.markdown("#### Sources used in the answer")
-
-                display_html(
-                    '<div class="km-sources">'
-                    f"{render_source_cards(answer_source_list)}"
-                    "</div>"
-                )
-
-            elif private_source_list or web_source_list:
-                display_html(
-                    """
-                    <div class="km-empty-note">
-                        Retrieved evidence is available above, but the backend
-                        did not record any source as directly used in the final
-                        answer.
-                    </div>
-                    """
-                )
-
-            provenance_table_html = render_citation_provenance_table(
-                citation_provenance
-            )
-
-            if provenance_table_html:
-                st.markdown("#### Citation provenance")
-                display_html(provenance_table_html)
-
-            if not (
-                private_source_list
-                or web_source_list
-                or answer_source_list
-                or citation_provenance
-            ):
-                st.info("No source evidence was reported for this response.")
-
-        with quality_tab:
-            quality_html = render_quality_summary(trace)
-
-            if quality_html:
                 display_html(
                     """
                     <div class="km-tab-panel">
-                        <div class="km-tab-heading">
-                            Validation signals
-                        </div>
+                        <div class="km-tab-heading">Run overview</div>
                         <div class="km-signal-row">
                     """
-                    + quality_html
+                    + "".join(overview_chips)
                     + """
                         </div>
                     </div>
                     """
                 )
 
-            else:
-                st.info("No validation results were reported for this response.")
-
-            recovery_html = render_recovery_summary(trace)
-
-            if recovery_html:
-                display_html(
-                    """
-                    <div class="km-tab-panel">
-                        <div class="km-tab-heading">
-                            Self-RAG and recovery
+                if context_reason:
+                    display_html(
+                        f"""
+                        <div class="km-info-card">
+                            <div class="km-info-card-title">
+                                Context evaluation
+                            </div>
+                            <div class="km-info-card-body">
+                                {esc(context_reason)}
+                            </div>
                         </div>
-                        <div class="km-signal-row">
-                    """
-                    + recovery_html
-                    + """
+                        """
+                    )
+
+                if search_query:
+                    display_html(
+                        f"""
+                        <div class="km-info-card">
+                            <div class="km-info-card-title">
+                                Planner search query
+                            </div>
+                            <div class="km-info-card-body">
+                                <code>{esc(search_query)}</code>
+                            </div>
                         </div>
-                    </div>
-                    """
+                        """
+                    )
+
+                if status_text:
+                    display_html(
+                        f"""
+                        <div class="km-status-note">
+                            Status: {esc(status_text)}
+                        </div>
+                        """
+                    )
+
+            with evidence_tab:
+                if private_source_list:
+                    st.markdown("#### Private knowledge sources")
+
+                    display_html(
+                        '<div class="km-sources">'
+                        f"{render_source_cards(private_source_list)}"
+                        "</div>"
+                    )
+
+                if web_source_list:
+                    st.markdown("#### Web fallback sources")
+
+                    display_html(
+                        '<div class="km-sources">'
+                        f"{render_source_cards(web_source_list)}"
+                        "</div>"
+                    )
+
+                if answer_source_list:
+                    st.markdown("#### Sources used in the answer")
+
+                    display_html(
+                        '<div class="km-sources">'
+                        f"{render_source_cards(answer_source_list)}"
+                        "</div>"
+                    )
+
+                elif private_source_list or web_source_list:
+                    display_html(
+                        """
+                        <div class="km-empty-note">
+                            Retrieved evidence is available above, but the backend
+                            did not record any source as directly used in the final
+                            answer.
+                        </div>
+                        """
+                    )
+
+                provenance_table_html = render_citation_provenance_table(
+                    citation_provenance
                 )
 
-            if grounding_feedback:
-                display_html(
-                    f"""
-                    <div class="km-info-card">
-                        <div class="km-info-card-title">
-                            Grounding feedback
+                if provenance_table_html:
+                    st.markdown("#### Citation provenance")
+                    display_html(provenance_table_html)
+
+                if not (
+                    private_source_list
+                    or web_source_list
+                    or answer_source_list
+                    or citation_provenance
+                ):
+                    st.info("No source evidence was reported for this response.")
+
+            with quality_tab:
+                quality_html = render_quality_summary(trace)
+
+                if quality_html:
+                    display_html(
+                        """
+                        <div class="km-tab-panel">
+                            <div class="km-tab-heading">
+                                Validation signals
+                            </div>
+                            <div class="km-signal-row">
+                        """
+                        + quality_html
+                        + """
+                            </div>
                         </div>
-                        <div class="km-info-card-body">
-                            {esc(grounding_feedback)}
+                        """
+                    )
+
+                else:
+                    st.info("No validation results were reported for this response.")
+
+                claims = trace.get("claims") or []
+                grounding_details = trace.get("grounding_details") or {}
+
+                claims_html = render_claims(claims, grounding_details)
+
+                if claims_html:
+                    st.markdown("#### Claim-level grounding review")
+                    display_html(claims_html)
+
+                recovery_html = render_recovery_summary(trace)
+
+                if recovery_html:
+                    display_html(
+                        """
+                        <div class="km-tab-panel">
+                            <div class="km-tab-heading">
+                                Self-RAG and recovery
+                            </div>
+                            <div class="km-signal-row">
+                        """
+                        + recovery_html
+                        + """
+                            </div>
                         </div>
-                    </div>
-                    """
+                        """
+                    )
+
+                if grounding_feedback:
+                    feedback_items = (
+                        grounding_feedback
+                        if isinstance(grounding_feedback, list)
+                        else [grounding_feedback]
+                    )
+
+                    feedback_html = "".join(
+                        f"<li>{esc(item)}</li>"
+                        for item in feedback_items
+                        if str(item).strip()
+                    )
+
+                    if feedback_html:
+                        display_html(
+                            f"""
+                            <div class="km-info-card">
+                                <div class="km-info-card-title">
+                                    Grounding feedback
+                                </div>
+                                <div class="km-info-card-body">
+                                    <ul class="km-trace-list">{feedback_html}</ul>
+                                </div>
+                            </div>
+                            """
+                        )
+
+            with performance_tab:
+                waterfall_html = render_latency_waterfall(trace)
+
+                if waterfall_html:
+                    display_html(waterfall_html)
+
+                metric_1, metric_2, metric_3, metric_4, metric_5 = st.columns(5)
+
+                metric_1.metric(
+                    "Total",
+                    format_seconds(trace.get("latency")),
+                    help="End-to-end Streamlit request duration.",
                 )
 
-        with performance_tab:
-            metric_1, metric_2, metric_3, metric_4, metric_5 = st.columns(5)
-
-            metric_1.metric(
-                "Total",
-                format_seconds(trace.get("latency")),
-                help="End-to-end Streamlit request duration.",
-            )
-
-            metric_2.metric(
-                "Retrieval",
-                format_ms(trace.get("retrieval_latency_ms")),
-                help="Private knowledge retrieval latency.",
-            )
-
-            metric_3.metric(
-                "Reranking",
-                format_ms(trace.get("rerank_latency_ms")),
-                help="Semantic reranking latency.",
-            )
-
-            metric_4.metric(
-                "Grading",
-                format_ms(trace.get("grader_latency_ms")),
-                help="Document and context evaluation latency.",
-            )
-
-            metric_5.metric(
-                "Generation",
-                format_ms(trace.get("generation_latency_ms")),
-                help="LLM response generation latency.",
-            )
-
-            backend_latency_ms = trace.get("backend_latency_ms")
-
-            if backend_latency_ms is not None:
-                display_html(
-                    f"""
-                    <div class="km-status-note">
-                        Backend-reported total latency:
-                        <strong>{esc(format_ms(backend_latency_ms))}</strong>
-                    </div>
-                    """
+                metric_2.metric(
+                    "Retrieval",
+                    format_ms(trace.get("retrieval_latency_ms")),
+                    help="Private knowledge retrieval latency.",
                 )
 
-        with trace_tab:
-            steps = trace.get("steps", [])
+                metric_3.metric(
+                    "Reranking",
+                    format_ms(trace.get("rerank_latency_ms")),
+                    help="Semantic reranking latency.",
+                )
 
-            if steps:
-                trace_items = []
+                metric_4.metric(
+                    "Grading",
+                    format_ms(trace.get("grader_latency_ms")),
+                    help="Document and context evaluation latency.",
+                )
 
-                for step in steps:
-                    _, code, detail = classify_step(step)
+                metric_5.metric(
+                    "Generation",
+                    format_ms(trace.get("generation_latency_ms")),
+                    help="LLM response generation latency.",
+                )
 
-                    trace_items.append(f"<li><b>{esc(code)}</b> — {esc(detail)}</li>")
+                backend_latency_ms = trace.get("backend_latency_ms")
 
-                display_html(
-                    f"""
-                    <div class="km-tab-panel">
-                        <div class="km-tab-heading">
-                            Execution trace
+                if backend_latency_ms is not None:
+                    display_html(
+                        f"""
+                        <div class="km-status-note">
+                            Backend-reported total latency:
+                            <strong>{esc(format_ms(backend_latency_ms))}</strong>
                         </div>
-                        <ol class="km-trace-list">
-                            {"".join(trace_items)}
-                        </ol>
-                    </div>
-                    """
-                )
+                        """
+                    )
 
-            else:
-                st.info("No reasoning trace was reported for this response.")
+            with trace_tab:
+                steps = trace.get("steps", [])
+
+                if steps:
+                    trace_items = []
+
+                    for step in steps:
+                        _, code, detail = classify_step(step)
+
+                        trace_items.append(
+                            f"<li><b>{esc(code)}</b> — {esc(detail)}</li>"
+                        )
+
+                    display_html(
+                        f"""
+                        <div class="km-tab-panel">
+                            <div class="km-tab-heading">
+                                Execution trace
+                            </div>
+                            <ol class="km-trace-list">
+                                {"".join(trace_items)}
+                            </ol>
+                        </div>
+                        """
+                    )
+
+                else:
+                    st.info("No reasoning trace was reported for this response.")
 
 
 # ============================================================
@@ -3693,23 +4010,13 @@ if prompt:
 display_html(
     """
     <div style="
-        display:flex;
-        flex-wrap:wrap;
-        gap:8px;
         margin-top:10px;
         color:var(--km-muted-soft);
-        font-size:10px;
+        font-size:10.5px;
+        line-height:1.5;
     ">
-        <span>KnowledgeMesh Agentic RAG</span>
-        <span>·</span>
-        <span>Private retrieval</span>
-        <span>·</span>
-        <span>Evidence grading</span>
-        <span>·</span>
-        <span>Web fallback</span>
-        <span>·</span>
-        <span>Answer validation</span>
+        KnowledgeMesh — self-correcting agentic RAG, running against your
+        local FastAPI backend.
     </div>
     """
 )
-

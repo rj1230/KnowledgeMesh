@@ -14,6 +14,7 @@ CITATION_FAILURE = "CITATION_FAILURE"
 GROUNDING_FAILURE = "GROUNDING_FAILURE"
 GENERATION_FAILURE = "GENERATION_FAILURE"
 REVISION_FAILURE = "REVISION_FAILURE"
+ANSWER_RELEVANCE_FAILURE = "ANSWER_RELEVANCE_FAILURE"
 
 
 # ============================================================
@@ -207,6 +208,7 @@ def infer_failure_taxonomy(
 
     if context_quality in {
         "weak",
+        "insufficient",
         "needs_web",
         "unverified",
     }:
@@ -253,6 +255,21 @@ def infer_failure_taxonomy(
     # --------------------------------------------------------
     # Revision
     # --------------------------------------------------------
+
+    # --------------------------------------------------------
+    # Answer relevance
+    # --------------------------------------------------------
+
+    answer_relevance_events = _events_by_step(
+        state,
+        "answer_relevance",
+    )
+
+    if any(
+        str(event.get("status", "")).strip().lower() == "failed"
+        for event in answer_relevance_events
+    ):
+        failures.append(ANSWER_RELEVANCE_FAILURE)
 
     revision_events = _events_by_step(
         state,
@@ -338,6 +355,7 @@ def calculate_metrics(
     final_valid = (
         bool(state.get("citation_valid", False))
         and bool(grounding_value)
+        and bool(state.get("answer_useful", False))
         and not bool(state.get("generation_failed", False))
     )
 
@@ -495,6 +513,7 @@ def evaluate_trajectory(
     final_success = (
         bool(state.get("citation_valid", False))
         and bool(grounding_value)
+        and bool(state.get("answer_useful", False))
         and not bool(state.get("generation_failed", False))
     )
 

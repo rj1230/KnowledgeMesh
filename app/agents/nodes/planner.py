@@ -3,6 +3,7 @@ from __future__ import annotations
 import logfire
 
 from app.agents.state import AgentState
+from app.evaluation.trace import append_trace_event
 from app.gateway import get_langchain_llm
 
 
@@ -77,7 +78,16 @@ def planner_node(state: AgentState):
     messages = state.get("messages", [])
 
     if not messages:
+        trace_update = append_trace_event(
+            state,
+            step="planner",
+            status="empty_input",
+            route="simple",
+            retrieval_required=False,
+        )
+
         return {
+            **trace_update,
             "current_query": "CONVERSATIONAL",
             "original_query": "",
             "route": "simple",
@@ -429,7 +439,16 @@ Never include quotation marks.
         )
 
     if decision == "CONVERSATIONAL":
+        trace_update = append_trace_event(
+            state,
+            step="planner",
+            status="conversational",
+            route="simple",
+            retrieval_required=False,
+        )
+
         return {
+            **trace_update,
             "current_query": "CONVERSATIONAL",
             "original_query": user_message,
             "route": "simple",
@@ -442,7 +461,17 @@ Never include quotation marks.
             "revision_count": 0,
         }
 
+    trace_update = append_trace_event(
+        state,
+        step="planner",
+        status="technical",
+        route="knowledge",
+        retrieval_required=True,
+        query=decision,
+    )
+
     return {
+        **trace_update,
         # Retrieval-optimized query.
         "current_query": decision,
         # Exact user wording must remain untouched.
@@ -456,3 +485,4 @@ Never include quotation marks.
         "retrieval_loops": 0,
         "revision_count": 0,
     }
+

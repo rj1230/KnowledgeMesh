@@ -1,0 +1,422 @@
+[
+  {
+    "id": "inv_attention_001",
+    "question": "What is the main architectural idea introduced by the Transformer in Attention Is All You Need?",
+    "relevant_chunks": [
+      {
+        "document_id": "c5403b511fa73a2221411a42",
+        "chunk_id": 0
+      }
+    ],
+    "category": "architecture",
+    "metadata": {
+      "source_filename": "Attention.pdf",
+      "probe_type": "inventory_pilot"
+    }
+  },
+  {
+    "id": "inv_attention_002",
+    "question": "How does self-attention differ between the encoder and decoder with respect to which positions can be attended to?",
+    "relevant_chunks": [
+      {
+        "document_id": "c5403b511fa73a2221411a42",
+        "chunk_id": 9
+      }
+    ],
+    "category": "self_attention",
+    "metadata": {
+      "source_filename": "Attention.pdf",
+      "probe_type": "inventory_pilot"
+    }
+  },
+  {
+    "id": "inv_attention_003",
+    "question": "What do the experiments indicate about the effect of changing the number of attention heads and the attention key size?",
+    "relevant_chunks": [
+      {
+        "document_id": "c5403b511fa73a2221411a42",
+        "chunk_id": 18
+      }
+    ],
+    "category": "experiments",
+    "metadata": {
+      "source_filename": "Attention.pdf",
+      "probe_type": "inventory_pilot"
+    }
+  },
+  {
+    "id": "inv_attention_004",
+    "question": "What do the visualized attention heads reveal about anaphora resolution in the Transformer?",
+    "relevant_chunks": [
+      {
+        "document_id": "c5403b511fa73a2221411a42",
+        "chunk_id": 27
+      }
+    ],
+    "category": "analysis",
+    "metadata": {
+      "source_filename": "Attention.pdf",
+      "probe_type": "inventory_pilot"
+    }
+  },
+  {
+    "id": "inv_harness_001",
+    "question": "Why does the Agentic Harness Engineering paper argue that harness engineering is difficult to automate?",
+    "relevant_chunks": [
+      {
+        "document_id": "66f55cf4060534797ac59189",
+        "chunk_id": 0
+      }
+    ],
+    "category": "architecture",
+    "metadata": {
+      "source_filename": "harness.pdf",
+      "probe_type": "inventory_pilot"
+    }
+  },
+  {
+    "id": "inv_harness_002",
+    "question": "What external resources are referenced for designing harnesses for long-running applications and effective context engineering?",
+    "relevant_chunks": [
+      {
+        "document_id": "66f55cf4060534797ac59189",
+        "chunk_id": 31
+      }
+    ],
+    "category": "references",
+    "metadata": {
+      "source_filename": "harness.pdf",
+      "probe_type": "inventory_pilot"
+    }
+  },
+  {
+    "id": "inv_harness_003",
+    "question": "What kinds of information does the paper suggest searching for when researching coding-agent techniques and implementations?",
+    "relevant_chunks": [
+      {
+        "document_id": "66f55cf4060534797ac59189",
+        "chunk_id": 62
+      }
+    ],
+    "category": "research_method",
+    "metadata": {
+      "source_filename": "harness.pdf",
+      "probe_type": "inventory_pilot"
+    }
+  },
+  {
+    "id": "inv_harness_004",
+    "question": "How does the paper describe the effect of encoding recurring coordination patterns into tools, middleware, and memory?",
+    "relevant_chunks": [
+      {
+        "document_id": "66f55cf4060534797ac59189",
+        "chunk_id": 93
+      }
+    ],
+    "category": "implications",
+    "metadata": {
+      "source_filename": "harness.pdf",
+      "probe_type": "inventory_pilot"
+    }
+  },
+  {
+    "id": "inv_llm_agents_001",
+    "question": "How does the survey define an LLM-based agent, and what basic capabilities distinguish such an agent?",
+    "relevant_chunks": [
+      {
+        "document_id": "7ed18d7a17efb3ce8ec56478",
+        "chunk_id": 0
+      }
+    ],
+    "category": "definition",
+    "metadata": {
+      "source_filename": "LLM Based-learning.pdf",
+      "probe_type": "inventory_pilot"
+    }
+  },
+  {
+    "id": "inv_llm_agents_002",
+    "question": "How are large language models used as planners in embodied agents operating in environments such as Minecraft?",
+    "relevant_chunks": [
+      {
+        "document_id": "7ed18d7a17efb3ce8ec56478",
+        "chunk_id": 81
+      }
+    ],
+    "category": "embodied_agents",
+    "metadata": {
+      "source_filename": "LLM Based-learning.pdf",
+      "probe_type": "inventory_pilot"
+    }
+  },
+  {
+    "id": "inv_llm_agents_003",
+    "question": "What role does AutoGPT play in the survey's discussion of autonomous or lifelong-learning agents?",
+    "relevant_chunks": [
+      {
+        "document_id": "7ed18d7a17efb3ce8ec56478",
+        "chunk_id": 74
+      }
+    ],
+    "category": "autonomous_agents",
+    "metadata": {
+      "source_filename": "LLM Based-learning.pdf",
+      "probe_type": "inventory_pilot"
+    }
+  },
+  {
+    "id": "inv_llm_agents_004",
+    "question": "How does the survey characterize the use of language models for decomposing high-level tasks into smaller actions or sub-goals?",
+    "relevant_chunks": [
+      {
+        "document_id": "7ed18d7a17efb3ce8ec56478",
+        "chunk_id": 81
+      }
+    ],
+    "category": "task_decomposition",
+    "metadata": {
+      "source_filename": "LLM Based-learning.pdf",
+      "probe_type": "inventory_pilot"
+    }
+  },
+  {
+    "id": "inv_llm_001",
+    "question": "What motivation does the GPT-3 paper give for pretraining large language models before applying them to downstream tasks?",
+    "relevant_chunks": [
+      {
+        "document_id": "3caf265f6ce786e3c2bd0ad6",
+        "chunk_id": 0
+      }
+    ],
+    "category": "pretraining",
+    "metadata": {
+      "source_filename": "LLM.pdf",
+      "probe_type": "inventory_pilot"
+    }
+  },
+  {
+    "id": "inv_llm_002",
+    "question": "What does the GPT-3 evaluation report about the largest model's accuracy in few-shot learning?",
+    "relevant_chunks": [
+      {
+        "document_id": "3caf265f6ce786e3c2bd0ad6",
+        "chunk_id": 55
+      }
+    ],
+    "category": "evaluation",
+    "metadata": {
+      "source_filename": "LLM.pdf",
+      "probe_type": "inventory_pilot"
+    }
+  },
+  {
+    "id": "inv_llm_003",
+    "question": "Which benchmark results in the GPT-3 evaluation show that performance varies substantially across tasks and model sizes?",
+    "relevant_chunks": [
+      {
+        "document_id": "3caf265f6ce786e3c2bd0ad6",
+        "chunk_id": 111
+      }
+    ],
+    "category": "benchmarks",
+    "metadata": {
+      "source_filename": "LLM.pdf",
+      "probe_type": "inventory_pilot"
+    }
+  },
+  {
+    "id": "inv_llm_004",
+    "question": "What limitations or related work does the GPT-3 paper discuss when placing its results in the broader language-model literature?",
+    "relevant_chunks": [
+      {
+        "document_id": "3caf265f6ce786e3c2bd0ad6",
+        "chunk_id": 166
+      }
+    ],
+    "category": "literature",
+    "metadata": {
+      "source_filename": "LLM.pdf",
+      "probe_type": "inventory_pilot"
+    }
+  },
+  {
+    "id": "inv_rag_001",
+    "question": "What limitations of pretrained language models motivate Retrieval-Augmented Generation?",
+    "relevant_chunks": [
+      {
+        "document_id": "89e40c0de3ce2081b9d726b9",
+        "chunk_id": 0
+      }
+    ],
+    "category": "motivation",
+    "metadata": {
+      "source_filename": "RAG.pdf",
+      "probe_type": "inventory_pilot"
+    }
+  },
+  {
+    "id": "inv_rag_002",
+    "question": "Why can the generator sometimes complete a title using its parametric knowledge even when the retrieval posterior becomes less informative?",
+    "relevant_chunks": [
+      {
+        "document_id": "89e40c0de3ce2081b9d726b9",
+        "chunk_id": 16
+      }
+    ],
+    "category": "retrieval_generation",
+    "metadata": {
+      "source_filename": "RAG.pdf",
+      "probe_type": "inventory_pilot"
+    }
+  },
+  {
+    "id": "inv_rag_003",
+    "question": "What evidence does the RAG paper provide about the relationship between retrieval and generation when generating book titles?",
+    "relevant_chunks": [
+      {
+        "document_id": "89e40c0de3ce2081b9d726b9",
+        "chunk_id": 16
+      }
+    ],
+    "category": "analysis",
+    "metadata": {
+      "source_filename": "RAG.pdf",
+      "probe_type": "inventory_pilot"
+    }
+  },
+  {
+    "id": "inv_rag_004",
+    "question": "What happens when the retrieval component of a RAG system collapses and repeatedly retrieves the same documents?",
+    "relevant_chunks": [
+      {
+        "document_id": "89e40c0de3ce2081b9d726b9",
+        "chunk_id": 48
+      }
+    ],
+    "category": "failure_mode",
+    "metadata": {
+      "source_filename": "RAG.pdf",
+      "probe_type": "inventory_pilot"
+    }
+  },
+  {
+    "id": "inv_training_001",
+    "question": "Why does the InstructGPT paper argue that increasing language-model size alone does not guarantee better instruction following?",
+    "relevant_chunks": [
+      {
+        "document_id": "c7cc94a4d3e661a199e0bb13",
+        "chunk_id": 0
+      }
+    ],
+    "category": "motivation",
+    "metadata": {
+      "source_filename": "Training Llm.pdf",
+      "probe_type": "inventory_pilot"
+    }
+  },
+  {
+    "id": "inv_training_002",
+    "question": "What evidence does the paper provide that instruction-following alignment can generalize to tasks that were not directly supervised?",
+    "relevant_chunks": [
+      {
+        "document_id": "c7cc94a4d3e661a199e0bb13",
+        "chunk_id": 43
+      }
+    ],
+    "category": "generalization",
+    "metadata": {
+      "source_filename": "Training Llm.pdf",
+      "probe_type": "inventory_pilot"
+    }
+  },
+  {
+    "id": "inv_training_003",
+    "question": "How does the paper evaluate whether model outputs are toxic, and what dimensions are considered in that evaluation?",
+    "relevant_chunks": [
+      {
+        "document_id": "c7cc94a4d3e661a199e0bb13",
+        "chunk_id": 86
+      }
+    ],
+    "category": "evaluation",
+    "metadata": {
+      "source_filename": "Training Llm.pdf",
+      "probe_type": "inventory_pilot"
+    }
+  },
+  {
+    "id": "inv_training_004",
+    "question": "What does the human evaluation example involving GPT-3 175B and InstructGPT 175B illustrate?",
+    "relevant_chunks": [
+      {
+        "document_id": "c7cc94a4d3e661a199e0bb13",
+        "chunk_id": 128
+      }
+    ],
+    "category": "human_evaluation",
+    "metadata": {
+      "source_filename": "Training Llm.pdf",
+      "probe_type": "inventory_pilot"
+    }
+  },
+  {
+    "id": "inv_loop_001",
+    "question": "What five elements does the paper define as part of a loop specification for coding agents?",
+    "relevant_chunks": [
+      {
+        "document_id": "a26a0a845b9004cd2b884c79",
+        "chunk_id": 0
+      }
+    ],
+    "category": "definition",
+    "metadata": {
+      "source_filename": "loop.pdf",
+      "probe_type": "inventory_pilot"
+    }
+  },
+  {
+    "id": "inv_loop_002",
+    "question": "How does the Ralph loop use fresh context and external files to maintain state across iterations?",
+    "relevant_chunks": [
+      {
+        "document_id": "a26a0a845b9004cd2b884c79",
+        "chunk_id": 15
+      }
+    ],
+    "category": "memory",
+    "metadata": {
+      "source_filename": "loop.pdf",
+      "probe_type": "inventory_pilot"
+    }
+  },
+  {
+    "id": "inv_loop_003",
+    "question": "What does the paper mean by the claim that a loop automates typing rather than judgment?",
+    "relevant_chunks": [
+      {
+        "document_id": "a26a0a845b9004cd2b884c79",
+        "chunk_id": 30
+      }
+    ],
+    "category": "limitations",
+    "metadata": {
+      "source_filename": "loop.pdf",
+      "probe_type": "inventory_pilot"
+    }
+  },
+  {
+    "id": "inv_loop_004",
+    "question": "What aspects of real-world coding-agent loops does the Loop Library analysis examine?",
+    "relevant_chunks": [
+      {
+        "document_id": "a26a0a845b9004cd2b884c79",
+        "chunk_id": 15
+      }
+    ],
+    "category": "empirical_analysis",
+    "metadata": {
+      "source_filename": "loop.pdf",
+      "probe_type": "inventory_pilot"
+    }
+  }
+]

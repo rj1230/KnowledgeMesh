@@ -1,27 +1,36 @@
 """
 KnowledgeMesh · Agentic RAG Console
 
-Professional Streamlit frontend for the KnowledgeMesh FastAPI backend.
+Single-file Streamlit frontend for the KnowledgeMesh FastAPI backend.
+    POST {BACKEND_URL}/query   {"q": "...", "thread_id": "..."}
 
-Backend endpoint:
-    POST http://localhost:8000/query
+The stylesheet is embedded below (APP_CSS), so this file runs on its own.
+Optional files next to it:
+    .streamlit/config.toml    (theme + minimal toolbar)
+    assets/favicon.png, assets/favicon-warning.png, assets/favicon-error.png
 
-Request:
-    {"q": "...", "thread_id": "..."}
+Environment:
+    BACKEND_URL                http://localhost:8000
+    BACKEND_TIMEOUT_SECONDS    180
+    LOGFIRE_TOKEN              optional
+    KM_DEBUG=1                 shows developer hints, raw error bodies and the
+                               editable backend URL (leave off for shared use)
 
-The interface visualizes an agentic-RAG execution path:
-Guardrails -> Planner -> Private Retrieval -> Reranking -> Grading ->
-Web Fallback -> Response Synthesis -> Citation Validation -> Grounding Critic.
+Requires Streamlit >= 1.37 for the evidence dialog (older versions fall back
+to an inline expander).
 """
 
-from contextlib import nullcontext
-from datetime import datetime
+import base64
 import html
+import inspect
 import os
 import re
 import textwrap
 import time
 import uuid
+from contextlib import nullcontext
+from datetime import datetime
+from functools import lru_cache
 
 import logfire
 import requests
@@ -45,50 +54,73 @@ if not os.path.exists(ENV_PATH):
 
 load_dotenv(dotenv_path=ENV_PATH, override=False)
 
-DEFAULT_BACKEND_URL = os.getenv(
-    "BACKEND_URL",
-    "http://localhost:8000",
-).rstrip("/")
-
+DEFAULT_BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000").rstrip("/")
 BACKEND_TIMEOUT_SECONDS = int(os.getenv("BACKEND_TIMEOUT_SECONDS", "180"))
+DEBUG_UI = os.getenv("KM_DEBUG", "0").strip().lower() in {"1", "true", "yes"}
 
-
-# ============================================================
-# LOGFIRE
-# ============================================================
-
-LOGFIRE_OK = False
-LOGFIRE_ERROR = None
-
-try:
-    logfire_token = os.getenv("LOGFIRE_TOKEN")
-
-    if logfire_token:
-        logfire.configure(token=logfire_token)
-        LOGFIRE_OK = True
-    else:
-        print("Logfire token is not configured for the Streamlit UI.")
-
-except Exception as exc:
-    LOGFIRE_ERROR = str(exc)
-    print(f"Streamlit Logfire initialization failed: {exc}")
-
-
-# ============================================================
-# STREAMLIT CONFIG
-# ============================================================
-
-st.set_page_config(
-    page_title="KnowledgeMesh",
-    page_icon="◈",
-    layout="wide",
-    initial_sidebar_state="expanded",
+# Streamlit renamed use_container_width -> width="stretch"; support both.
+_STRETCH = (
+    {"width": "stretch"}
+    if "width" in inspect.signature(st.button).parameters
+    else {"use_container_width": True}
 )
 
 
 # ============================================================
-# GENERIC HELPERS
+# LOGFIRE (configured once per process, not on every rerun)
 # ============================================================
+
+
+@st.cache_resource(show_spinner=False)
+def init_logfire():
+    token = os.getenv("LOGFIRE_TOKEN")
+
+    if not token:
+        return False, None
+
+    try:
+        logfire.configure(token=token)
+
+        try:
+            # Propagates trace context to the FastAPI backend.
+            logfire.instrument_requests()
+        except Exception as exc:  # optional instrumentation package missing
+            print(f"Logfire requests instrumentation skipped: {exc}")
+
+        return True, None
+
+    except Exception as exc:
+        print(f"Streamlit Logfire initialization failed: {exc}")
+        return False, str(exc)
+
+
+LOGFIRE_OK, LOGFIRE_ERROR = init_logfire()
+
+
+def _trace_context():
+    if LOGFIRE_OK:
+        return logfire.span("KnowledgeMesh UI operation")
+
+    return nullcontext()
+
+
+# ============================================================
+# SMALL HELPERS
+# ============================================================
+
+
+def safe_float(value, default=None):
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def safe_int(value, default=0):
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
 
 
 def clean_html(markup: str) -> str:
@@ -97,7 +129,6 @@ def clean_html(markup: str) -> str:
 
 def display_html(markup: str):
     markup = clean_html(markup)
-
     native_html_renderer = getattr(st, "html", None)
 
     if callable(native_html_renderer):
@@ -112,54 +143,36 @@ def esc(value) -> str:
 
 def safe_url(value) -> str:
     value = str(value or "").strip()
-
-    if value.startswith(("http://", "https://")):
-        return value
-
-    return ""
+    return value if value.startswith(("http://", "https://")) else ""
 
 
 def format_score(value) -> str:
-    if isinstance(value, (int, float)):
-        return f"{value:.3f}"
+    return f"{value:.3f}" if isinstance(value, (int, float)) else "—"
 
-    return "—"
+
+def format_2dp(value) -> str:
+    number = safe_float(value)
+    return f"{number:.2f}" if number is not None else "—"
 
 
 def format_ms(value) -> str:
-    if value is None:
+    milliseconds = safe_float(value)
+
+    if milliseconds is None:
         return "—"
 
-    try:
-        milliseconds = float(value)
+    if milliseconds >= 1000:
+        return f"{milliseconds / 1000:.2f}s"
 
-        if milliseconds >= 1000:
-            return f"{milliseconds / 1000:.2f}s"
-
-        return f"{milliseconds:.0f}ms"
-
-    except (TypeError, ValueError):
-        return "—"
+    return f"{milliseconds:.0f}ms"
 
 
 def format_seconds(value) -> str:
-    if value is None:
-        return "—"
-
-    try:
-        return f"{float(value):.2f}s"
-
-    except (TypeError, ValueError):
-        return "—"
+    seconds = safe_float(value)
+    return f"{seconds:.2f}s" if seconds is not None else "—"
 
 
-def tri_state_chip(
-    label_true: str,
-    label_false: str,
-    label_unknown: str,
-    value,
-    unknown_ok: bool = True,
-) -> str:
+def tri_state_chip(label_true, label_false, label_unknown, value, unknown_ok=True):
     if value is True:
         return f'<span class="km-chip success">{esc(label_true)}</span>'
 
@@ -172,11 +185,445 @@ def tri_state_chip(
     return ""
 
 
-def _trace_context():
-    if LOGFIRE_OK:
-        return logfire.span("KnowledgeMesh UI operation")
+# ============================================================
+# FAILURE / RECOVERY DETECTION
+# ============================================================
 
-    return nullcontext()
+_RATE_LIMIT_RE = re.compile(
+    r"ratelimit|rate[\s_-]?limit|too many requests|(?:error|status|http)\D{0,12}\b429\b",
+    re.I,
+)
+_FAILURE_RE = re.compile(
+    r"document grade: failed|grader failed|generation failed|"
+    r"response generation failed|retrieval failed|web search failed",
+    re.I,
+)
+
+
+def is_rate_limit_error(value) -> bool:
+    return bool(_RATE_LIMIT_RE.search(str(value or "")))
+
+
+def has_recovery_signal(text) -> bool:
+    return is_rate_limit_error(text) or bool(_FAILURE_RE.search(str(text or "")))
+
+
+def _generation_failed(status_text: str) -> bool:
+    status_text = str(status_text or "").lower()
+
+    return (
+        "generation rate-limited" in status_text
+        or "generation failed" in status_text
+        or "response generation failed" in status_text
+    )
+
+
+# ============================================================
+# PAGE CONFIG + FAVICON
+# ============================================================
+
+
+def _favicon_variant() -> str:
+    for message in reversed(st.session_state.get("messages", [])):
+        if message.get("role") != "assistant":
+            continue
+
+        trace = message.get("trace") or {}
+
+        if not trace or _generation_failed(trace.get("status")):
+            return "favicon-error"
+
+        if (
+            trace.get("citation_valid") is False
+            or trace.get("is_grounded") is False
+            or trace.get("web_search_used")
+        ):
+            return "favicon-warning"
+
+        break
+
+    return "favicon"
+
+
+def _page_icon():
+    """assets/<variant>.png when present, otherwise a text glyph."""
+    path = os.path.join(PROJECT_ROOT, "assets", f"{_favicon_variant()}.png")
+
+    try:
+        if os.path.exists(path):
+            from PIL import Image
+
+            return Image.open(path)
+    except Exception:
+        pass
+
+    return "◈"
+
+
+st.set_page_config(
+    page_title="KnowledgeMesh",
+    page_icon=_page_icon(),
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
+
+
+# ============================================================
+# STYLES (embedded) — dark enterprise console: graphite surfaces, hairline
+# borders, one indigo→cyan accent, Inter for UI and answers, mono for ids
+# and numbers.
+# ============================================================
+
+APP_CSS = r"""
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root{
+  color-scheme:dark;
+  --km-bg:#080b11; --km-surface:#0f131c; --km-surface-2:#141926; --km-surface-3:#1b2231;
+  --km-line:rgba(148,163,184,.14); --km-line-strong:rgba(148,163,184,.28);
+  --km-ink:#f1f4fa; --km-ink-2:#c5ccda; --km-muted:#8d97ab; --km-faint:#6b7589;
+  --km-accent:#7b8cff; --km-accent-strong:#b0baff; --km-accent-soft:rgba(123,140,255,.13); --km-accent-border:rgba(123,140,255,.42);
+  --km-grad:linear-gradient(135deg,#7b8cff 0%,#4fd1e8 100%);
+  --km-success:#34d399; --km-success-soft:rgba(52,211,153,.12); --km-success-border:rgba(52,211,153,.36);
+  --km-warning:#fbbf24; --km-warning-soft:rgba(251,191,36,.11); --km-warning-border:rgba(251,191,36,.36);
+  --km-danger:#f87171;  --km-danger-soft:rgba(248,113,113,.11);  --km-danger-border:rgba(248,113,113,.36);
+  --km-sans:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --km-mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+  --km-r-sm:8px; --km-r-md:12px; --km-r-lg:16px;
+  --km-shadow:0 1px 0 rgba(255,255,255,.035) inset,0 10px 28px -14px rgba(0,0,0,.7);
+}
+
+html,body,[class*="css"],.stApp{font-family:var(--km-sans);-webkit-font-smoothing:antialiased}
+.stApp{color:var(--km-ink);background:
+  radial-gradient(1100px 520px at 78% -8%,rgba(123,140,255,.13),transparent 60%),
+  radial-gradient(800px 460px at -8% 0%,rgba(79,209,232,.06),transparent 55%),
+  var(--km-bg);background-attachment:fixed}
+header[data-testid="stHeader"]{background:transparent}
+[data-testid="stAppDeployButton"],#MainMenu,footer{display:none!important}
+::selection{background:var(--km-accent-soft)}
+:focus-visible{outline:2px solid var(--km-accent)!important;outline-offset:2px}
+.km-icon{flex:none;display:inline-block;vertical-align:-2px}
+[data-testid="stMainBlockContainer"],.block-container{max-width:960px;margin:0 auto;padding:2.2rem 2rem 9rem}
+
+/* ---------- top bar ---------- */
+.km-topbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:14px;margin:0 0 22px;padding-bottom:18px;border-bottom:1px solid var(--km-line)}
+.km-topbar-title{color:var(--km-ink);font-size:18px;font-weight:600;letter-spacing:-.015em}
+.km-topbar-sub{margin-top:2px;color:var(--km-muted);font-size:12.5px}
+.km-topbar-pills{display:flex;flex-wrap:wrap;gap:8px}
+.km-pill{display:inline-flex;align-items:center;gap:7px;padding:5px 12px;border:1px solid var(--km-line);border-radius:999px;background:var(--km-surface);color:var(--km-ink-2);font-size:12px;font-weight:500}
+.km-pill.mono{font:500 11.5px var(--km-mono)}
+
+/* ---------- sidebar ---------- */
+section[data-testid="stSidebar"]{background:linear-gradient(180deg,#0d111a 0%,#090c13 100%);border-right:1px solid var(--km-line)}
+section[data-testid="stSidebar"]>div{padding-top:1rem}
+.km-brand{display:flex;align-items:center;gap:11px;padding:2px 2px 18px;margin-bottom:14px;border-bottom:1px solid var(--km-line)}
+.km-brand-mark{display:grid;place-items:center;width:34px;height:34px;border-radius:10px;background:var(--km-grad);color:#06101a;font-size:16px;font-weight:700;box-shadow:0 8px 20px -8px rgba(123,140,255,.7)}
+.km-brand strong{display:block;color:var(--km-ink);font-size:15px;font-weight:600;letter-spacing:-.01em}
+.km-brand small{display:block;margin-top:1px;color:var(--km-muted);font-size:12px}
+.km-rail-label{margin:24px 0 9px 2px;color:var(--km-faint);font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase}
+.km-status-card,.km-side-card{padding:2px 14px;border:1px solid var(--km-line);border-radius:var(--km-r-md);background:var(--km-surface)}
+.km-side-card.kb{padding:13px 14px 2px}
+.km-status-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 0;font-size:12.5px}
+.km-status-row+.km-status-row{border-top:1px solid var(--km-line)}
+.km-status-row .label{color:var(--km-muted)}
+.km-status-row .value{max-width:150px;overflow:hidden;color:var(--km-ink-2);font:500 12px var(--km-mono);text-align:right;text-overflow:ellipsis;white-space:nowrap}
+.km-kb-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;color:var(--km-ink);font-size:13px;font-weight:600}
+.km-kb-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.km-kb-grid>div{padding:9px 11px;border:1px solid var(--km-line);border-radius:10px;background:var(--km-surface-2)}
+.km-kb-grid b{display:block;color:var(--km-ink);font:500 19px var(--km-mono)}
+.km-kb-grid span{color:var(--km-muted);font-size:11.5px}
+.km-hist-active{margin-bottom:6px;padding:9px 11px;border:1px solid var(--km-accent-border);border-radius:10px;background:var(--km-accent-soft)}
+.km-hist-active b{display:block;overflow:hidden;color:var(--km-accent-strong);font-size:13px;font-weight:600;text-overflow:ellipsis;white-space:nowrap}
+.km-hist-active small{color:var(--km-muted);font-size:12px}
+.km-capability-list{display:grid;gap:2px}
+.km-capability-row{display:flex;align-items:center;gap:8px;padding:5px 4px;color:var(--km-ink-2);font-size:12.5px}
+.km-dot{display:inline-block;width:8px;height:8px;flex:none;border-radius:50%;background:var(--km-faint)}
+.km-dot.success{background:var(--km-success);box-shadow:0 0 0 3px var(--km-success-soft)}
+.km-dot.warning{background:var(--km-warning);box-shadow:0 0 0 3px var(--km-warning-soft)}
+.km-dot.danger{background:var(--km-danger);box-shadow:0 0 0 3px var(--km-danger-soft)}
+
+section[data-testid="stSidebar"] .stButton>button,section[data-testid="stSidebar"] .stDownloadButton>button{
+  min-height:38px;border:1px solid var(--km-line);border-radius:10px;background:var(--km-surface);
+  color:var(--km-ink-2);font-size:13px;font-weight:500;justify-content:flex-start;text-align:left;transition:border-color .15s,background .15s,color .15s}
+section[data-testid="stSidebar"] .stButton>button:hover,section[data-testid="stSidebar"] .stDownloadButton>button:hover{border-color:var(--km-accent-border);background:var(--km-surface-2);color:var(--km-ink)}
+section[data-testid="stSidebar"] .stButton>button[kind="primary"],section[data-testid="stSidebar"] .stButton>button[data-testid="stBaseButton-primary"]{
+  justify-content:center;border:0;background:var(--km-grad);color:#06101a;font-weight:600;box-shadow:0 8px 20px -10px rgba(123,140,255,.8)}
+section[data-testid="stSidebar"] .stButton>button[kind="primary"]:hover,section[data-testid="stSidebar"] .stButton>button[data-testid="stBaseButton-primary"]:hover{filter:brightness(1.08);color:#06101a}
+section[data-testid="stSidebar"] .stDownloadButton>button{justify-content:center}
+
+/* ---------- empty state ---------- */
+.km-hero{position:relative;margin:.4rem 0 16px;padding:34px 34px 30px;border:1px solid var(--km-line);border-radius:20px;overflow:hidden;
+  background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.008)),var(--km-surface);box-shadow:var(--km-shadow)}
+.km-hero::before{content:"";position:absolute;top:-45%;right:-8%;width:520px;height:400px;background:radial-gradient(closest-side,rgba(123,140,255,.24),transparent);pointer-events:none}
+.km-eyebrow{position:relative;display:inline-flex;align-items:center;padding:4px 11px;border:1px solid var(--km-accent-border);border-radius:999px;background:var(--km-accent-soft);color:var(--km-accent-strong);font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase}
+.km-hero h1{position:relative;margin:16px 0 10px;padding:0;color:var(--km-ink);font:700 38px/1.1 var(--km-sans);letter-spacing:-.03em}
+.km-hero h1 em{font-style:normal;background:var(--km-grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.km-hero p{position:relative;max-width:60ch;margin:0;color:var(--km-ink-2);font-size:15px;line-height:1.7}
+.km-features{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:0 0 26px}
+.km-feature{padding:16px 16px 15px;border:1px solid var(--km-line);border-radius:14px;background:var(--km-surface)}
+.km-feature-icon{display:grid;place-items:center;width:30px;height:30px;margin-bottom:11px;border-radius:9px;background:var(--km-accent-soft);color:var(--km-accent-strong);font-size:14px;font-weight:600}
+.km-feature b{display:block;color:var(--km-ink);font-size:13.5px;font-weight:600}
+.km-feature span{display:block;margin-top:4px;color:var(--km-muted);font-size:12.5px;line-height:1.55}
+.km-section-label{margin:4px 0 10px;color:var(--km-faint);font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase}
+.st-key-km_starters .stButton>button{
+  justify-content:space-between;gap:12px;height:auto;min-height:52px;padding:12px 18px;text-align:left;
+  border:1px solid var(--km-line);border-radius:12px;background:var(--km-surface);
+  color:var(--km-ink);font-size:14.5px;font-weight:500;transition:border-color .15s,background .15s}
+.st-key-km_starters .stButton>button::after{content:"→";color:var(--km-faint);transition:transform .15s,color .15s}
+.st-key-km_starters .stButton>button:hover{border-color:var(--km-accent-border);background:var(--km-surface-2);color:var(--km-ink)}
+.st-key-km_starters .stButton>button:hover::after{color:var(--km-accent);transform:translateX(3px)}
+.st-key-km_starters [data-testid="stVerticalBlock"]{gap:.5rem}
+
+/* ---------- conversation ---------- */
+.km-msg-row{display:flex;align-items:center;gap:10px;margin:34px 0 10px}
+.km-msg-row.user{margin-top:40px}
+.km-msg-avatar{display:grid;place-items:center;width:26px;height:26px;border-radius:8px;background:var(--km-grad);color:#06101a;font-size:13px;font-weight:700}
+.km-msg-row.user .km-msg-avatar{background:var(--km-surface-3);border:1px solid var(--km-line-strong)}
+.km-msg-label{color:var(--km-ink);font-size:13.5px;font-weight:600}
+.km-msg-meta{padding:2px 9px;border:1px solid var(--km-line);border-radius:999px;color:var(--km-muted);font:500 11px var(--km-mono)}
+
+[class*="st-key-km_user_bubble_"]{
+  max-width:100%;padding:14px 18px;overflow:visible;border:1px solid var(--km-line);border-radius:14px;
+  background:var(--km-surface-2);color:var(--km-ink);font:500 15.5px/1.6 var(--km-sans)}
+[class*="st-key-km_bubble_"]{
+  max-width:100%;padding:22px 26px;border:1px solid var(--km-line);border-radius:var(--km-r-lg);box-shadow:var(--km-shadow);
+  background:linear-gradient(180deg,rgba(255,255,255,.028),transparent 45%),var(--km-surface);color:#dfe4ee;font:400 15.5px/1.75 var(--km-sans)}
+[class*="st-key-km_bubble_"] p,[class*="st-key-km_bubble_"] li,
+[class*="st-key-km_user_bubble_"] p{font-family:inherit;font-size:inherit;line-height:inherit;margin-bottom:.85em}
+[class*="st-key-km_bubble_"] p,[class*="st-key-km_bubble_"] li{max-width:72ch}
+[class*="st-key-km_bubble_"] p:last-child,[class*="st-key-km_user_bubble_"] p:last-child{margin-bottom:0}
+[class*="st-key-km_bubble_"] strong{color:var(--km-ink);font-weight:600}
+[class*="st-key-km_bubble_"] code{padding:2px 6px;border:1px solid var(--km-line);border-radius:6px;background:var(--km-surface-2);color:var(--km-accent-strong);font:13px var(--km-mono)}
+[class*="st-key-km_bubble_"] pre code{border:0;background:none;color:var(--km-ink-2)}
+[data-testid="stMarkdownContainer"] blockquote{margin:6px 0;padding:12px 16px;border:0;border-left:3px solid var(--km-accent);border-radius:0 10px 10px 0;background:var(--km-surface-2);color:var(--km-ink-2)}
+
+/* ---------- run summary ---------- */
+.km-run-banner{display:flex;align-items:center;justify-content:space-between;gap:24px;margin:14px 0 10px;padding:16px 18px;border:1px solid var(--km-line);border-left:3px solid var(--km-accent);border-radius:var(--km-r-md);background:var(--km-surface)}
+.km-run-banner.success{border-left-color:var(--km-success)}.km-run-banner.warning{border-left-color:var(--km-warning)}.km-run-banner.danger{border-left-color:var(--km-danger)}
+.km-run-banner-main{min-width:0;flex:1.2}
+.km-run-banner-title{display:flex;align-items:center;gap:9px;color:var(--km-ink);font-size:14px;font-weight:600}
+.km-run-indicator{width:8px;height:8px;flex:none;border-radius:50%;background:var(--km-accent);box-shadow:0 0 0 4px var(--km-accent-soft)}
+.km-run-banner.success .km-run-indicator{background:var(--km-success);box-shadow:0 0 0 4px var(--km-success-soft)}
+.km-run-banner.warning .km-run-indicator{background:var(--km-warning);box-shadow:0 0 0 4px var(--km-warning-soft)}
+.km-run-banner.danger .km-run-indicator{background:var(--km-danger);box-shadow:0 0 0 4px var(--km-danger-soft)}
+.km-run-banner-description{max-width:52ch;margin-top:5px;color:var(--km-muted);font-size:12.5px;line-height:1.55}
+.km-run-banner-stats{display:grid;grid-template-columns:repeat(5,minmax(72px,1fr));gap:4px;min-width:430px}
+.km-run-stat{min-width:0;padding-left:12px;border-left:1px solid var(--km-line)}
+.km-run-stat span{display:block;overflow:hidden;color:var(--km-muted);font-size:11.5px;text-overflow:ellipsis;white-space:nowrap}
+.km-run-stat strong{display:block;margin-top:4px;overflow:hidden;color:var(--km-ink);font:500 13.5px var(--km-mono);text-overflow:ellipsis;white-space:nowrap}
+
+/* ---------- answer health + citation chips ---------- */
+.km-health{margin:18px 0 10px}
+.km-health-title{margin-bottom:9px;color:var(--km-faint);font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase}
+.km-health-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}
+.km-health-tile{padding:12px 13px 11px;border:1px solid var(--km-line);border-radius:var(--km-r-md);background:var(--km-surface)}
+.km-health-tile span{display:block;overflow:hidden;color:var(--km-muted);font-size:11.5px;text-overflow:ellipsis;white-space:nowrap}
+.km-health-tile strong{display:block;margin-top:5px;color:var(--km-ink);font:500 17px var(--km-mono)}
+.km-health-tile.success{border-color:var(--km-success-border)}.km-health-tile.success strong{color:var(--km-success)}
+.km-health-tile.warning{border-color:var(--km-warning-border)}.km-health-tile.warning strong{color:var(--km-warning)}
+.km-health-tile.danger{border-color:var(--km-danger-border)}.km-health-tile.danger strong{color:var(--km-danger)}
+.km-meter{display:block;height:4px;margin-top:10px;border-radius:99px;background:rgba(148,163,184,.16);overflow:hidden}
+.km-meter b{display:block;height:100%;border-radius:99px;background:var(--km-accent)}
+.km-health-tile.success .km-meter b{background:var(--km-success)}
+.km-health-tile.warning .km-meter b{background:var(--km-warning)}
+.km-health-tile.danger .km-meter b{background:var(--km-danger)}
+.km-fail{margin:10px 0 14px;padding:14px 16px;border:1px solid var(--km-danger-border);border-left:3px solid var(--km-danger);border-radius:var(--km-r-md);background:var(--km-danger-soft)}
+.km-fail-title{color:var(--km-danger);font-size:14px;font-weight:600}
+.km-fail-facts{margin:4px 0 10px;color:var(--km-ink-2);font-size:12.5px}
+.km-fail-claim{padding:10px 0;border-top:1px solid var(--km-danger-border);color:var(--km-ink);font-size:13.5px;line-height:1.6}
+.km-fail-tags{margin-bottom:3px;color:var(--km-danger);font-size:11.5px;font-weight:600}
+.km-fail-cites{margin-top:4px;color:var(--km-muted);font:12px var(--km-mono)}
+.km-fail-more{padding-top:8px;color:var(--km-muted);font-size:12.5px}
+[class*="st-key-km_cites_"] .stButton>button{min-height:30px;padding:2px 12px;border:1px solid var(--km-accent-border);border-radius:999px;background:var(--km-accent-soft);color:var(--km-accent-strong);font:500 12px var(--km-mono);transition:background .15s,border-color .15s}
+[class*="st-key-km_cites_"] .stButton>button:hover{border-color:var(--km-accent);background:var(--km-surface-3);color:var(--km-ink)}
+[class*="st-key-km_cites_"] [data-testid="stHorizontalBlock"]{gap:.4rem}
+
+/* ---------- latency + pipeline ---------- */
+.km-lat{margin:2px 0 16px}
+.km-lat-head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px;margin-bottom:9px;color:var(--km-muted);font-size:12.5px}
+.km-lat-head b{color:var(--km-ink);font-family:var(--km-mono);font-weight:500}
+.km-lat-bar{display:flex;gap:3px;height:8px}
+.km-lat-seg{display:block;min-width:4px;height:100%;border-radius:99px;background:var(--km-accent)}
+.km-lat-seg.warn{background:var(--km-warning)}
+.km-lat-seg.unknown{background:repeating-linear-gradient(45deg,var(--km-line-strong) 0 3px,transparent 3px 6px)}
+.km-lat-legend{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:11px;color:var(--km-muted);font-size:12.5px}
+.km-lat-legend em{color:var(--km-ink);font:500 12.5px var(--km-mono);font-style:normal}
+.km-lat-note{margin-top:9px;color:var(--km-warning);font-size:12.5px;font-weight:500}
+
+.km-pipeline{display:flex;width:100%;margin:12px 0;padding:20px 18px 16px;border:1px solid var(--km-line);border-radius:var(--km-r-md);background:var(--km-surface);overflow-x:auto}
+.km-step{display:flex;flex:1;flex-direction:column;align-items:flex-start;gap:10px;min-width:116px}
+.km-step.pending{opacity:.5}
+.km-step-marker{display:flex;align-items:center;width:100%}
+.km-step-dot{display:grid;place-items:center;width:28px;height:28px;flex:none;border:1px solid var(--km-line-strong);border-radius:50%;background:var(--km-surface-2);color:var(--km-faint)}
+.km-step.success .km-step-dot{border-color:var(--km-success);background:var(--km-success);box-shadow:0 0 0 4px var(--km-success-soft)}
+.km-step.fallback .km-step-dot{border-color:var(--km-warning);background:var(--km-warning);box-shadow:0 0 0 4px var(--km-warning-soft)}
+.km-step.failed .km-step-dot{border-color:var(--km-danger);background:var(--km-danger);box-shadow:0 0 0 4px var(--km-danger-soft)}
+.km-step.skipped .km-step-dot{border-style:dashed}
+.km-step.slow .km-step-dot{outline:2px solid var(--km-warning);outline-offset:3px}
+.km-step-line{flex:1;height:2px;margin:0 8px;border-radius:1px;background:var(--km-line)}
+.km-step-line.success{background:var(--km-success)}.km-step-line.fallback{background:var(--km-warning)}.km-step-line.failed{background:var(--km-danger)}
+.km-step-body strong{display:block;color:var(--km-ink);font-size:13px;font-weight:600}
+.km-step.skipped .km-step-body strong{color:var(--km-muted);font-weight:500}
+.km-step-body span{display:block;margin-top:2px;color:var(--km-muted);font-size:12px;line-height:1.45}
+.km-step-time{display:block;margin-top:4px;color:var(--km-ink-2);font:500 12px var(--km-mono);font-style:normal}
+.km-step-time.muted{color:var(--km-faint);font-weight:400}
+.km-stage-detail{display:grid;grid-template-columns:1.2fr 1fr;gap:12px;margin:10px 0 14px}
+.km-stage-box{padding:14px 16px;border:1px solid var(--km-line);border-radius:var(--km-r-md);background:var(--km-surface)}
+.km-stage-box h5{margin:0 0 5px;color:var(--km-ink);font-size:13.5px;font-weight:600}
+.km-stage-box.tip{background:var(--km-warning-soft);border-color:var(--km-warning-border)}
+.km-stage-box.tip h5{color:var(--km-warning)}
+.km-stage-box p{margin:0;color:var(--km-ink-2);font-size:13px;line-height:1.6}
+.km-stage-box .nums{display:flex;gap:28px;margin-top:13px}
+.km-stage-box .nums span{display:block;color:var(--km-muted);font-size:11.5px}
+.km-stage-box .nums strong{color:var(--km-ink);font:500 15px var(--km-mono)}
+
+/* ---------- panels, chips, evidence ---------- */
+.km-recovery-card{margin:12px 0;padding:12px 15px;border:1px solid var(--km-warning-border);border-radius:var(--km-r-md);background:var(--km-warning-soft)}
+.km-recovery-title{display:flex;align-items:center;gap:7px;color:var(--km-warning);font-size:13px;font-weight:600}
+.km-recovery-body{margin-top:5px;color:var(--km-ink-2);font-size:12.5px;line-height:1.55}
+.km-tab-panel{margin:8px 0 10px;padding:15px 16px;border:1px solid var(--km-line);border-radius:var(--km-r-md);background:var(--km-surface)}
+.km-tab-heading{margin-bottom:11px;color:var(--km-ink);font-size:13px;font-weight:600}
+.km-info-card{margin:10px 0;padding:13px 15px;border:1px solid var(--km-line);border-radius:var(--km-r-md);background:var(--km-surface)}
+.km-info-card-title{margin-bottom:5px;color:var(--km-ink);font-size:13px;font-weight:600}
+.km-info-card-body{color:var(--km-ink-2);font-size:13px;line-height:1.6}
+.km-info-card-body code{padding:2px 6px;border:1px solid var(--km-line);border-radius:6px;background:var(--km-surface-2);color:var(--km-accent-strong);font:12.5px var(--km-mono)}
+.km-status-note{margin:10px 0 0;color:var(--km-muted);font-size:12.5px;line-height:1.55}
+.km-signal-row{display:flex;flex-wrap:wrap;gap:8px}
+.km-chip{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border:1px solid var(--km-line);border-radius:999px;background:var(--km-surface-2);color:var(--km-ink-2);font-size:12px;font-weight:500}
+.km-chip.ok{border-color:var(--km-accent-border);background:var(--km-accent-soft);color:var(--km-accent-strong)}
+.km-chip.success{border-color:var(--km-success-border);background:var(--km-success-soft);color:var(--km-success)}
+.km-chip.warning{border-color:var(--km-warning-border);background:var(--km-warning-soft);color:var(--km-warning)}
+.km-chip.danger{border-color:var(--km-danger-border);background:var(--km-danger-soft);color:var(--km-danger)}
+.km-chip .num{color:inherit;font-family:var(--km-mono);font-weight:500}
+
+.km-sources{display:grid;gap:10px;margin-top:10px}
+.km-source{padding:14px 16px;border:1px solid var(--km-line);border-radius:var(--km-r-md);background:var(--km-surface)}
+.km-source-meta{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:9px;color:var(--km-muted);font-size:12px}
+.km-source-number{color:var(--km-accent-strong);font:500 12.5px var(--km-mono)}
+.km-source-name{color:var(--km-ink);font-size:13px;font-weight:600}
+.km-source-type{padding:1px 8px;border:1px solid var(--km-line);border-radius:999px;background:var(--km-surface-2);color:var(--km-ink-2)}
+.km-origin-badge{padding:1px 8px}
+.km-source-score{color:var(--km-muted);font-family:var(--km-mono)}
+.km-source-body{max-height:200px;overflow-y:auto;color:var(--km-ink-2);font-size:13px;line-height:1.7}
+.km-source-reason{margin-top:9px;color:var(--km-muted);font-size:12px}
+.km-source-id{margin-top:9px;color:var(--km-faint);font:11.5px var(--km-mono);word-break:break-all}
+.km-source-link{color:var(--km-accent);font-weight:500;text-decoration:none}.km-source-link:hover{text-decoration:underline}
+.km-empty-note{margin-top:10px;padding:11px 13px;border:1px dashed var(--km-line-strong);border-radius:var(--km-r-md);color:var(--km-muted);font-size:12.5px;line-height:1.55}
+.km-provenance-table{width:100%;margin-top:10px;border-collapse:collapse;font-size:12.5px}
+.km-provenance-table th{padding:9px 8px;border-bottom:1px solid var(--km-line-strong);color:var(--km-muted);font-size:11.5px;font-weight:600;text-align:left}
+.km-provenance-table td{padding:9px 8px;border-bottom:1px solid var(--km-line);color:var(--km-ink-2);font-family:var(--km-mono)}
+.km-claims{display:grid;gap:8px;margin-top:10px}
+.km-claim{padding:12px 15px;border:1px solid var(--km-line);border-radius:var(--km-r-md);background:var(--km-surface)}
+.km-claim.supported{border-color:var(--km-success-border)}.km-claim.unsupported{border-color:var(--km-danger-border)}
+.km-claim-meta{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:7px}
+.km-claim-text{color:var(--km-ink);font-size:13.5px;line-height:1.6}
+.km-claim-citations{margin-top:7px;color:var(--km-muted);font:12px var(--km-mono)}
+.km-trace-list{margin:8px 0 0;padding-left:20px;color:var(--km-ink-2);font-size:13px;line-height:1.8}
+.km-trace-list b{color:var(--km-accent-strong);font-family:var(--km-mono);font-weight:500}
+
+/* ---------- Streamlit widgets ---------- */
+div[data-baseweb="tab-list"]{gap:4px}
+div[data-baseweb="tab-border"]{background-color:var(--km-line)!important}
+button[data-baseweb="tab"]{height:42px;padding:0 14px;color:var(--km-muted)!important;font-size:13.5px!important;font-weight:500!important}
+button[data-baseweb="tab"]:hover{color:var(--km-ink)!important}
+button[data-baseweb="tab"][aria-selected="true"]{color:var(--km-ink)!important}
+div[data-baseweb="tab-highlight"]{height:2px!important;background:var(--km-grad)!important}
+div[data-testid="stExpander"]{border:1px solid var(--km-line);border-radius:var(--km-r-md);background:var(--km-surface);overflow:hidden}
+div[data-testid="stExpander"] summary{padding:.7rem 1rem;color:var(--km-ink);font-size:13.5px;font-weight:600}
+div[data-testid="stExpander"] summary:hover{color:var(--km-accent-strong)}
+.stButton>button{border-radius:var(--km-r-sm);font-weight:500}
+div[role="radiogroup"]{flex-wrap:wrap;gap:6px}
+div[role="radiogroup"] label{margin:0;padding:4px 13px;border:1px solid var(--km-line);border-radius:999px;background:var(--km-surface-2);color:var(--km-ink-2);cursor:pointer;transition:border-color .15s,background .15s}
+div[role="radiogroup"] label>div:first-child{display:none}
+div[role="radiogroup"] label:hover{border-color:var(--km-line-strong)}
+div[role="radiogroup"] label:has(input:checked){border-color:var(--km-accent-border);background:var(--km-accent-soft);color:var(--km-accent-strong)}
+div[role="radiogroup"] label p{font-size:12.5px;font-weight:500}
+
+/* dialog + metrics (evidence drawer) */
+div[role="dialog"]{border:1px solid var(--km-line-strong);border-radius:18px!important;background:var(--km-surface)!important;box-shadow:0 30px 80px -20px rgba(0,0,0,.8)}
+[data-testid="stMetric"]{padding:11px 13px;border:1px solid var(--km-line);border-radius:var(--km-r-md);background:var(--km-surface-2)}
+[data-testid="stMetricLabel"] p{color:var(--km-muted);font-size:11.5px}
+[data-testid="stMetricValue"]{color:var(--km-ink);font:500 20px var(--km-mono)}
+
+/* ---------- chat input ---------- */
+[data-testid="stBottom"],[data-testid="stBottom"]>div{background:var(--km-bg)!important}
+[data-testid="stBottomBlockContainer"]{max-width:960px;padding:12px 2rem 26px}
+div[data-testid="stChatInput"]{border:1px solid var(--km-line-strong);border-radius:var(--km-r-lg);background:var(--km-surface);box-shadow:0 10px 30px -12px rgba(0,0,0,.7);transition:border-color .15s,box-shadow .15s}
+div[data-testid="stChatInput"]:focus-within{border-color:var(--km-accent);box-shadow:0 0 0 4px var(--km-accent-soft),0 10px 30px -12px rgba(0,0,0,.7)}
+div[data-testid="stChatInput"]>div{border:0!important;background:transparent!important}
+div[data-testid="stChatInput"] textarea{min-height:auto!important;border:0!important;background:transparent!important;box-shadow:none!important;color:var(--km-ink)!important;font-size:15px!important}
+div[data-testid="stChatInput"] textarea::placeholder{color:var(--km-faint)}
+[data-testid="stChatInputSubmitButton"]{color:var(--km-accent)!important}
+[data-testid="stChatInputSubmitButton"]:disabled{color:var(--km-faint)!important}
+
+/* ---------- inputs, code, status, scrollbars ---------- */
+div[data-baseweb="input"],div[data-baseweb="base-input"]{background:var(--km-surface)!important;border-color:var(--km-line)!important;border-radius:10px!important}
+div[data-baseweb="input"]:focus-within{border-color:var(--km-accent)!important}
+section[data-testid="stSidebar"] input{color:var(--km-ink)!important;-webkit-text-fill-color:var(--km-ink);font-size:13px!important}
+section[data-testid="stSidebar"] input::placeholder{color:var(--km-faint)!important;-webkit-text-fill-color:var(--km-faint);opacity:1}
+[data-testid="stCode"],[data-testid="stCode"] pre{background:var(--km-surface-2)!important;border:1px solid var(--km-line);border-radius:var(--km-r-md)}
+[data-testid="stCode"] code,[data-testid="stCode"] code span{color:var(--km-ink-2)!important;font-family:var(--km-mono)!important;font-size:13px!important}
+[data-testid="stStatusWidget"],div[data-testid="stStatus"]{border:1px solid var(--km-line)!important;border-radius:var(--km-r-md)!important;background:var(--km-surface)!important}
+/* Streamlit gives .stMarkdown a negative bottom margin that the last <p>
+   margin normally cancels; zero it so bubble text isn't clipped. */
+[class*="st-key-km_bubble_"] [data-testid="stMarkdown"],[class*="st-key-km_user_bubble_"] [data-testid="stMarkdown"],
+[class*="st-key-km_bubble_"] .stMarkdown,[class*="st-key-km_user_bubble_"] .stMarkdown{margin-bottom:0!important}
+hr{border-color:var(--km-line)}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:var(--km-surface-3);border:2px solid transparent;border-radius:99px;background-clip:padding-box}
+::-webkit-scrollbar-track{background:transparent}
+
+/* ---------- responsive + motion ---------- */
+@media(max-width:1100px){.km-run-banner{flex-direction:column;align-items:stretch;gap:14px}.km-run-banner-stats{min-width:0}}
+@media(max-width:900px){.km-hero{padding:26px 22px}.km-hero h1{font-size:30px}.km-features{grid-template-columns:1fr}.km-stage-detail{grid-template-columns:1fr}.km-health-grid{grid-template-columns:repeat(3,minmax(0,1fr))}[data-testid="stMainBlockContainer"],.block-container{padding:1.6rem 1rem 8rem}[class*="st-key-km_bubble_"]{padding:18px 18px}}
+@media(max-width:700px){.km-run-banner-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.km-run-stat:nth-child(odd){padding-left:0;border-left:0}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+""" + "".join(f".km-w{i}{{width:{i * 5}%}}" for i in range(21))
+
+
+def load_styles():
+    st.markdown(f"<style>{APP_CSS}</style>", unsafe_allow_html=True)
+
+
+load_styles()
+
+
+# ============================================================
+# ICONS (inline SVG, wrapped in <img> so sanitisers keep them)
+# ============================================================
+
+_ICON_PATHS = {
+    "check": '<path d="M5 12.5 9.5 17 19 7"/>',
+    "refresh": (
+        '<path d="M4 12a8 8 0 0 1 14-5.3L20 8"/><path d="M20 4v4h-4"/>'
+        '<path d="M20 12a8 8 0 0 1-14 5.3L4 16"/><path d="M4 20v-4h4"/>'
+    ),
+    "cross": '<path d="M6 6l12 12"/><path d="M18 6 6 18"/>',
+    "dash": '<path d="M6 12h12"/>',
+    "user": '<circle cx="12" cy="8" r="3.6"/><path d="M5 20c.8-3.8 3.7-6 7-6s6.2 2.2 7 6"/>',
+    "dot": '<circle cx="12" cy="12" r="2.2" fill="currentColor" stroke="none"/>',
+    "warning": (
+        '<path d="M12 3.5 22 20.5H2z"/><path d="M12 9.5v5"/>'
+        '<circle cx="12" cy="17.4" r=".9" fill="currentColor" stroke="none"/>'
+    ),
+}
+
+
+@lru_cache(maxsize=128)
+def icon(name: str, size: int = 14, color: str = "#c3c9d4") -> str:
+    paths = _ICON_PATHS.get(name, "").replace("currentColor", color)
+
+    svg = (
+        f'<svg xmlns="http://www.w3.org/2000/svg" width="{size}" height="{size}" '
+        f'viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="2" '
+        f'stroke-linecap="round" stroke-linejoin="round">{paths}</svg>'
+    )
+    encoded = base64.b64encode(svg.encode("utf-8")).decode("ascii")
+
+    return (
+        f'<img class="km-icon" src="data:image/svg+xml;base64,{encoded}" '
+        f'width="{size}" height="{size}" alt="">'
+    )
 
 
 # ============================================================
@@ -195,57 +642,75 @@ PIPELINE_STAGES = [
     ("critic", "Critic", "Grounding review"),
 ]
 
+STAGE_TITLES = {key: title for key, title, _ in PIPELINE_STAGES}
+
+STAGE_LATENCY_FIELDS = {
+    "retrieval": "retrieval_latency_ms",
+    "reranking": "rerank_latency_ms",
+    "grader": "grader_latency_ms",
+    "responder": "generation_latency_ms",
+}
+
 TRACE_PATTERNS = [
-    (re.compile(r"guardrail", re.IGNORECASE), "guardrails", "GRD"),
-    (re.compile(r"intent|planner|planning", re.IGNORECASE), "planner", "PLN"),
+    (re.compile(r"guardrail", re.I), "guardrails", "GRD"),
+    (re.compile(r"intent|planner|planning", re.I), "planner", "PLN"),
     (
-        re.compile(
-            r"retriev|qdrant|context retrieved|knowledge retrieval",
-            re.IGNORECASE,
-        ),
+        re.compile(r"retriev|qdrant|context retrieved|knowledge retrieval", re.I),
         "retrieval",
         "RET",
     ),
+    (re.compile(r"rerank|flashrank|semantic reranking", re.I), "reranking", "RER"),
     (
-        re.compile(
-            r"rerank|flashrank|semantic reranking",
-            re.IGNORECASE,
-        ),
-        "reranking",
-        "RER",
-    ),
-    (
-        re.compile(
-            r"grader|document grade|context quality|relevance",
-            re.IGNORECASE,
-        ),
+        re.compile(r"grader|document grade|context quality|relevance", re.I),
         "grader",
         "GRD",
     ),
     (
-        re.compile(
-            r"web search|web fallback|external search|web evidence",
-            re.IGNORECASE,
-        ),
+        re.compile(r"web search|web fallback|external search|web evidence", re.I),
         "web_search",
         "WEB",
     ),
-    (
-        re.compile(r"citation|cite", re.IGNORECASE),
-        "validator",
-        "VAL",
-    ),
-    (
-        re.compile(r"ground|support|critic|revis", re.IGNORECASE),
-        "critic",
-        "CRT",
-    ),
-    (
-        re.compile(r"respond|response|synthes|answer|llm", re.IGNORECASE),
-        "responder",
-        "LLM",
-    ),
+    (re.compile(r"citation|cite", re.I), "validator", "VAL"),
+    (re.compile(r"ground|support|critic|revis", re.I), "critic", "CRT"),
+    (re.compile(r"respond|response|synthes|answer|llm", re.I), "responder", "LLM"),
 ]
+
+
+# ============================================================
+# LATENCY HELPERS
+# ============================================================
+
+
+def stage_latency_ms(trace, key):
+    field = STAGE_LATENCY_FIELDS.get(key)
+    value = (trace or {}).get(field) if field else None
+
+    return float(value) if isinstance(value, (int, float)) else None
+
+
+def backend_total_ms(trace):
+    trace = trace or {}
+    value = trace.get("backend_latency_ms")
+
+    if isinstance(value, (int, float)) and value > 0:
+        return float(value)
+
+    latency = trace.get("latency")
+
+    return float(latency) * 1000 if isinstance(latency, (int, float)) else None
+
+
+def bottleneck_key(trace):
+    total = backend_total_ms(trace)
+    timed = {k: stage_latency_ms(trace, k) for k in STAGE_LATENCY_FIELDS}
+    timed = {k: v for k, v in timed.items() if v}
+
+    if not total or not timed:
+        return None
+
+    key = max(timed, key=timed.get)
+
+    return key if timed[key] / total >= 0.4 else None
 
 
 # ============================================================
@@ -272,14 +737,8 @@ def classify_step(step):
 def infer_query_type(thought_process):
     text = " ".join(str(step) for step in (thought_process or [])).lower()
 
-    if "conversational" in text:
+    if "conversational" in text or "retrieval: skipped" in text:
         return "conversational"
-
-    if "retrieval: skipped" in text:
-        return "conversational"
-
-    if "intent: technical" in text:
-        return "technical"
 
     return "technical"
 
@@ -294,131 +753,33 @@ def extract_search_query(thought_process):
     return None
 
 
-def infer_visited_nodes(
-    thought_process,
-    sources,
-    status,
-    context_quality=None,
-    web_search_used=False,
-    citation_valid=None,
-    is_grounded=None,
-):
-    visited = set()
-    steps = thought_process or []
-
-    combined_text = " ".join(str(step) for step in steps).lower()
-
-    status_text = str(status or "").lower()
-
-    for step in steps:
-        stage_key, _, _ = classify_step(step)
-
-        if stage_key:
-            visited.add(stage_key)
-
-    if "guardrail" in combined_text or "guardrail" in status_text:
-        visited.add("guardrails")
-
-    if (
-        "intent:" in combined_text
-        or "search term:" in combined_text
-        or "conversational" in combined_text
-    ):
-        visited.add("planner")
-
-    if sources:
-        visited.add("retrieval")
-        visited.add("reranking")
-
-    if (
-        "document grade" in combined_text
-        or "context quality" in combined_text
-        or context_quality is not None
-    ):
-        visited.add("grader")
-
-    if web_search_used:
-        visited.add("web_search")
-
-    if status:
-        visited.add("responder")
-
-    if citation_valid is not None:
-        visited.add("validator")
-
-    if is_grounded is not None:
-        visited.add("critic")
-
-    return visited
-
-
-def is_rate_limit_error(value) -> bool:
-    text = str(value or "").lower()
-
-    markers = [
-        "ratelimit",
-        "rate limit",
-        "too many requests",
-        "429",
-    ]
-
-    return any(marker in text for marker in markers)
-
-
 def normalize_stage_state(value) -> str:
     value = str(value or "").lower().strip()
 
-    valid_states = {
-        "success",
-        "fallback",
-        "failed",
-        "skipped",
-        "pending",
-    }
-
-    return value if value in valid_states else "pending"
+    return (
+        value
+        if value in {"success", "fallback", "failed", "skipped", "pending"}
+        else "pending"
+    )
 
 
 def stage_statuses(trace: dict) -> dict:
-    """
-    Creates transparent UI stage states from current backend payload fields.
-
-    The preferred long-term backend contract is an explicit `node_statuses`
-    dictionary. Until that exists, this avoids falsely showing every stage
-    as successful when the backend only gives partial telemetry.
-    """
+    """UI stage states from the payload fields the backend currently sends."""
     trace = trace or {}
 
-    steps = trace.get("steps", []) or []
-    steps_text = " ".join(str(step) for step in steps).lower()
+    steps_text = " ".join(str(s) for s in trace.get("steps", []) or []).lower()
     status_text = str(trace.get("status") or "").lower()
-
     query_type = trace.get("query_type", "technical")
 
-    private_sources = (
-        trace.get(
-            "private_sources",
-            trace.get("sources", []),
-        )
-        or []
-    )
-
+    private_sources = trace.get("private_sources", trace.get("sources", [])) or []
     web_sources = trace.get("web_sources", []) or []
-
-    private_retrieval_status = trace.get(
-        "private_retrieval_status",
-        "Not used",
-    )
-
+    retrieval_status = trace.get("private_retrieval_status", "Not used")
     context_quality = str(trace.get("context_quality") or "").strip().lower()
-
-    web_search_used = bool(trace.get("web_search_used"))
-
+    web_used = bool(trace.get("web_search_used"))
     citation_valid = trace.get("citation_valid")
     is_grounded = trace.get("is_grounded")
-
-    revision_count = trace.get("revision_count")
-    support_retry_count = trace.get("support_retry_count")
+    revisions = trace.get("revision_count")
+    retries = trace.get("support_retry_count")
 
     grader_failed = (
         "document grade: failed" in steps_text
@@ -427,56 +788,23 @@ def stage_statuses(trace: dict) -> dict:
         or is_rate_limit_error(status_text)
     )
 
-    generation_failed = (
-        "generation rate-limited" in status_text
-        or "generation failed" in status_text
-        or "response generation failed" in status_text
-    )
+    def s(state, detail):
+        return {"state": state, "detail": detail}
 
-    statuses = {
-        "guardrails": {
-            "state": "pending",
-            "detail": "Not reported",
-        },
-        "planner": {
-            "state": "pending",
-            "detail": "Not reported",
-        },
-        "retrieval": {
-            "state": "skipped",
-            "detail": "Not required",
-        },
-        "reranking": {
-            "state": "skipped",
-            "detail": "Not required",
-        },
-        "grader": {
-            "state": "skipped",
-            "detail": "Not run",
-        },
-        "web_search": {
-            "state": "skipped",
-            "detail": "Not required",
-        },
-        "responder": {
-            "state": "pending",
-            "detail": "No response state reported",
-        },
-        "validator": {
-            "state": "skipped",
-            "detail": "Not checked",
-        },
-        "critic": {
-            "state": "skipped",
-            "detail": "Not checked",
-        },
+    out = {
+        "guardrails": s("pending", "Not reported"),
+        "planner": s("pending", "Not reported"),
+        "retrieval": s("skipped", "Not required"),
+        "reranking": s("skipped", "Not required"),
+        "grader": s("skipped", "Not run"),
+        "web_search": s("skipped", "Not required"),
+        "responder": s("pending", "No response state reported"),
+        "validator": s("skipped", "Not checked"),
+        "critic": s("skipped", "Not checked"),
     }
 
     if "guardrail" in steps_text or "guardrail" in status_text:
-        statuses["guardrails"] = {
-            "state": "success",
-            "detail": "Completed",
-        }
+        out["guardrails"] = s("success", "Completed")
 
     if (
         "intent:" in steps_text
@@ -484,182 +812,109 @@ def stage_statuses(trace: dict) -> dict:
         or "planner" in steps_text
         or query_type == "conversational"
     ):
-        statuses["planner"] = {
-            "state": "success",
-            "detail": (
-                "Conversation path"
-                if query_type == "conversational"
-                else query_type.title()
-            ),
-        }
+        out["planner"] = s(
+            "success",
+            "Conversation path"
+            if query_type == "conversational"
+            else query_type.title(),
+        )
 
     if query_type == "conversational":
-        statuses["retrieval"] = {
-            "state": "skipped",
-            "detail": "Conversation path",
-        }
-        statuses["reranking"] = {
-            "state": "skipped",
-            "detail": "Conversation path",
-        }
-        statuses["grader"] = {
-            "state": "skipped",
-            "detail": "Conversation path",
-        }
-        statuses["web_search"] = {
-            "state": "skipped",
-            "detail": "Conversation path",
-        }
-        statuses["responder"] = {
-            "state": "success",
-            "detail": "Memory-based answer",
-        }
+        for key in ("retrieval", "reranking", "grader", "web_search"):
+            out[key] = s("skipped", "Conversation path")
+        out["responder"] = s("success", "Memory-based answer")
 
-        return statuses
+        return out
 
-    retrieval_attempted = private_retrieval_status in {
-        "Used",
-        "Attempted",
-    }
-
-    if retrieval_attempted:
-        statuses["retrieval"] = {
-            "state": "success" if private_sources else "failed",
-            "detail": (
-                f"{len(private_sources)} private source(s)"
-                if private_sources
-                else "No documents returned"
-            ),
-        }
-
-        statuses["reranking"] = {
-            "state": "success" if private_sources else "skipped",
-            "detail": (
-                f"Top {len(private_sources)} context chunk(s)"
-                if private_sources
-                else "No context to rerank"
-            ),
-        }
+    if retrieval_status in {"Used", "Attempted"}:
+        out["retrieval"] = s(
+            "success" if private_sources else "failed",
+            f"{len(private_sources)} private source(s)"
+            if private_sources
+            else "No documents returned",
+        )
+        out["reranking"] = s(
+            "success" if private_sources else "skipped",
+            f"Top {len(private_sources)} context chunk(s)"
+            if private_sources
+            else "No context to rerank",
+        )
 
     if grader_failed:
-        statuses["grader"] = {
-            "state": "failed",
-            "detail": "Rate-limited or failed",
-        }
+        out["grader"] = s("failed", "Rate-limited or failed")
     elif trace.get("context_quality") is not None:
-        statuses["grader"] = {
-            "state": "success",
-            "detail": f"Context: {context_quality or 'reported'}",
-        }
+        out["grader"] = s("success", f"Context: {context_quality or 'reported'}")
 
-    if web_search_used:
-        statuses["web_search"] = {
-            "state": "fallback",
-            "detail": f"{len(web_sources)} web source(s)",
-        }
+    if web_used:
+        out["web_search"] = s("fallback", f"{len(web_sources)} web source(s)")
 
-    if generation_failed:
-        statuses["responder"] = {
-            "state": "failed",
-            "detail": "Generation failed or rate-limited",
-        }
+    if _generation_failed(status_text):
+        out["responder"] = s("failed", "Generation failed or rate-limited")
     elif status_text:
-        statuses["responder"] = {
-            "state": "fallback" if web_search_used else "success",
-            "detail": (
-                "Generated with web fallback" if web_search_used else "Answer generated"
-            ),
-        }
+        out["responder"] = s(
+            "fallback" if web_used else "success",
+            "Generated with web fallback" if web_used else "Answer generated",
+        )
 
     if citation_valid is True:
-        statuses["validator"] = {
-            "state": "success",
-            "detail": "Citations valid",
-        }
+        out["validator"] = s("success", "Citations valid")
     elif citation_valid is False:
-        statuses["validator"] = {
-            "state": "failed",
-            "detail": "Citation mismatch",
-        }
+        out["validator"] = s("failed", "Citation mismatch")
 
     if is_grounded is True:
-        statuses["critic"] = {
-            "state": "success",
-            "detail": "Grounded",
-        }
+        out["critic"] = s("success", "Grounded")
     elif is_grounded is False:
-        statuses["critic"] = {
-            "state": "failed",
-            "detail": "Not grounded",
-        }
-    elif revision_count not in (None, 0) or support_retry_count not in (None, 0):
-        statuses["critic"] = {
-            "state": "fallback",
-            "detail": (
-                f"Revisions {revision_count or 0} · Retries {support_retry_count or 0}"
-            ),
-        }
+        out["critic"] = s("failed", "Not grounded")
+    elif revisions not in (None, 0) or retries not in (None, 0):
+        out["critic"] = s(
+            "fallback", f"Revisions {revisions or 0} · Retries {retries or 0}"
+        )
 
-    return statuses
+    return out
 
 
 def run_outcome(trace: dict) -> dict:
     trace = trace or {}
 
-    citation_valid = trace.get("citation_valid")
-    is_grounded = trace.get("is_grounded")
-    web_search_used = bool(trace.get("web_search_used"))
+    status_text = str(trace.get("status") or "")
+    steps_text = " ".join(str(step) for step in trace.get("steps", []))
 
-    status_text = str(trace.get("status") or "").lower()
-    steps_text = " ".join(str(step) for step in trace.get("steps", [])).lower()
-
-    generation_failed = (
-        "generation rate-limited" in status_text
-        or "generation failed" in status_text
-        or "response generation failed" in status_text
-    )
-
-    if generation_failed:
+    if _generation_failed(status_text):
         return {
             "kind": "failed",
             "title": "Response generation issue",
             "description": (
-                "The workflow completed partially, but final response "
-                "generation encountered an execution issue."
+                "The workflow completed partially, but the final response "
+                "could not be generated."
             ),
         }
 
-    if citation_valid is False or is_grounded is False:
+    if trace.get("citation_valid") is False or trace.get("is_grounded") is False:
         return {
             "kind": "warning",
-            "title": "Completed with validation warning",
+            "title": "Completed with a validation warning",
             "description": (
-                "The system produced a response, but citation or grounding "
-                "review reported a quality issue."
+                "An answer was produced, but citation or grounding review "
+                "reported a quality issue."
             ),
         }
 
-    if web_search_used:
+    if trace.get("web_search_used"):
         return {
             "kind": "fallback",
             "title": "Completed with web fallback",
             "description": (
-                "Private knowledge was supplemented with external evidence "
-                "to improve answer coverage."
+                "Private knowledge was supplemented with external evidence. "
+                "Web sources are labelled in the Evidence tab."
             ),
         }
 
-    if (
-        "rate limit" in steps_text
-        or "ratelimit" in steps_text
-        or "failed" in steps_text
-    ):
+    if has_recovery_signal(steps_text):
         return {
             "kind": "warning",
-            "title": "Completed with recovery",
+            "title": "Completed after recovery",
             "description": (
-                "The agentic workflow recovered from a partial execution or "
-                "evaluation issue."
+                "A stage failed or was rate-limited and the workflow recovered."
             ),
         }
 
@@ -668,8 +923,8 @@ def run_outcome(trace: dict) -> dict:
             "kind": "memory",
             "title": "Conversation response",
             "description": (
-                "The response used the conversational memory path without "
-                "private knowledge retrieval."
+                "Answered from conversation memory without searching the "
+                "knowledge base."
             ),
         }
 
@@ -677,8 +932,8 @@ def run_outcome(trace: dict) -> dict:
         "kind": "success",
         "title": "Completed successfully",
         "description": (
-            "The agent completed planning, evidence processing, response "
-            "generation, and available validation checks."
+            "Planning, evidence processing, generation and the available "
+            "validation checks all completed."
         ),
     }
 
@@ -693,62 +948,62 @@ def outcome_badge_class(kind: str) -> str:
     }.get(kind, "")
 
 
+def derive_completion_state(
+    status_text, citation_valid, is_grounded, web_search_used, thought_process
+):
+    trace_text = " ".join(str(step) for step in (thought_process or []))
+
+    if _generation_failed(status_text):
+        return "error", "Completed with generation issue"
+    if citation_valid is False or is_grounded is False:
+        return "complete", "Completed with validation warning"
+    if web_search_used:
+        return "complete", "Completed with web fallback"
+    if has_recovery_signal(trace_text):
+        return "complete", "Completed after recovery"
+
+    return "complete", "Completed successfully"
+
+
+# ============================================================
+# RENDER FUNCTIONS
+# ============================================================
+
+
 def render_run_banner(trace: dict) -> str:
     trace = trace or {}
-
     outcome = run_outcome(trace)
     kind = outcome_badge_class(outcome["kind"])
 
-    private_sources = (
-        trace.get(
-            "private_sources",
-            trace.get("sources", []),
-        )
-        or []
-    )
-
+    private_sources = trace.get("private_sources", trace.get("sources", [])) or []
     web_sources = trace.get("web_sources", []) or []
     answer_sources = trace.get("answer_sources", []) or []
 
-    context_quality = trace.get("context_quality")
-    context_label = str(context_quality).title() if context_quality else "Not reported"
-
+    quality = trace.get("context_quality")
+    context_label = str(quality).title() if quality else "Not reported"
     web_used = bool(trace.get("web_search_used"))
+
+    stats = [
+        ("Total time", esc(format_seconds(trace.get("latency")))),
+        ("Private evidence", len(private_sources)),
+        ("Web evidence", len(web_sources) if web_used else "—"),
+        ("Cited sources", len(answer_sources)),
+        ("Context", esc(context_label)),
+    ]
+    stats_html = "".join(
+        f'<div class="km-run-stat"><span>{label}</span><strong>{value}</strong></div>'
+        for label, value in stats
+    )
 
     return f"""
         <div class="km-run-banner {esc(kind)}">
             <div class="km-run-banner-main">
                 <div class="km-run-banner-title">
-                    <span class="km-run-indicator"></span>
-                    {esc(outcome["title"])}
+                    <span class="km-run-indicator"></span>{esc(outcome["title"])}
                 </div>
-                <div class="km-run-banner-description">
-                    {esc(outcome["description"])}
-                </div>
+                <div class="km-run-banner-description">{esc(outcome["description"])}</div>
             </div>
-
-            <div class="km-run-banner-stats">
-                <div class="km-run-stat">
-                    <span>Total time</span>
-                    <strong>{esc(format_seconds(trace.get("latency")))}</strong>
-                </div>
-                <div class="km-run-stat">
-                    <span>Private evidence</span>
-                    <strong>{len(private_sources)}</strong>
-                </div>
-                <div class="km-run-stat">
-                    <span>Web evidence</span>
-                    <strong>{len(web_sources) if web_used else "—"}</strong>
-                </div>
-                <div class="km-run-stat">
-                    <span>Cited sources</span>
-                    <strong>{len(answer_sources)}</strong>
-                </div>
-                <div class="km-run-stat">
-                    <span>Context</span>
-                    <strong>{esc(context_label)}</strong>
-                </div>
-            </div>
+            <div class="km-run-banner-stats">{stats_html}</div>
         </div>
     """
 
@@ -756,43 +1011,50 @@ def render_run_banner(trace: dict) -> str:
 def render_pipeline_rail(trace=None):
     trace = trace or {}
     statuses = stage_statuses(trace)
+    slow_key = bottleneck_key(trace)
 
     icon_map = {
-        "success": "✓",
-        "fallback": "↻",
-        "failed": "✕",
-        "skipped": "—",
-        "pending": "·",
+        "success": icon("check", 13, "#07130d"),
+        "fallback": icon("refresh", 13, "#1a1204"),
+        "failed": icon("cross", 13, "#1a0709"),
+        "skipped": icon("dash", 13, "#9099a8"),
+        "pending": icon("dot", 13, "#5e6878"),
     }
 
     nodes = []
     total = len(PIPELINE_STAGES)
 
-    for index, (key, title, default_detail) in enumerate(
-        PIPELINE_STAGES,
-        start=1,
-    ):
+    for index, (key, title, default_detail) in enumerate(PIPELINE_STAGES, start=1):
         stage = statuses.get(key, {})
-
         state = normalize_stage_state(stage.get("state"))
         detail = stage.get("detail") or default_detail
-        icon = icon_map.get(state, "·")
+        icon_markup = icon_map.get(state, icon_map["pending"])
 
-        connector = ""
+        latency_ms = stage_latency_ms(trace, key)
+        slow_cls = "slow" if key == slow_key else ""
 
-        if index < total:
-            connector = f'<div class="km-step-line {esc(state)}"></div>'
+        if latency_ms is not None:
+            latency_html = f'<em class="km-step-time">{esc(format_ms(latency_ms))}</em>'
+        elif key in STAGE_LATENCY_FIELDS and state != "skipped":
+            latency_html = '<em class="km-step-time muted">no timing</em>'
+        else:
+            latency_html = ""
+
+        connector = (
+            f'<div class="km-step-line {esc(state)}"></div>' if index < total else ""
+        )
 
         nodes.append(
             f"""
-            <div class="km-step {esc(state)}">
+            <div class="km-step {esc(state)} {slow_cls}">
                 <div class="km-step-marker">
-                    <div class="km-step-dot">{esc(icon)}</div>
+                    <div class="km-step-dot">{icon_markup}</div>
                     {connector}
                 </div>
                 <div class="km-step-body">
                     <strong>{esc(title)}</strong>
                     <span>{esc(detail)}</span>
+                    {latency_html}
                 </div>
             </div>
             """
@@ -801,11 +1063,121 @@ def render_pipeline_rail(trace=None):
     return f'<div class="km-pipeline">{"".join(nodes)}</div>'
 
 
+def render_latency_panel(trace: dict) -> str:
+    trace = trace or {}
+    total = backend_total_ms(trace)
+
+    if not total:
+        return ""
+
+    slow = bottleneck_key(trace)
+    segments, legend, known = [], [], 0.0
+
+    for key in ("retrieval", "reranking", "grader", "responder"):
+        value = stage_latency_ms(trace, key)
+
+        if not value:
+            continue
+
+        known += value
+        label = STAGE_TITLES[key]
+        css = "warn" if key == slow else ""
+        color = "var(--km-warning)" if key == slow else "var(--km-accent)"
+
+        segments.append(
+            f'<i class="km-lat-seg {css}" style="flex:{value:.2f}" '
+            f'title="{esc(label)}: {esc(format_ms(value))}"></i>'
+        )
+        legend.append(
+            f'<span><span style="color:{color}">&#9632;</span> {esc(label)} '
+            f"<em>{esc(format_ms(value))}</em></span>"
+        )
+
+    rest = max(total - known, 0)
+
+    if rest > 0:
+        segments.append(
+            f'<i class="km-lat-seg unknown" style="flex:{rest:.2f}" '
+            'title="Not itemised"></i>'
+        )
+        legend.append(
+            f"<span>&#9640; Not itemised <em>{esc(format_ms(rest))}</em></span>"
+        )
+
+    latency = trace.get("latency")
+    ui_overhead = (
+        max(latency * 1000 - total, 0) if isinstance(latency, (int, float)) else None
+    )
+
+    note = ""
+
+    if slow:
+        share = stage_latency_ms(trace, slow) / total * 100
+        note = (
+            f'<div class="km-lat-note">{esc(STAGE_TITLES[slow])} took '
+            f"{share:.0f}% of the run.</div>"
+        )
+
+    return f"""
+        <div class="km-lat">
+            <div class="km-lat-head">
+                <span>Where the time went</span>
+                <span>Backend <b>{esc(format_ms(total))}</b> &middot;
+                UI and network <b>{esc(format_ms(ui_overhead))}</b></span>
+            </div>
+            <div class="km-lat-bar">{"".join(segments)}</div>
+            <div class="km-lat-legend">{"".join(legend)}</div>
+            {note}
+        </div>
+    """
+
+
+def render_stage_detail(trace: dict, key: str) -> str:
+    trace = trace or {}
+    stage = stage_statuses(trace).get(key, {})
+    ms = stage_latency_ms(trace, key)
+    total = backend_total_ms(trace)
+    share = f"{ms / total * 100:.1f}%" if ms and total else "—"
+
+    tip_html = ""
+
+    if key == bottleneck_key(trace):
+        idea = "This stage took the largest share of the run."
+
+        if DEBUG_UI and key == "retrieval":
+            idea += (
+                " Try a lower top-k, keep the vector client warm between "
+                "requests, and check whether the embedding call is the slow part."
+            )
+
+        tip_html = (
+            '<div class="km-stage-box tip"><h5>Slowest stage</h5>'
+            f"<p>{esc(idea)}</p></div>"
+        )
+    elif DEBUG_UI and ms is None and key in STAGE_LATENCY_FIELDS:
+        tip_html = (
+            '<div class="km-stage-box tip"><h5>No timing reported</h5>'
+            "<p>Return this stage's latency from the API so it shows here.</p></div>"
+        )
+
+    return f"""
+        <div class="km-stage-detail">
+            <div class="km-stage-box">
+                <h5>{esc(STAGE_TITLES.get(key, key))}</h5>
+                <p>{esc(stage.get("detail", "Not reported"))}</p>
+                <div class="nums">
+                    <div><span>Time</span><strong>{esc(format_ms(ms))}</strong></div>
+                    <div><span>Share of backend</span><strong>{esc(share)}</strong></div>
+                </div>
+            </div>
+            {tip_html}
+        </div>
+    """
+
+
 def render_recovery_notice(trace: dict) -> str:
     trace = trace or {}
-
     steps_text = " ".join(str(item) for item in trace.get("steps", []))
-
     status_text = str(trace.get("status") or "")
 
     grader_failure = (
@@ -815,31 +1187,21 @@ def render_recovery_notice(trace: dict) -> str:
         or is_rate_limit_error(status_text)
     )
 
-    web_search_used = bool(trace.get("web_search_used"))
-    revision_count = trace.get("revision_count") or 0
-    retry_count = trace.get("support_retry_count") or 0
-
-    citation_valid = trace.get("citation_valid")
-    is_grounded = trace.get("is_grounded")
-
+    revisions = safe_int(trace.get("revision_count"))
+    retries = safe_int(trace.get("support_retry_count"))
     details = []
 
     if grader_failure:
         details.append("Document grading did not complete successfully.")
-
-    if web_search_used:
+    if trace.get("web_search_used"):
         details.append("External web evidence was used as a fallback.")
-
-    if revision_count:
-        details.append(f"Answer revisions: {revision_count}.")
-
-    if retry_count:
-        details.append(f"Support retries: {retry_count}.")
-
-    if citation_valid is False:
+    if revisions:
+        details.append(f"Answer revisions: {revisions}.")
+    if retries:
+        details.append(f"Support retries: {retries}.")
+    if trace.get("citation_valid") is False:
         details.append("Citation validation reported a mismatch.")
-
-    if is_grounded is False:
+    if trace.get("is_grounded") is False:
         details.append("Grounding review reported an issue.")
 
     if not details:
@@ -847,128 +1209,110 @@ def render_recovery_notice(trace: dict) -> str:
 
     return f"""
         <div class="km-recovery-card">
-            <div class="km-recovery-title">
-                ⚠ Recovery or validation event
-            </div>
-            <div class="km-recovery-body">
-                {esc(" ".join(details))}
-            </div>
+            <div class="km-recovery-title">{icon("warning", 14, "#e8b25c")} Recovery or validation event</div>
+            <div class="km-recovery-body">{esc(" ".join(details))}</div>
         </div>
     """
 
 
+def _score_chip(label, value, danger=False):
+    css = " danger" if danger else ""
+
+    return (
+        f'<span class="km-chip{css}">{esc(label)} '
+        f'<span class="num">{esc(value)}</span></span>'
+    )
+
+
 def render_quality_summary(trace: dict) -> str:
     trace = trace or {}
-
-    citation_valid = trace.get("citation_valid")
-    is_grounded = trace.get("is_grounded")
-
-    answer_supported = trace.get("answer_supported")
-    answer_useful = trace.get("answer_useful")
-
-    support_score = trace.get("support_score")
-    usefulness_score = trace.get("usefulness_score")
-
-    grounding_scores = trace.get("grounding_scores") or {}
+    details = trace.get("grounding_details") or {}
 
     chips = [
         tri_state_chip(
             "Citations valid",
             "Citation mismatch",
             "Citations not checked",
-            citation_valid,
+            trace.get("citation_valid"),
         ),
         tri_state_chip(
             "Grounded",
             "Not grounded",
             "Grounding not checked",
-            is_grounded,
+            trace.get("is_grounded"),
         ),
     ]
 
-    if answer_supported is not None:
+    if trace.get("answer_supported") is not None:
         chips.append(
             tri_state_chip(
-                "Supported",
-                "Not supported",
-                "",
-                answer_supported,
-                unknown_ok=False,
+                "Supported", "Not supported", "", trace["answer_supported"], False
             )
         )
 
-    if answer_useful is not None:
+    if trace.get("answer_useful") is not None:
         chips.append(
-            tri_state_chip(
-                "Useful",
-                "Not useful",
-                "",
-                answer_useful,
-                unknown_ok=False,
+            tri_state_chip("Useful", "Not useful", "", trace["answer_useful"], False)
+        )
+
+    if trace.get("support_score") is not None:
+        chips.append(_score_chip("Support", format_2dp(trace["support_score"])))
+
+    if trace.get("usefulness_score") is not None:
+        chips.append(_score_chip("Usefulness", format_2dp(trace["usefulness_score"])))
+
+    if details.get("claim_count"):
+        chips.append(_score_chip("Claims checked", safe_int(details["claim_count"])))
+
+    unsupported = safe_int(details.get("unsupported_atomic_count"))
+
+    if details.get("atomic_claim_count"):
+        chips.append(
+            _score_chip(
+                "Atomic claims",
+                safe_int(details["atomic_claim_count"]),
+                bool(unsupported),
             )
         )
 
-    if support_score is not None:
+    if unsupported:
+        chips.append(_score_chip("Unsupported", unsupported, True))
+
+    if details.get("entailment_threshold") is not None:
         chips.append(
-            '<span class="km-chip">'
-            f'Support <span class="num">{float(support_score):.2f}</span>'
-            "</span>"
+            _score_chip(
+                "Entailment threshold", format_2dp(details["entailment_threshold"])
+            )
         )
-
-    if usefulness_score is not None:
-        chips.append(
-            '<span class="km-chip">'
-            f'Usefulness <span class="num">{float(usefulness_score):.2f}</span>'
-            "</span>"
-        )
-
-    if isinstance(grounding_scores, dict):
-        for key, value in grounding_scores.items():
-            if isinstance(value, (int, float)):
-                readable_key = str(key).replace("_", " ").title()
-
-                chips.append(
-                    '<span class="km-chip">'
-                    f"{esc(readable_key)} "
-                    f'<span class="num">{float(value):.2f}</span>'
-                    "</span>"
-                )
 
     return "".join(chip for chip in chips if chip)
 
 
 def render_recovery_summary(trace: dict) -> str:
     trace = trace or {}
-
-    recovery_items = [
+    items = [
         ("Query rewrites", trace.get("retrieval_rewrite_count")),
         ("Answer revisions", trace.get("revision_count")),
         ("Support retries", trace.get("support_retry_count")),
         ("Web rewrites", trace.get("web_rewrite_count")),
     ]
 
-    chips = []
-
-    for label, value in recovery_items:
-        if value is not None:
-            chips.append(
-                '<span class="km-chip">'
-                f'{esc(label)} <span class="num">{int(value)}</span>'
-                "</span>"
-            )
-
-    return "".join(chips)
+    return "".join(
+        _score_chip(label, safe_int(value))
+        for label, value in items
+        if value is not None
+    )
 
 
 # ============================================================
-# SOURCE NORMALIZATION
+# SOURCE NORMALIZATION + CARDS
 # ============================================================
 
 
 def normalize_origin(value) -> str:
     value = str(value or "").strip().lower()
 
-    if value in {"private", "internal", "knowledge_base", "kb"}:
+    if value in {"private", "internal", "knowledge_base", "kb", "private_kb"}:
         return "private"
 
     if value in {"web", "external", "internet"}:
@@ -980,71 +1324,34 @@ def normalize_origin(value) -> str:
 def normalize_source(source, index, origin="private"):
     origin = normalize_origin(origin)
 
-    if isinstance(source, dict):
-        content = (
-            source.get("content") or source.get("text") or source.get("snippet") or ""
-        )
+    if not isinstance(source, dict):
+        source = {"content": str(source)}
 
-        name = (
+    chunk_id = source.get("chunk_id")
+
+    return {
+        "n": index,
+        "text": str(
+            source.get("content") or source.get("text") or source.get("snippet") or ""
+        ),
+        "name": str(
             source.get("source")
             or source.get("filename")
             or source.get("title")
             or "Unknown document"
-        )
-
-        source_type = source.get("source_type") or "unknown"
-
-        document_id = source.get("id") or source.get("document_id")
-
-        chunk_id = source.get("chunk_id")
-
-        citation_id = source.get("citation_id") or source.get("citation") or chunk_id
-
-        vector_score = source.get("score")
-        rerank_score = source.get("rerank_score")
-
-        grader_score = source.get("grader_score")
-        grader_relevant = source.get("grader_relevant")
-        grader_reason = source.get("grader_reason")
-
-        relevance = source.get("relevance") or source.get("rank")
-        url = source.get("url")
-
-    else:
-        content = str(source)
-        name = "Unknown document"
-        source_type = "unknown"
-
-        document_id = None
-        chunk_id = None
-        citation_id = None
-
-        vector_score = None
-        rerank_score = None
-
-        grader_score = None
-        grader_relevant = None
-        grader_reason = None
-
-        relevance = None
-        url = None
-
-    return {
-        "n": index,
-        "text": str(content),
-        "name": str(name),
-        "source_type": str(source_type),
+        ),
+        "source_type": str(source.get("source_type") or "unknown"),
         "origin": origin,
-        "id": document_id,
+        "id": source.get("id") or source.get("document_id"),
         "chunk_id": chunk_id,
-        "citation_id": citation_id,
-        "score": vector_score,
-        "rerank_score": rerank_score,
-        "grader_score": grader_score,
-        "grader_relevant": grader_relevant,
-        "grader_reason": grader_reason,
-        "relevance": relevance,
-        "url": url,
+        "citation_id": source.get("citation_id") or source.get("citation") or chunk_id,
+        "score": source.get("score"),
+        "rerank_score": source.get("rerank_score"),
+        "grader_score": source.get("grader_score"),
+        "grader_relevant": source.get("grader_relevant"),
+        "grader_reason": source.get("grader_reason"),
+        "relevance": source.get("relevance") or source.get("rank"),
+        "url": source.get("url"),
     }
 
 
@@ -1053,10 +1360,8 @@ def source_type_label(value):
 
     if normalized == "true":
         return "Trusted"
-
     if normalized in {"false", "noisy"}:
         return "Noisy"
-
     if not normalized:
         return "Unknown"
 
@@ -1064,38 +1369,22 @@ def source_type_label(value):
 
 
 def render_source_cards(source_list):
+    origin_map = {
+        "private": ("ok", "Private"),
+        "web": ("warning", "Web"),
+        "unknown": ("", "Unknown"),
+    }
     cards = []
 
-    origin_map = {
-        "private": ("ok", "PRIVATE"),
-        "web": ("warning", "WEB"),
-        "unknown": ("", "UNKNOWN"),
-    }
-
     for source in source_list:
-        source_name = source.get("name", "Unknown document")
-        source_type = source_type_label(source.get("source_type"))
-
         origin = normalize_origin(source.get("origin"))
         origin_class, origin_label = origin_map[origin]
+        url = safe_url(source.get("url"))
 
-        vector_score = format_score(source.get("score"))
-        rerank_score = format_score(source.get("rerank_score"))
-        grader_score = format_score(source.get("grader_score"))
-
-        grader_relevant = source.get("grader_relevant")
-        grader_reason = source.get("grader_reason")
-
-        document_id = source.get("id") or "Unknown"
-        citation_id = source.get("citation_id")
-
-        source_url = safe_url(source.get("url"))
-
-        if source_url:
+        if url:
             link_html = (
-                f'<a class="km-source-link" href="{esc(source_url)}" '
-                'target="_blank" rel="noopener noreferrer">'
-                "Open source</a>"
+                f'<a class="km-source-link" href="{esc(url)}" target="_blank" '
+                'rel="noopener noreferrer">Open source</a>'
             )
         elif origin == "web":
             link_html = '<span class="km-source-score">No URL provided</span>'
@@ -1106,67 +1395,45 @@ def render_source_cards(source_list):
 
         if origin == "private":
             score_html = (
-                f'<span class="km-source-score">'
-                f"vector {esc(vector_score)}</span>"
-                f'<span class="km-source-score">'
-                f"rerank {esc(rerank_score)}</span>"
+                f'<span class="km-source-score">vector {esc(format_score(source.get("score")))}</span>'
+                f'<span class="km-source-score">rerank {esc(format_score(source.get("rerank_score")))}</span>'
             )
 
         grader_html = ""
+        grader_score = format_score(source.get("grader_score"))
 
         if grader_score != "—":
-            if grader_relevant is True:
-                grader_label = "relevant"
-            elif grader_relevant is False:
-                grader_label = "rejected"
-            else:
-                grader_label = "reported"
-
-            grader_html = (
-                f'<span class="km-source-score">'
-                f"grader {esc(grader_score)} · {esc(grader_label)}"
-                "</span>"
+            relevant = source.get("grader_relevant")
+            label = (
+                "relevant"
+                if relevant is True
+                else "rejected"
+                if relevant is False
+                else "reported"
             )
+            grader_html = f'<span class="km-source-score">grader {esc(grader_score)} ({label})</span>'
 
-        citation_html = ""
-
-        if citation_id:
-            citation_html = (
-                f'<span class="km-source-score">cite [{esc(citation_id)}]</span>'
-            )
-
-        reason_html = ""
-
-        if grader_reason:
-            reason_html = (
-                f'<div class="km-source-reason">Grader: {esc(grader_reason)}</div>'
-            )
+        # The answer text cites by citation id, so show that as the label.
+        label_value = source.get("citation_id") or source.get("n")
+        reason_html = (
+            f'<div class="km-source-reason">Grader: {esc(source["grader_reason"])}</div>'
+            if source.get("grader_reason")
+            else ""
+        )
 
         cards.append(
             f"""
             <div class="km-source">
                 <div class="km-source-meta">
-                    <span class="km-source-number">[{source["n"]}]</span>
-                    <span class="km-chip {origin_class} km-origin-badge">
-                        {esc(origin_label)}
-                    </span>
-                    <span class="km-source-name">{esc(source_name)}</span>
-                    <span class="km-source-type">{esc(source_type)}</span>
-                    {score_html}
-                    {grader_html}
-                    {citation_html}
-                    {link_html}
+                    <span class="km-source-number">[{esc(label_value)}]</span>
+                    <span class="km-chip {origin_class} km-origin-badge">{esc(origin_label)}</span>
+                    <span class="km-source-name">{esc(source.get("name", "Unknown document"))}</span>
+                    <span class="km-source-type">{esc(source_type_label(source.get("source_type")))}</span>
+                    {score_html}{grader_html}{link_html}
                 </div>
-
-                <div class="km-source-body">
-                    {esc(source.get("text", ""))}
-                </div>
-
+                <div class="km-source-body">{esc(source.get("text", ""))}</div>
                 {reason_html}
-
-                <div class="km-source-id">
-                    ID: {esc(document_id)}
-                </div>
+                <div class="km-source-id">ID: {esc(source.get("id") or "Unknown")}</div>
             </div>
             """
         )
@@ -1175,49 +1442,34 @@ def render_source_cards(source_list):
 
 
 def render_citation_provenance_table(provenance_list):
-    if not provenance_list:
-        return ""
-
     rows = []
 
-    for entry in provenance_list:
+    for entry in provenance_list or []:
         if not isinstance(entry, dict):
             continue
 
-        citation = entry.get("citation") or entry.get("citation_id") or "—"
-
-        source = entry.get("source") or entry.get("name") or "—"
-
-        origin = str(entry.get("origin") or "—").upper()
-
-        document = entry.get("document") or entry.get("document_id") or "—"
-
-        chunk = entry.get("chunk") or entry.get("chunk_id") or "—"
+        raw_origin = entry.get("origin") or entry.get("source_type")
+        key = normalize_origin(raw_origin)
+        origin = {"private": "Private", "web": "Web"}.get(key, str(raw_origin or "—"))
+        color = {"Private": "var(--km-success)", "Web": "var(--km-warning)"}.get(origin)
+        style = f' style="color:{color};"' if color else ""
 
         url = safe_url(entry.get("url"))
-
         url_cell = (
-            f'<a class="km-source-link" href="{esc(url)}" '
-            'target="_blank" rel="noopener noreferrer">Open</a>'
+            f'<a class="km-source-link" href="{esc(url)}" target="_blank" '
+            'rel="noopener noreferrer">Open</a>'
             if url
             else "—"
         )
 
-        origin_style = ""
-
-        if origin == "PRIVATE":
-            origin_style = ' style="color:var(--km-success);"'
-        elif origin == "WEB":
-            origin_style = ' style="color:var(--km-warning);"'
-
         rows.append(
             f"""
             <tr>
-                <td>[{esc(citation)}]</td>
-                <td>{esc(source)}</td>
-                <td{origin_style}>{esc(origin)}</td>
-                <td>{esc(document)}</td>
-                <td>{esc(chunk)}</td>
+                <td>[{esc(entry.get("citation") or entry.get("citation_id") or "—")}]</td>
+                <td>{esc(entry.get("source") or entry.get("name") or "—")}</td>
+                <td{style}>{esc(origin)}</td>
+                <td>{esc(entry.get("document") or entry.get("document_id") or "—")}</td>
+                <td>{esc(entry.get("chunk") or entry.get("chunk_id") or "—")}</td>
                 <td>{url_cell}</td>
             </tr>
             """
@@ -1228,21 +1480,432 @@ def render_citation_provenance_table(provenance_list):
 
     return f"""
         <table class="km-provenance-table">
-            <thead>
-                <tr>
-                    <th>Citation</th>
-                    <th>Source</th>
-                    <th>Origin</th>
-                    <th>Document</th>
-                    <th>Chunk</th>
-                    <th>URL</th>
-                </tr>
-            </thead>
-            <tbody>
-                {"".join(rows)}
-            </tbody>
+            <thead><tr>
+                <th>Citation</th><th>Source</th><th>Origin</th>
+                <th>Document</th><th>Chunk</th><th>URL</th>
+            </tr></thead>
+            <tbody>{"".join(rows)}</tbody>
         </table>
     """
+
+
+def _claim_keys(items):
+    """Backend lists may hold strings or dicts; return the claim texts as a set."""
+    keys = set()
+
+    for item in items or []:
+        if isinstance(item, dict):
+            text = item.get("claim") or item.get("text") or item.get("statement")
+            keys.add(str(text) if text else str(sorted(item.items())))
+        else:
+            keys.add(str(item))
+
+    return keys
+
+
+def render_claims(claims, grounding_details=None) -> str:
+    if not claims:
+        return ""
+
+    details = grounding_details or {}
+    uncited = _claim_keys(details.get("uncited_claims"))
+    invalid = _claim_keys(details.get("invalid_citations"))
+    cards = []
+
+    for claim in claims:
+        text = str(claim.get("claim") or "") if isinstance(claim, dict) else ""
+
+        if not text:
+            continue
+
+        supported = claim.get("supported")
+        score = claim.get("score")
+        citations = claim.get("citations") or []
+        state = (
+            "supported" if supported else "unsupported" if supported is False else ""
+        )
+
+        chips = [tri_state_chip("Supported", "Unsupported", "Unchecked", supported)]
+
+        if isinstance(score, (int, float)):
+            chips.append(_score_chip("Entailment", format_2dp(score)))
+        if text in uncited or not citations:
+            chips.append('<span class="km-chip danger">Uncited</span>')
+        if text in invalid:
+            chips.append('<span class="km-chip danger">Invalid citation</span>')
+
+        cited = (
+            '<div class="km-claim-citations">Cited: '
+            + " ".join(f"[{esc(c)}]" for c in citations)
+            + "</div>"
+            if citations
+            else ""
+        )
+
+        cards.append(
+            f"""
+            <div class="km-claim {esc(state)}">
+                <div class="km-claim-meta">{"".join(chips)}</div>
+                <div class="km-claim-text">{esc(text)}</div>
+                {cited}
+            </div>
+            """
+        )
+
+    return f'<div class="km-claims">{"".join(cards)}</div>' if cards else ""
+
+
+# ============================================================
+# ANSWER HEALTH (spec section 4)
+# Score tiles, the validation verdict, and — on failure — the exact claims
+# behind it rather than a bare red status.
+# ============================================================
+
+REVISION_BUDGET = 2  # keep in sync with the backend's max answer revisions
+
+_CONTEXT_TONE = {
+    "STRONG": "success",
+    "AMBIGUOUS": "warning",
+    "WEAK": "danger",
+    "INSUFFICIENT": "danger",
+}
+
+
+def _pct(value) -> str:
+    number = safe_float(value)
+    return f"{number * 100:.0f}%" if number is not None else "—"
+
+
+def _tone(value, good=0.8, ok=0.6) -> str:
+    number = safe_float(value)
+
+    if number is None:
+        return ""
+
+    return "success" if number >= good else "warning" if number >= ok else "danger"
+
+
+def _meter(value) -> str:
+    number = safe_float(value)
+
+    if number is None:
+        return ""
+
+    step = max(0, min(20, round(number * 20)))
+
+    return f'<i class="km-meter"><b class="km-w{step}"></b></i>'
+
+
+def _claim_text(claim) -> str:
+    return str(claim.get("claim") or "") if isinstance(claim, dict) else ""
+
+
+def citation_consistency(trace, claims):
+    """Share of claims whose citations match; None when it can't be derived."""
+    if trace.get("citation_valid") is True:
+        return 1.0
+
+    if not claims:
+        return None
+
+    bad = _claim_keys((trace.get("grounding_details") or {}).get("invalid_citations"))
+
+    if trace.get("citation_valid") is False and not bad:
+        return None
+
+    return max(0.0, 1 - len(bad) / len(claims))
+
+
+def validation_state(trace):
+    if trace.get("citation_valid") is False or trace.get("is_grounded") is False:
+        return "FAIL"
+
+    if trace.get("citation_valid") is True or trace.get("is_grounded") is True:
+        return "PASS"
+
+    return None
+
+
+def render_failure_panel(trace, claims, details, revisions) -> str:
+    uncited_keys = _claim_keys(details.get("uncited_claims"))
+
+    def is_uncited(claim):
+        return not claim.get("citations") or _claim_text(claim) in uncited_keys
+
+    flagged = [c for c in claims if c.get("supported") is False or is_uncited(c)]
+    n_unsupported = safe_int(details.get("unsupported_atomic_count")) or sum(
+        1 for c in claims if c.get("supported") is False
+    )
+    n_uncited = sum(1 for c in claims if is_uncited(c))
+
+    facts = []
+
+    if n_unsupported:
+        facts.append(
+            f"{n_unsupported} unsupported atomic claim{'s' if n_unsupported != 1 else ''}"
+        )
+    if n_uncited:
+        facts.append(f"{n_uncited} uncited claim{'s' if n_uncited != 1 else ''}")
+    if safe_int(revisions) >= REVISION_BUDGET:
+        facts.append("Revision budget exhausted")
+
+    title = (
+        "Grounding validation failed"
+        if trace.get("is_grounded") is False
+        else "Citation validation failed"
+    )
+
+    rows = []
+
+    for claim in flagged[:8]:
+        tags = []
+
+        if claim.get("supported") is False:
+            tags.append("Unsupported")
+        if is_uncited(claim):
+            tags.append("Uncited")
+
+        score = safe_float(claim.get("score"))
+
+        if score is not None:
+            tags.append(f"entailment {score:.2f}")
+
+        cites = " ".join(f"[{esc(c)}]" for c in claim.get("citations") or [])
+        cited_html = f'<div class="km-fail-cites">Cited: {cites}</div>' if cites else ""
+
+        rows.append(
+            '<div class="km-fail-claim">'
+            f'<div class="km-fail-tags">{esc(" · ".join(tags))}</div>'
+            f"<div>{esc(_claim_text(claim))}</div>{cited_html}</div>"
+        )
+
+    extra = len(flagged) - 8
+
+    if extra > 0:
+        rows.append(
+            f'<div class="km-fail-more">+ {extra} more in the Quality tab</div>'
+        )
+
+    return (
+        '<div class="km-fail">'
+        f'<div class="km-fail-title">{esc(title)}</div>'
+        f'<div class="km-fail-facts">{esc(" · ".join(facts))}</div>'
+        + "".join(rows)
+        + "</div>"
+    )
+
+
+def render_answer_health(trace: dict) -> str:
+    trace = trace or {}
+    signals = (
+        "support_score",
+        "usefulness_score",
+        "citation_valid",
+        "is_grounded",
+        "context_quality",
+    )
+
+    if not any(trace.get(key) is not None for key in signals):
+        return ""
+
+    claims = [c for c in trace.get("claims") or [] if isinstance(c, dict)]
+    details = trace.get("grounding_details") or {}
+    state = validation_state(trace)
+    revisions = trace.get("revision_count")
+    consistency = citation_consistency(trace, claims)
+    quality = str(trace.get("context_quality") or "").upper() or "—"
+    revisions_label = (
+        f"{safe_int(revisions)} / {REVISION_BUDGET}" if revisions is not None else "—"
+    )
+
+    tiles = [
+        (
+            "Grounding",
+            _pct(trace.get("support_score")),
+            _tone(trace.get("support_score")),
+            _meter(trace.get("support_score")),
+        ),
+        (
+            "Citation consistency",
+            _pct(consistency),
+            _tone(consistency),
+            _meter(consistency),
+        ),
+        (
+            "Answer relevance",
+            _pct(trace.get("usefulness_score")),
+            _tone(trace.get("usefulness_score")),
+            _meter(trace.get("usefulness_score")),
+        ),
+        ("Context quality", quality, _CONTEXT_TONE.get(quality, ""), ""),
+        (
+            "Revisions",
+            revisions_label,
+            "warning" if safe_int(revisions) >= REVISION_BUDGET else "",
+            "",
+        ),
+        (
+            "Validation",
+            state or "—",
+            {"PASS": "success", "FAIL": "danger"}.get(state, ""),
+            "",
+        ),
+    ]
+    tiles_html = "".join(
+        f'<div class="km-health-tile {tone}"><span>{esc(label)}</span>'
+        f"<strong>{esc(value)}</strong>{meter}</div>"
+        for label, value, tone, meter in tiles
+    )
+
+    markup = (
+        '<div class="km-health"><div class="km-health-title">Answer health</div>'
+        f'<div class="km-health-grid">{tiles_html}</div></div>'
+    )
+
+    if state == "FAIL":
+        markup += render_failure_panel(trace, claims, details, revisions)
+
+    return markup
+
+
+# ============================================================
+# INTERACTIVE CITATIONS + EVIDENCE DRAWER (spec sections 3, 5, 11)
+# Streamlit markdown can't hold clickable inline markers, so each citation the
+# answer uses becomes a button under it; clicking opens that source's exact
+# evidence in a dialog (inline expander on older Streamlit).
+# ============================================================
+
+_dialog = getattr(st, "dialog", None) or getattr(st, "experimental_dialog", None)
+_CITE_RE = re.compile(r"\[([^\[\]]+)\]")
+CITES_PER_ROW = 6
+
+
+def _sources_by_citation(trace):
+    items = trace.get("answer_sources") or (
+        (trace.get("private_sources") or []) + (trace.get("web_sources") or [])
+    )
+
+    return {
+        str(s["citation_id"]): s
+        for s in items
+        if isinstance(s, dict) and s.get("citation_id") is not None
+    }
+
+
+def cited_ids(answer, by_id):
+    """Citation ids in the order the answer first uses them."""
+    seen = []
+
+    for group in _CITE_RE.findall(answer or ""):
+        for part in group.split(","):
+            cid = part.strip()
+
+            if cid in by_id and cid not in seen:
+                seen.append(cid)
+
+    return seen or list(by_id)
+
+
+def _grounding_score(trace, cid):
+    scores = []
+
+    for claim in trace.get("claims") or []:
+        if not isinstance(claim, dict):
+            continue
+
+        if cid in {str(c) for c in claim.get("citations") or []}:
+            score = safe_float(claim.get("score"))
+
+            if score is not None:
+                scores.append(score)
+
+    return max(scores) if scores else None
+
+
+def _citation_match(trace, score):
+    if score is None:
+        return "—"
+
+    threshold = (
+        safe_float((trace.get("grounding_details") or {}).get("entailment_threshold"))
+        or 0.8
+    )
+
+    return "Strong" if score >= threshold else "Weak"
+
+
+def render_evidence_body(source, trace):
+    cid = source.get("citation_id") or source.get("n")
+    name = source.get("name") or "Unknown document"
+    retrieval = (
+        source.get("rerank_score")
+        if source.get("rerank_score") is not None
+        else source.get("score")
+    )
+    grounding = _grounding_score(trace, str(cid))
+
+    st.markdown(f"**{name}**")
+
+    meta = [
+        ("Chunk", source.get("chunk_id")),
+        ("Document ID", source.get("id")),
+        ("Origin", str(source.get("origin") or "").title()),
+    ]
+    st.caption(" · ".join(f"{k}: {v}" for k, v in meta if v not in (None, "")))
+
+    text = str(source.get("text") or "").strip() or "No passage text was returned."
+    st.markdown("> " + text.replace("\n", "\n> "))
+
+    col_a, col_b, col_c = st.columns(3)
+    col_a.metric("Retrieval score", format_2dp(retrieval))
+    col_b.metric("Grounding score", format_2dp(grounding))
+    col_c.metric("Citation match", _citation_match(trace, grounding))
+
+    if source.get("grader_reason"):
+        st.caption(f"Grader: {source['grader_reason']}")
+
+    url = safe_url(source.get("url"))
+
+    if url and hasattr(st, "link_button"):
+        st.link_button("Open document", url)
+
+    st.caption("Copy citation")
+    st.code(f"[{cid}] {name}", language="text")
+
+
+def open_evidence(source, trace):
+    cid = source.get("citation_id") or source.get("n")
+
+    if _dialog is None:
+        with st.expander(f"Evidence · [{cid}]", expanded=True):
+            render_evidence_body(source, trace)
+
+        return
+
+    @_dialog(f"Evidence · [{cid}]")
+    def _show():
+        render_evidence_body(source, trace)
+
+    _show()
+
+
+def render_citation_row(index, answer, trace):
+    trace = trace or {}
+    by_id = _sources_by_citation(trace)
+    ids = cited_ids(answer, by_id)
+
+    if not ids:
+        return
+
+    st.caption("Cited sources — select one to see the exact evidence")
+
+    with st.container(key=f"km_cites_{index}"):
+        for start in range(0, len(ids), CITES_PER_ROW):
+            row = ids[start : start + CITES_PER_ROW]
+
+            for col, cid in zip(st.columns(CITES_PER_ROW), row):
+                if col.button(f"[{cid}]", key=f"km_cite_{index}_{cid}"):
+                    open_evidence(by_id[cid], trace)
 
 
 # ============================================================
@@ -1259,96 +1922,73 @@ def transcript_markdown(messages):
     ]
 
     for message in messages:
-        role = message.get("role", "assistant")
-
-        speaker = "You" if role == "user" else "KnowledgeMesh"
-
-        lines.extend(
-            [
-                f"## {speaker}",
-                "",
-                str(message.get("content", "")),
-                "",
-            ]
-        )
+        speaker = "You" if message.get("role") == "user" else "KnowledgeMesh"
+        lines += [f"## {speaker}", "", str(message.get("content", "")), ""]
 
         trace = message.get("trace")
 
         if not trace:
             continue
 
-        lines.extend(
-            [
-                "### Agentic-RAG Run Summary",
-                "",
-                f"- Status: {trace.get('status') or 'Not reported'}",
-                f"- Total latency: {format_seconds(trace.get('latency'))}",
-                f"- Backend latency: {format_ms(trace.get('backend_latency_ms'))}",
-                f"- Retrieval latency: {format_ms(trace.get('retrieval_latency_ms'))}",
-                f"- Reranking latency: {format_ms(trace.get('rerank_latency_ms'))}",
-                f"- Grading latency: {format_ms(trace.get('grader_latency_ms'))}",
-                f"- Generation latency: {format_ms(trace.get('generation_latency_ms'))}",
-                "",
-            ]
-        )
+        private = trace.get("private_sources", trace.get("sources", []))
 
-        for label, value in (
-            ("Context quality", trace.get("context_quality")),
-            ("Context reason", trace.get("context_reason")),
-            ("Citation valid", trace.get("citation_valid")),
-            ("Grounded", trace.get("is_grounded")),
-            ("Support score", trace.get("support_score")),
-            ("Usefulness score", trace.get("usefulness_score")),
+        lines += [
+            "### Run summary",
+            "",
+            f"- Status: {trace.get('status') or 'Not reported'}",
+            f"- Total latency: {format_seconds(trace.get('latency'))}",
+            f"- Backend latency: {format_ms(trace.get('backend_latency_ms'))}",
+            f"- Retrieval latency: {format_ms(trace.get('retrieval_latency_ms'))}",
+            f"- Reranking latency: {format_ms(trace.get('rerank_latency_ms'))}",
+            f"- Grading latency: {format_ms(trace.get('grader_latency_ms'))}",
+            f"- Generation latency: {format_ms(trace.get('generation_latency_ms'))}",
+            "",
+        ]
+
+        for label, key in (
+            ("Context quality", "context_quality"),
+            ("Context reason", "context_reason"),
+            ("Citation valid", "citation_valid"),
+            ("Grounded", "is_grounded"),
+            ("Support score", "support_score"),
+            ("Usefulness score", "usefulness_score"),
+            ("Query rewrites", "retrieval_rewrite_count"),
+            ("Answer revisions", "revision_count"),
+            ("Support retries", "support_retry_count"),
+            ("Web rewrites", "web_rewrite_count"),
         ):
-            if value is not None:
-                lines.append(f"- {label}: {value}")
+            if trace.get(key) is not None:
+                lines.append(f"- {label}: {trace[key]}")
 
-        private_sources = trace.get(
-            "private_sources",
-            trace.get("sources", []),
-        )
+        lines += [
+            f"- Private sources retrieved: {len(private)}",
+            f"- Web sources used: {len(trace.get('web_sources', []))}",
+            f"- Sources used in answer: {len(trace.get('answer_sources', []))}",
+            "",
+        ]
 
-        web_sources = trace.get("web_sources", [])
         answer_sources = trace.get("answer_sources", [])
 
-        lines.extend(
-            [
-                f"- Private sources retrieved: {len(private_sources)}",
-                f"- Web sources used: {len(web_sources)}",
-                f"- Sources used in answer: {len(answer_sources)}",
-                "",
-            ]
-        )
+        if answer_sources:
+            lines += ["### Cited sources", ""]
 
-        for label, value in (
-            ("Query rewrites", trace.get("retrieval_rewrite_count")),
-            ("Answer revisions", trace.get("revision_count")),
-            ("Support retries", trace.get("support_retry_count")),
-            ("Web rewrites", trace.get("web_rewrite_count")),
-        ):
-            if value is not None:
-                lines.append(f"- {label}: {value}")
+            for source in answer_sources:
+                label = source.get("citation_id") or source.get("n")
+                line = f"- [{label}] {source.get('name', 'Unknown document')} ({source.get('origin', 'unknown')})"
 
-        lines.append("")
+                if safe_url(source.get("url")):
+                    line += f" {source['url']}"
 
-        search_query = trace.get("search_query")
+                lines.append(line)
 
-        if search_query:
-            lines.extend(
-                [
-                    f"**Planner search query:** `{search_query}`",
-                    "",
-                ]
-            )
+            lines.append("")
 
-        steps = trace.get("steps", [])
+        if trace.get("search_query"):
+            lines += [f"**Planner search query:** `{trace['search_query']}`", ""]
 
-        if steps:
-            lines.extend(["### Reasoning Trace", ""])
-
-            for step in steps:
-                lines.append(f"- {step}")
-
+        if trace.get("steps"):
+            lines += ["### Reasoning trace", ""]
+            lines += [f"- {step}" for step in trace["steps"]]
             lines.append("")
 
     return "\n".join(lines)
@@ -1362,12 +2002,7 @@ def transcript_markdown(messages):
 @st.cache_data(ttl=10, show_spinner=False)
 def check_backend_health(backend_url):
     try:
-        response = requests.get(
-            f"{backend_url}/health",
-            timeout=4,
-        )
-        return response.ok
-
+        return requests.get(f"{backend_url}/health", timeout=4).ok
     except requests.RequestException:
         return False
 
@@ -1375,1297 +2010,289 @@ def check_backend_health(backend_url):
 @st.cache_data(ttl=10, show_spinner=False)
 def check_backend_ready(backend_url):
     try:
-        response = requests.get(
-            f"{backend_url}/ready",
-            timeout=4,
-        )
+        response = requests.get(f"{backend_url}/ready", timeout=4)
 
-        if not response.ok:
-            return False
-
-        payload = response.json()
-
-        return payload.get("status") == "ready"
+        return response.ok and response.json().get("status") == "ready"
 
     except (requests.RequestException, ValueError):
         return False
+
+
+@st.cache_data(ttl=60, show_spinner=False)
+def fetch_kb_stats(backend_url):
+    """Optional GET /stats -> {collection, documents, chunks, last_indexed}."""
+    try:
+        response = requests.get(f"{backend_url}/stats", timeout=4)
+
+        if response.ok:
+            payload = response.json()
+
+            return payload if isinstance(payload, dict) else None
+
+    except (requests.RequestException, ValueError):
+        pass
+
+    return None
+
+
+def clear_backend_caches():
+    check_backend_health.clear()
+    check_backend_ready.clear()
+    fetch_kb_stats.clear()
 
 
 # ============================================================
 # SESSION STATE
 # ============================================================
 
-if "session_id" not in st.session_state:
-    st.session_state.session_id = str(uuid.uuid4())
-
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-
-if "latencies" not in st.session_state:
-    st.session_state.latencies = []
-
-if "session_started_at" not in st.session_state:
-    st.session_state.session_started_at = time.strftime("%H:%M:%S")
-
-if "backend_url" not in st.session_state:
-    st.session_state.backend_url = DEFAULT_BACKEND_URL
+for _key, _default in (
+    ("session_id", lambda: str(uuid.uuid4())),
+    ("messages", list),
+    ("latencies", list),
+    ("history", list),
+    ("pending", lambda: False),
+    ("session_started_at", lambda: time.strftime("%H:%M:%S")),
+    ("backend_url", lambda: DEFAULT_BACKEND_URL),
+):
+    if _key not in st.session_state:
+        st.session_state[_key] = _default()
 
 if "http_session" not in st.session_state:
-    http_session = requests.Session()
-
-    retry_strategy = Retry(
-        total=2,
-        backoff_factor=0.5,
-        status_forcelist=[502, 503, 504],
-        allowed_methods=["GET", "POST"],
+    _http = requests.Session()
+    # Retry connection errors only. Retrying read timeouts or 5xx on /query
+    # would repeat a slow LLM call and multiply the wait.
+    _adapter = HTTPAdapter(
+        max_retries=Retry(
+            connect=2,
+            read=0,
+            status=0,
+            backoff_factor=0.5,
+            allowed_methods=["GET", "POST"],
+        )
     )
+    _http.mount("http://", _adapter)
+    _http.mount("https://", _adapter)
+    st.session_state.http_session = _http
 
-    adapter = HTTPAdapter(max_retries=retry_strategy)
 
-    http_session.mount("http://", adapter)
-    http_session.mount("https://", adapter)
+def session_title(messages):
+    for message in messages:
+        if message.get("role") == "user":
+            text = str(message.get("content", "")).strip().replace("\n", " ")
 
-    st.session_state.http_session = http_session
+            return text if len(text) <= 38 else text[:35] + "…"
 
+    return "New conversation"
 
-# ============================================================
-# CSS
-# ============================================================
 
-CUSTOM_CSS = """
-<style>
-:root {
-    --km-bg: #0a0c11;
-    --km-panel: #11141c;
-    --km-panel-alt: #161a24;
-    --km-panel-raised: #1b202b;
+def archive_session():
+    messages = st.session_state.messages
 
-    --km-border: #2a3040;
-    --km-border-soft: #202633;
+    if not messages:
+        return
 
-    --km-text: #f1f3f8;
-    --km-muted: #9aa2b4;
-    --km-muted-soft: #6f778a;
+    st.session_state.history.insert(
+        0,
+        {
+            "id": st.session_state.session_id,
+            "title": session_title(messages),
+            "started": st.session_state.session_started_at,
+            "questions": len([m for m in messages if m.get("role") == "user"]),
+            "messages": list(messages),
+            "latencies": list(st.session_state.latencies),
+        },
+    )
+    st.session_state.history = st.session_state.history[:20]
 
-    --km-accent: #7c86f5;
-    --km-accent-strong: #adb5ff;
-    --km-accent-soft: rgba(124, 134, 245, .14);
-    --km-accent-border: rgba(124, 134, 245, .40);
 
-    --km-success: #58d6a0;
-    --km-success-soft: rgba(88, 214, 160, .13);
+def restore_session(index):
+    entry = st.session_state.history.pop(index)
 
-    --km-warning: #e5ad5d;
-    --km-warning-soft: rgba(229, 173, 93, .13);
+    archive_session()
 
-    --km-danger: #ef737e;
-    --km-danger-soft: rgba(239, 115, 126, .13);
-
-    --km-radius-sm: 8px;
-    --km-radius-md: 12px;
-    --km-radius-lg: 16px;
-
-    --km-shadow:
-        0 1px 2px rgba(0, 0, 0, .32),
-        0 10px 28px -16px rgba(0, 0, 0, .70);
-}
-
-html,
-body,
-[class*="css"] {
-    font-family:
-        "Inter",
-        -apple-system,
-        BlinkMacSystemFont,
-        "Segoe UI",
-        sans-serif;
-}
-
-.stApp {
-    background:
-        radial-gradient(
-            1050px 520px at 12% -10%,
-            rgba(124, 134, 245, .08),
-            transparent 62%
-        ),
-        var(--km-bg);
-    color: var(--km-text);
-}
-
-header[data-testid="stHeader"] {
-    background: transparent;
-}
-
-#MainMenu,
-footer {
-    visibility: hidden;
-}
-
-::selection {
-    background: var(--km-accent-soft);
-}
-
-@keyframes kmFadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(5px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* ============================================================
-   SIDEBAR
-   ============================================================ */
-
-section[data-testid="stSidebar"] {
-    background: var(--km-panel);
-    border-right: 1px solid var(--km-border-soft);
-}
-
-section[data-testid="stSidebar"] > div {
-    padding-top: .65rem;
-}
-
-section[data-testid="stSidebar"] * {
-    color: var(--km-text);
-}
-
-.km-brand {
-    display: flex;
-    align-items: center;
-    gap: 11px;
-    padding: 6px 0 18px;
-    margin-bottom: 18px;
-    border-bottom: 1px solid var(--km-border-soft);
-}
-
-.km-brand-mark {
-    display: grid;
-    place-items: center;
-    width: 34px;
-    height: 34px;
-    border-radius: 9px;
-    background: linear-gradient(150deg, var(--km-accent), #5d65ce);
-    box-shadow: 0 4px 14px -4px rgba(124, 134, 245, .60);
-    color: #0a0c11;
-    font-size: 15px;
-    font-weight: 850;
-}
-
-.km-brand strong {
-    display: block;
-    color: #ffffff;
-    font-size: 14.5px;
-    font-weight: 720;
-    letter-spacing: -.01em;
-}
-
-.km-brand small {
-    display: block;
-    margin-top: 2px;
-    color: var(--km-muted-soft);
-    font-size: 10.5px;
-}
-
-.km-rail-label {
-    margin: 20px 0 9px 1px;
-    color: var(--km-muted-soft);
-    font-size: 10px;
-    font-weight: 750;
-    letter-spacing: .09em;
-    text-transform: uppercase;
-}
-
-.km-status-card {
-    padding: 12px 13px;
-    border: 1px solid var(--km-border-soft);
-    border-radius: var(--km-radius-md);
-    background: var(--km-panel-alt);
-}
-
-.km-status-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    padding: 5px 0;
-    font-size: 11px;
-}
-
-.km-status-row + .km-status-row {
-    border-top: 1px solid var(--km-border-soft);
-}
-
-.km-status-row .label {
-    color: var(--km-muted-soft);
-}
-
-.km-status-row .value {
-    max-width: 150px;
-    overflow: hidden;
-    color: var(--km-text);
-    font-family: "SF Mono", "JetBrains Mono", monospace;
-    font-size: 10px;
-    text-align: right;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.km-capability-list {
-    display: grid;
-    gap: 7px;
-}
-
-.km-capability-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    color: var(--km-muted);
-    font-size: 11px;
-}
-
-.km-capability-row .mark {
-    color: var(--km-success);
-    font-weight: 750;
-}
-
-.km-rail-footer {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-top: 22px;
-    padding-top: 16px;
-    border-top: 1px solid var(--km-border-soft);
-}
-
-.km-rail-footer strong {
-    display: block;
-    color: var(--km-text);
-    font-size: 11.5px;
-    font-weight: 650;
-}
-
-.km-rail-footer small {
-    display: block;
-    margin-top: 3px;
-    color: var(--km-muted-soft);
-    font-size: 9.5px;
-    line-height: 1.5;
-}
-
-.km-dot {
-    display: inline-block;
-    width: 7px;
-    height: 7px;
-    flex: none;
-    border-radius: 50%;
-    background: var(--km-muted-soft);
-}
-
-.km-dot.success {
-    background: var(--km-success);
-    box-shadow: 0 0 10px var(--km-success-soft);
-}
-
-.km-dot.warning {
-    background: var(--km-warning);
-    box-shadow: 0 0 10px var(--km-warning-soft);
-}
-
-.km-dot.danger {
-    background: var(--km-danger);
-    box-shadow: 0 0 10px var(--km-danger-soft);
-}
-
-section[data-testid="stSidebar"] button {
-    border: 1px solid var(--km-border) !important;
-    border-radius: 8px !important;
-    background: var(--km-panel-raised) !important;
-    color: var(--km-text) !important;
-    font-size: 11.5px !important;
-}
-
-section[data-testid="stSidebar"] button:hover {
-    border-color: var(--km-accent-border) !important;
-}
-
-section[data-testid="stSidebar"] input,
-section[data-testid="stSidebar"] div[data-baseweb="input"] {
-    border-color: var(--km-border) !important;
-    background: var(--km-panel-raised) !important;
-    color: var(--km-text) !important;
-    font-family: "SF Mono", "JetBrains Mono", monospace !important;
-    font-size: 10.5px !important;
-}
-
-/* ============================================================
-   TOPBAR
-   ============================================================ */
-
-.km-topbar {
-    padding-top: 3px;
-}
-
-.km-kicker {
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
-    margin-bottom: 10px;
-    color: var(--km-accent-strong);
-    font-family: "SF Mono", "JetBrains Mono", monospace;
-    font-size: 10.5px;
-    font-weight: 700;
-    letter-spacing: .08em;
-    text-transform: uppercase;
-}
-
-.km-kicker::before {
-    content: "";
-    width: 14px;
-    height: 1px;
-    background: var(--km-accent);
-}
-
-.km-topbar h1 {
-    margin: 0 0 9px;
-    color: #ffffff;
-    font-size: 27px;
-    font-weight: 760;
-    letter-spacing: -.03em;
-}
-
-.km-topbar p {
-    max-width: 780px;
-    margin: 0;
-    color: var(--km-muted);
-    font-size: 13px;
-    line-height: 1.65;
-}
-
-.km-engine-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 9px;
-    margin-top: 14px;
-    padding: 7px 13px;
-    border: 1px solid var(--km-border);
-    border-radius: 999px;
-    background: var(--km-panel-alt);
-    color: var(--km-muted);
-    font-family: "SF Mono", "JetBrains Mono", monospace;
-    font-size: 10px;
-}
-
-/* ============================================================
-   CONSOLE
-   ============================================================ */
-
-.km-console-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 2px 12px;
-    margin: 24px 0 16px;
-    border-bottom: 1px solid var(--km-border-soft);
-}
-
-.km-console-live {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    color: var(--km-text);
-    font-size: 12.5px;
-    font-weight: 650;
-}
-
-.km-session-id {
-    color: var(--km-muted-soft);
-    font-family: "SF Mono", "JetBrains Mono", monospace;
-    font-size: 10px;
-}
-
-.km-msg-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 6px;
-}
-
-.km-msg-row.user {
-    justify-content: flex-end;
-}
-
-.km-msg-avatar {
-    display: grid;
-    place-items: center;
-    width: 26px;
-    height: 26px;
-    border-radius: 7px;
-    background: linear-gradient(150deg, var(--km-accent), #5d65ce);
-    color: #0a0c11;
-    font-family: "SF Mono", "JetBrains Mono", monospace;
-    font-size: 11px;
-    font-weight: 850;
-}
-
-.km-msg-label {
-    color: var(--km-muted-soft);
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: .05em;
-    text-transform: uppercase;
-}
-
-.km-msg-label.user {
-    text-align: right;
-}
-
-[class*="st-key-km_bubble_"] {
-    max-width: min(860px, 92%);
-    padding: 15px 17px;
-    border: 1px solid var(--km-border-soft);
-    border-radius: 4px 14px 14px 14px;
-    background: var(--km-panel-alt);
-    color: var(--km-text);
-    font-size: 13.5px;
-    line-height: 1.7;
-    box-shadow: var(--km-shadow);
-    animation: kmFadeIn .24s ease both;
-}
-
-[class*="st-key-km_user_bubble_"] {
-    margin-left: auto;
-    border-radius: 14px 4px 14px 14px;
-    background: var(--km-panel-raised);
-}
-
-[class*="st-key-km_bubble_intro"] {
-    border-left: 2px solid var(--km-accent);
-    background: linear-gradient(
-        180deg,
-        var(--km-accent-soft),
-        var(--km-panel-alt) 60%
-    );
-}
-
-[class*="st-key-km_bubble_"] p {
-    margin-bottom: 9px;
-}
-
-[class*="st-key-km_bubble_"] p:last-child {
-    margin-bottom: 0;
-}
-
-[class*="st-key-km_bubble_"] code {
-    padding: 2px 5px;
-    border: 1px solid var(--km-border);
-    border-radius: 4px;
-    background: var(--km-panel);
-    font-size: 12px;
-}
-
-/* ============================================================
-   RUN SUMMARY
-   ============================================================ */
-
-.km-run-banner {
-    display: flex;
-    align-items: stretch;
-    justify-content: space-between;
-    gap: 22px;
-    margin: 16px 0;
-    padding: 16px 18px;
-    border: 1px solid var(--km-border-soft);
-    border-radius: var(--km-radius-md);
-    background: linear-gradient(
-        115deg,
-        var(--km-panel-alt),
-        var(--km-panel)
-    );
-    box-shadow: var(--km-shadow);
-}
-
-.km-run-banner.success {
-    border-left: 3px solid var(--km-success);
-}
-
-.km-run-banner.ok {
-    border-left: 3px solid var(--km-accent);
-}
-
-.km-run-banner.warning {
-    border-left: 3px solid var(--km-warning);
-}
-
-.km-run-banner.danger {
-    border-left: 3px solid var(--km-danger);
-}
-
-.km-run-banner-main {
-    min-width: 0;
-    flex: 1.2;
-}
-
-.km-run-banner-title {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    color: var(--km-text);
-    font-size: 13px;
-    font-weight: 750;
-}
-
-.km-run-indicator {
-    display: inline-block;
-    width: 8px;
-    height: 8px;
-    flex: none;
-    border-radius: 50%;
-    background: var(--km-accent);
-}
-
-.km-run-banner.success .km-run-indicator {
-    background: var(--km-success);
-    box-shadow: 0 0 12px var(--km-success-soft);
-}
-
-.km-run-banner.ok .km-run-indicator {
-    background: var(--km-accent);
-    box-shadow: 0 0 12px var(--km-accent-soft);
-}
-
-.km-run-banner.warning .km-run-indicator {
-    background: var(--km-warning);
-    box-shadow: 0 0 12px var(--km-warning-soft);
-}
-
-.km-run-banner.danger .km-run-indicator {
-    background: var(--km-danger);
-    box-shadow: 0 0 12px var(--km-danger-soft);
-}
-
-.km-run-banner-description {
-    max-width: 520px;
-    margin-top: 5px;
-    color: var(--km-muted);
-    font-size: 11px;
-    line-height: 1.55;
-}
-
-.km-run-banner-stats {
-    display: grid;
-    grid-template-columns: repeat(5, minmax(72px, 1fr));
-    align-items: center;
-    gap: 14px;
-    min-width: 430px;
-}
-
-.km-run-stat {
-    min-width: 0;
-    padding-left: 12px;
-    border-left: 1px solid var(--km-border-soft);
-}
-
-.km-run-stat span {
-    display: block;
-    overflow: hidden;
-    color: var(--km-muted-soft);
-    font-size: 9px;
-    font-weight: 700;
-    letter-spacing: .04em;
-    text-overflow: ellipsis;
-    text-transform: uppercase;
-    white-space: nowrap;
-}
-
-.km-run-stat strong {
-    display: block;
-    margin-top: 4px;
-    overflow: hidden;
-    color: var(--km-text);
-    font-family: "SF Mono", "JetBrains Mono", monospace;
-    font-size: 12px;
-    font-weight: 700;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-/* ============================================================
-   PIPELINE
-   ============================================================ */
-
-.km-pipeline {
-    display: flex;
-    width: 100%;
-    margin: 18px 0;
-    padding: 16px 18px;
-    border: 1px solid var(--km-border-soft);
-    border-radius: var(--km-radius-lg);
-    background: var(--km-panel);
-    box-shadow: var(--km-shadow);
-    overflow-x: auto;
-}
-
-.km-step {
-    display: flex;
-    flex: 1;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-    min-width: 108px;
-    opacity: .45;
-}
-
-.km-step.success,
-.km-step.fallback,
-.km-step.failed,
-.km-step.skipped {
-    opacity: 1;
-}
-
-.km-step-marker {
-    display: flex;
-    align-items: center;
-    width: 100%;
-}
-
-.km-step-dot {
-    display: grid;
-    place-items: center;
-    width: 26px;
-    height: 26px;
-    flex: none;
-    border: 1px solid var(--km-border);
-    border-radius: 50%;
-    background: var(--km-panel-alt);
-    color: var(--km-muted-soft);
-    font-family: "SF Mono", "JetBrains Mono", monospace;
-    font-size: 11px;
-    font-weight: 850;
-}
-
-.km-step.success .km-step-dot {
-    border-color: rgba(88, 214, 160, .6);
-    background: var(--km-success);
-    color: #0a0c11;
-    box-shadow: 0 0 0 4px var(--km-success-soft);
-}
-
-.km-step.fallback .km-step-dot {
-    border-color: rgba(229, 173, 93, .6);
-    background: var(--km-warning);
-    color: #0a0c11;
-    box-shadow: 0 0 0 4px var(--km-warning-soft);
-}
-
-.km-step.failed .km-step-dot {
-    border-color: rgba(239, 115, 126, .7);
-    background: var(--km-danger);
-    color: #0a0c11;
-    box-shadow: 0 0 0 4px var(--km-danger-soft);
-}
-
-.km-step.skipped {
-    opacity: .58;
-}
-
-.km-step.skipped .km-step-dot {
-    border-style: dashed;
-    color: var(--km-muted-soft);
-}
-
-.km-step-line {
-    flex: 1;
-    height: 1px;
-    margin: 0 6px;
-    background: var(--km-border);
-}
-
-.km-step-line.success {
-    background: rgba(88, 214, 160, .52);
-}
-
-.km-step-line.fallback {
-    background: rgba(229, 173, 93, .55);
-}
-
-.km-step-line.failed {
-    background: rgba(239, 115, 126, .55);
-}
-
-.km-step-line.skipped,
-.km-step-line.pending {
-    background: var(--km-border);
-}
-
-.km-step-body strong {
-    display: block;
-    color: var(--km-text);
-    font-size: 11.5px;
-    font-weight: 700;
-}
-
-.km-step.success .km-step-body strong {
-    color: var(--km-success);
-}
-
-.km-step.fallback .km-step-body strong {
-    color: var(--km-warning);
-}
-
-.km-step.failed .km-step-body strong {
-    color: var(--km-danger);
-}
-
-.km-step-body span {
-    display: block;
-    margin-top: 2px;
-    color: var(--km-muted-soft);
-    font-size: 9.5px;
-    line-height: 1.4;
-}
-
-/* ============================================================
-   RECOVERY + TABS
-   ============================================================ */
-
-.km-recovery-card {
-    margin: 12px 0;
-    padding: 11px 13px;
-    border: 1px solid rgba(229, 173, 93, .35);
-    border-radius: var(--km-radius-sm);
-    background: var(--km-warning-soft);
-}
-
-.km-recovery-title {
-    color: var(--km-warning);
-    font-size: 11.5px;
-    font-weight: 700;
-}
-
-.km-recovery-body {
-    margin-top: 4px;
-    color: var(--km-muted);
-    font-size: 10.5px;
-    line-height: 1.55;
-}
-
-.km-tab-panel {
-    padding: 14px;
-    margin: 8px 0 10px;
-    border: 1px solid var(--km-border-soft);
-    border-radius: var(--km-radius-sm);
-    background: var(--km-panel);
-}
-
-.km-tab-heading {
-    margin-bottom: 10px;
-    color: var(--km-muted-soft);
-    font-size: 9.5px;
-    font-weight: 750;
-    letter-spacing: .08em;
-    text-transform: uppercase;
-}
-
-.km-info-card {
-    padding: 12px 13px;
-    margin: 10px 0;
-    border: 1px solid var(--km-border-soft);
-    border-radius: var(--km-radius-sm);
-    background: var(--km-panel-alt);
-}
-
-.km-info-card-title {
-    margin-bottom: 6px;
-    color: var(--km-accent-strong);
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: .04em;
-    text-transform: uppercase;
-}
-
-.km-info-card-body {
-    color: var(--km-muted);
-    font-size: 11.5px;
-    line-height: 1.6;
-}
-
-.km-info-card-body code {
-    padding: 3px 6px;
-    border: 1px solid var(--km-border);
-    border-radius: 5px;
-    background: var(--km-panel-raised);
-    color: var(--km-text);
-    font-size: 10.5px;
-}
-
-.km-status-note {
-    margin: 11px 0 0;
-    color: var(--km-muted-soft);
-    font-size: 10.5px;
-    line-height: 1.55;
-}
-
-/* ============================================================
-   CHIPS + EVIDENCE
-   ============================================================ */
-
-.km-signal-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-}
-
-.km-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 5px 10px;
-    border: 1px solid var(--km-border);
-    border-radius: 999px;
-    background: var(--km-panel-raised);
-    color: var(--km-muted);
-    font-size: 10.5px;
-    font-weight: 500;
-}
-
-.km-chip::before {
-    content: "";
-    width: 5px;
-    height: 5px;
-    border-radius: 50%;
-    background: var(--km-muted-soft);
-}
-
-.km-chip.ok {
-    border-color: var(--km-accent-border);
-    background: var(--km-accent-soft);
-    color: var(--km-accent-strong);
-}
-
-.km-chip.ok::before {
-    background: var(--km-accent);
-}
-
-.km-chip.success {
-    border-color: rgba(88, 214, 160, .35);
-    background: var(--km-success-soft);
-    color: var(--km-success);
-}
-
-.km-chip.success::before {
-    background: var(--km-success);
-}
-
-.km-chip.warning {
-    border-color: rgba(229, 173, 93, .35);
-    background: var(--km-warning-soft);
-    color: var(--km-warning);
-}
-
-.km-chip.warning::before {
-    background: var(--km-warning);
-}
-
-.km-chip.danger {
-    border-color: rgba(239, 115, 126, .35);
-    background: var(--km-danger-soft);
-    color: var(--km-danger);
-}
-
-.km-chip.danger::before {
-    background: var(--km-danger);
-}
-
-.km-chip .num {
-    font-family: "SF Mono", "JetBrains Mono", monospace;
-    font-weight: 700;
-}
-
-.km-sources {
-    display: grid;
-    gap: 8px;
-    margin-top: 10px;
-}
-
-.km-source {
-    padding: 12px 13px;
-    border: 1px solid var(--km-border-soft);
-    border-radius: var(--km-radius-sm);
-    background: var(--km-panel-raised);
-}
-
-.km-source:hover {
-    border-color: var(--km-border);
-}
-
-.km-source-meta {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 8px;
-    color: var(--km-muted);
-    font-family: "SF Mono", "JetBrains Mono", monospace;
-    font-size: 10px;
-}
-
-.km-source-number {
-    color: var(--km-accent-strong);
-    font-weight: 700;
-}
-
-.km-source-name {
-    color: var(--km-text);
-    font-weight: 700;
-}
-
-.km-source-type {
-    padding: 2px 7px;
-    border: 1px solid var(--km-border);
-    border-radius: 999px;
-    background: var(--km-panel);
-    color: var(--km-muted);
-}
-
-.km-origin-badge {
-    padding: 2px 8px;
-}
-
-.km-source-score {
-    color: var(--km-muted-soft);
-}
-
-.km-source-body {
-    max-height: 190px;
-    overflow-y: auto;
-    color: var(--km-muted);
-    font-size: 11.5px;
-    line-height: 1.6;
-}
-
-.km-source-reason {
-    margin-top: 7px;
-    color: var(--km-muted-soft);
-    font-size: 10px;
-}
-
-.km-source-id {
-    margin-top: 8px;
-    color: var(--km-muted-soft);
-    font-family: "SF Mono", "JetBrains Mono", monospace;
-    font-size: 9px;
-    word-break: break-all;
-}
-
-.km-source-link {
-    color: var(--km-accent-strong);
-    font-weight: 600;
-    text-decoration: none;
-}
-
-.km-source-link:hover {
-    text-decoration: underline;
-}
-
-.km-empty-note {
-    margin-top: 10px;
-    padding: 10px 11px;
-    border: 1px dashed var(--km-border);
-    border-radius: var(--km-radius-sm);
-    color: var(--km-muted-soft);
-    font-size: 10.5px;
-    line-height: 1.55;
-}
-
-.km-provenance-table {
-    width: 100%;
-    margin-top: 10px;
-    border-collapse: collapse;
-    font-size: 10.5px;
-}
-
-.km-provenance-table th {
-    padding: 7px 8px;
-    border-bottom: 1px solid var(--km-border);
-    color: var(--km-muted-soft);
-    font-size: 9px;
-    font-weight: 700;
-    letter-spacing: .04em;
-    text-align: left;
-    text-transform: uppercase;
-}
-
-.km-provenance-table td {
-    padding: 7px 8px;
-    border-bottom: 1px solid var(--km-border-soft);
-    color: var(--km-muted);
-    font-family: "SF Mono", "JetBrains Mono", monospace;
-}
-
-/* ============================================================
-   TRACE + NATIVE STREAMLIT WIDGETS
-   ============================================================ */
-
-.km-trace-list {
-    margin: 9px 0 0;
-    padding-left: 20px;
-    color: var(--km-muted);
-    font-size: 11.5px;
-    line-height: 1.75;
-}
-
-.km-trace-list b {
-    color: var(--km-accent-strong);
-}
-
-div[data-testid="stMetric"] {
-    padding: 12px;
-    border: 1px solid var(--km-border-soft);
-    border-radius: var(--km-radius-sm);
-    background: var(--km-panel);
-}
-
-div[data-testid="stMetricLabel"] {
-    color: var(--km-muted-soft) !important;
-    font-size: 10px !important;
-}
-
-div[data-testid="stMetricValue"] {
-    color: var(--km-text) !important;
-    font-family: "SF Mono", "JetBrains Mono", monospace;
-    font-size: 18px !important;
-}
-
-button[data-baseweb="tab"] {
-    height: 38px;
-    padding: 0 13px;
-    color: var(--km-muted) !important;
-    font-size: 11.5px !important;
-}
-
-button[data-baseweb="tab"][aria-selected="true"] {
-    color: var(--km-accent-strong) !important;
-}
-
-div[data-baseweb="tab-highlight"] {
-    background-color: var(--km-accent) !important;
-}
-
-.stButton > button {
-    border: 1px solid var(--km-border) !important;
-    border-radius: 8px !important;
-    background: var(--km-panel-raised) !important;
-    color: var(--km-text) !important;
-    font-size: 12px !important;
-    font-weight: 500 !important;
-}
-
-.stButton > button:hover {
-    border-color: var(--km-accent-border) !important;
-}
-
-div[data-testid="stChatInput"] {
-    border-top: 1px solid var(--km-border-soft);
-    background: var(--km-panel);
-}
-
-div[data-testid="stChatInput"] textarea {
-    border: 1px solid var(--km-border) !important;
-    border-radius: 10px !important;
-    background: var(--km-panel-raised) !important;
-    color: var(--km-text) !important;
-}
-
-div[data-testid="stChatInput"] textarea:focus {
-    border-color: var(--km-accent) !important;
-    box-shadow: 0 0 0 1px var(--km-accent-soft) !important;
-}
-
-div[data-testid="stExpander"] {
-    border: 1px solid var(--km-border-soft);
-    border-radius: var(--km-radius-sm);
-    background: var(--km-panel);
-}
-
-/* ============================================================
-   EMPTY STATE
-   ============================================================ */
-
-.km-starter-card {
-    height: 100%;
-    padding: 14px 15px;
-    border: 1px solid var(--km-border-soft);
-    border-radius: var(--km-radius-md);
-    background: var(--km-panel-alt);
-}
-
-.km-starter-card .icon {
-    margin-bottom: 6px;
-    font-size: 17px;
-}
-
-.km-starter-card .title {
-    margin-bottom: 3px;
-    color: var(--km-text);
-    font-size: 12px;
-    font-weight: 650;
-}
-
-.km-starter-card .desc {
-    color: var(--km-muted-soft);
-    font-size: 10.5px;
-    line-height: 1.5;
-}
-
-/* ============================================================
-   RESPONSIVE
-   ============================================================ */
-
-@media (max-width: 1100px) {
-    .km-run-banner {
-        flex-direction: column;
-        gap: 14px;
-    }
-
-    .km-run-banner-stats {
-        width: 100%;
-        min-width: 0;
-        grid-template-columns: repeat(5, minmax(0, 1fr));
-    }
-}
-
-@media (max-width: 900px) {
-    .km-topbar h1 {
-        font-size: 22px;
-    }
-
-    .km-pipeline {
-        padding: 14px;
-        overflow-x: auto;
-    }
-
-    .km-step {
-        min-width: 108px;
-    }
-
-    [class*="st-key-km_bubble_"] {
-        max-width: 100%;
-    }
-}
-
-@media (max-width: 700px) {
-    .km-run-banner-stats {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .km-run-stat:nth-child(odd) {
-        padding-left: 0;
-        border-left: 0;
-    }
-}
-</style>
-"""
-
-st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
-
-
-# ============================================================
-# SESSION ACTIONS
-# ============================================================
+    st.session_state.session_id = entry["id"]
+    st.session_state.messages = entry["messages"]
+    st.session_state.latencies = entry["latencies"]
+    st.session_state.session_started_at = entry["started"]
+    st.session_state.pending = False
 
 
 def start_new_session():
     old_session_id = st.session_state.session_id
 
+    archive_session()
+
     if LOGFIRE_OK:
-        logfire.info(
-            "KnowledgeMesh session reset",
-            old_session_id=old_session_id,
-        )
+        logfire.info("KnowledgeMesh session reset", old_session_id=old_session_id)
 
     st.session_state.session_id = str(uuid.uuid4())
     st.session_state.messages = []
     st.session_state.latencies = []
+    st.session_state.pending = False
     st.session_state.session_started_at = time.strftime("%H:%M:%S")
 
     check_backend_health.clear()
     check_backend_ready.clear()
 
 
-def derive_completion_state(
-    status_text,
-    citation_valid,
-    is_grounded,
-    web_search_used,
-    thought_process,
-):
-    status_text = str(status_text or "").lower()
-
-    trace_text = " ".join(str(step) for step in (thought_process or [])).lower()
-
-    hard_failure = (
-        "generation rate-limited" in status_text
-        or "generation failed" in status_text
-        or "response generation failed" in status_text
-    )
-
-    if hard_failure:
-        return "error", "Completed with generation issue"
-
-    if citation_valid is False or is_grounded is False:
-        return "complete", "Completed with validation warning"
-
-    if web_search_used:
-        return "complete", "Completed with web fallback"
-
-    if (
-        "rate limit" in trace_text
-        or "ratelimit" in trace_text
-        or "failed" in trace_text
-    ):
-        return "complete", "Completed with recovery"
-
-    return "complete", "Completed successfully"
+# ============================================================
+# REQUEST HANDLING
+# ============================================================
 
 
-def ask(question: str):
+def submit_question(question: str):
+    """Show the user's message immediately; the request runs on the next rerun."""
     question = (question or "").strip()
 
     if not question:
         return
 
-    backend_url = st.session_state.backend_url
+    st.session_state.messages.append({"role": "user", "content": question})
+    st.session_state.pending = True
 
-    st.session_state.messages.append(
+
+def _assistant_error(content, status_code=None, body=None):
+    message = {"role": "assistant", "content": content}
+
+    # Raw backend bodies are only kept (and shown) in debug mode.
+    if DEBUG_UI and (status_code is not None or body):
+        message["error_detail"] = {"status_code": status_code, "body": body or ""}
+
+    st.session_state.messages.append(message)
+
+
+def parse_response(data: dict, elapsed: float, http_status: int):
+    """Turn the backend JSON into (answer_text, trace, completion_state, label)."""
+    web_search_used = bool(data.get("web_search_used", False))
+    retrieval_used = bool(data.get("retrieval_used", False))
+    citation_valid = data.get("citation_valid")
+    is_grounded = data.get("is_grounded")
+    context_quality = data.get("context_quality")
+
+    # citation_provenance arrives as a dict keyed by citation id
+    raw_provenance = data.get("citation_provenance") or {}
+    citation_provenance = (
+        list(raw_provenance.values())
+        if isinstance(raw_provenance, dict)
+        else raw_provenance
+        if isinstance(raw_provenance, list)
+        else []
+    )
+
+    thought_process = data.get("thought_process", []) or []
+    raw_private = data.get("private_sources") or data.get("sources") or []
+    raw_web = data.get("web_sources") or []
+
+    private_sources = [
+        normalize_source(s, i + 1, origin="private") for i, s in enumerate(raw_private)
+    ]
+    web_sources = [
+        normalize_source(s, i + 1, origin="web") for i, s in enumerate(raw_web)
+    ]
+    private_by_id = {s["id"]: s for s in private_sources if s.get("id") is not None}
+    web_by_id = {s["id"]: s for s in web_sources if s.get("id") is not None}
+
+    answer_sources = []
+
+    for raw in data.get("answer_sources") or []:
+        source_id = raw.get("id") if isinstance(raw, dict) else None
+
+        if source_id is not None and source_id in private_by_id:
+            answer_sources.append(private_by_id[source_id])
+        elif source_id is not None and source_id in web_by_id:
+            answer_sources.append(web_by_id[source_id])
+        else:
+            origin = raw.get("origin") if isinstance(raw, dict) else "unknown"
+            answer_sources.append(
+                normalize_source(raw, len(answer_sources) + 1, origin=origin)
+            )
+
+    status_text = data.get("status", "Response generated.")
+    query_type = infer_query_type(thought_process)
+    search_query = data.get("search_query") or extract_search_query(thought_process)
+
+    if query_type == "conversational" or not retrieval_used:
+        private_retrieval_status = "Not used"
+    elif web_search_used:
+        private_retrieval_status = "Attempted"
+    else:
+        private_retrieval_status = "Used"
+
+    completion_state, completion_label = derive_completion_state(
+        status_text, citation_valid, is_grounded, web_search_used, thought_process
+    )
+
+    passthrough = (
+        "context_reason",
+        "should_search_web",
+        "answer_supported",
+        "answer_useful",
+        "support_score",
+        "usefulness_score",
+        "grounding_scores",
+        "grounding_feedback",
+        "revision_count",
+        "support_retry_count",
+        "retrieval_rewrite_count",
+        "web_rewrite_count",
+        "retrieval_latency_ms",
+        "rerank_latency_ms",
+        "grader_latency_ms",
+        "generation_latency_ms",
+    )
+
+    trace = {key: data.get(key) for key in passthrough}
+    trace.update(
         {
-            "role": "user",
-            "content": question,
+            "steps": thought_process,
+            "query_type": query_type,
+            "search_query": search_query,
+            "sources": private_sources,
+            "private_sources": private_sources,
+            "web_sources": web_sources,
+            "answer_sources": answer_sources,
+            "citation_provenance": citation_provenance,
+            "context_quality": context_quality,
+            "web_search_used": web_search_used,
+            "private_retrieval_status": private_retrieval_status,
+            "citation_valid": citation_valid,
+            "is_grounded": is_grounded,
+            "grounding_details": data.get("grounding_details") or {},
+            "claims": data.get("claims") or [],
+            "latency": elapsed,
+            "backend_latency_ms": data.get("latency_ms"),
+            "status": status_text,
+            "http_status": http_status,
         }
     )
 
+    answer = data.get("answer", "No response was returned.")
+
+    return answer, trace, completion_state, completion_label
+
+
+def run_pending_query():
+    """Runs the request for the last user message and appends the reply."""
+    st.session_state.pending = False
+
+    messages = st.session_state.messages
+
+    if not messages or messages[-1].get("role") != "user":
+        return
+
+    question = messages[-1].get("content", "")
+    backend_url = st.session_state.backend_url
     response = None
 
     try:
         with st.status(
-            (
-                "Running Guardrails → Planner → Qdrant → FlashRank → "
-                "Grader → LLM → Validator → Critic…"
-            ),
+            "Planning, retrieving, grading and checking the answer…",
             expanded=True,
         ) as status:
             start_time = time.perf_counter()
+            st.write("Connecting to the KnowledgeMesh backend…")
 
-            st.write("Connecting to KnowledgeMesh backend…")
-
-            payload = {
-                "q": question,
-                "thread_id": st.session_state.session_id,
-            }
+            payload = {"q": question, "thread_id": st.session_state.session_id}
 
             with _trace_context():
                 response = st.session_state.http_session.post(
@@ -2676,333 +2303,105 @@ def ask(question: str):
 
             elapsed = time.perf_counter() - start_time
 
-            if response.status_code == 422:
-                status.update(
-                    label="Request rejected by backend validation (422)",
-                    state="error",
-                    expanded=False,
-                )
-
-                st.session_state.messages.append(
-                    {
-                        "role": "assistant",
-                        "content": (
-                            "**The request format was rejected by the backend.**"
-                        ),
-                        "error_detail": {
-                            "status_code": response.status_code,
-                            "body": response.text[:4000],
-                        },
-                    }
-                )
-
-                return
-
             if response.status_code != 200:
-                status.update(
-                    label=f"Backend error ({response.status_code})",
-                    state="error",
-                    expanded=False,
-                )
+                if response.status_code == 422:
+                    label = "Request rejected by backend validation (422)"
+                    text = "**The backend rejected the request format.**"
+                else:
+                    label = f"Backend error ({response.status_code})"
+                    text = (
+                        "**The backend returned an unexpected response "
+                        f"(HTTP {response.status_code}).**"
+                    )
 
-                st.session_state.messages.append(
-                    {
-                        "role": "assistant",
-                        "content": (
-                            "**KnowledgeMesh backend returned an unexpected "
-                            f"response (HTTP {response.status_code}).**"
-                        ),
-                        "error_detail": {
-                            "status_code": response.status_code,
-                            "body": response.text[:4000],
-                        },
-                    }
+                status.update(label=label, state="error", expanded=False)
+                _assistant_error(text, response.status_code, response.text[:4000])
+
+                return
+
+            try:
+                data = response.json()
+            except ValueError:
+                status.update(
+                    label="Invalid backend response", state="error", expanded=False
+                )
+                _assistant_error(
+                    "**Invalid backend response.**\n\nThe backend did not return valid JSON.",
+                    response.status_code,
+                    response.text[:4000],
                 )
 
                 return
 
-            data = response.json()
-
-            backend_latency_ms = data.get("latency_ms")
-            retrieval_latency_ms = data.get("retrieval_latency_ms")
-            rerank_latency_ms = data.get("rerank_latency_ms")
-            grader_latency_ms = data.get("grader_latency_ms")
-            generation_latency_ms = data.get("generation_latency_ms")
-
-            context_quality = data.get("context_quality")
-            context_reason = data.get("context_reason")
-
-            should_search_web = data.get("should_search_web")
-            web_search_required = data.get("web_search_required")
-
-            web_search_used = bool(data.get("web_search_used", False))
-
-            retrieval_used = bool(data.get("retrieval_used", False))
-
-            citation_valid = data.get("citation_valid")
-            is_grounded = data.get("is_grounded")
-
-            answer_supported = data.get("answer_supported")
-            answer_useful = data.get("answer_useful")
-
-            support_score = data.get("support_score")
-            usefulness_score = data.get("usefulness_score")
-
-            grounding_scores = data.get("grounding_scores")
-            grounding_feedback = data.get("grounding_feedback")
-
-            revision_count = data.get("revision_count")
-            support_retry_count = data.get("support_retry_count")
-
-            retrieval_rewrite_count = data.get("retrieval_rewrite_count")
-
-            web_rewrite_count = data.get("web_rewrite_count")
-
-            citation_provenance = data.get("citation_provenance") or []
-
-            thought_process = data.get("thought_process", []) or []
-
-            raw_private_sources = (
-                data.get("private_sources") or data.get("sources") or []
-            )
-
-            raw_answer_sources = data.get("answer_sources") or []
-            raw_web_sources = data.get("web_sources") or []
-
-            private_sources = [
-                normalize_source(source, index + 1, origin="private")
-                for index, source in enumerate(raw_private_sources)
-            ]
-
-            web_sources = [
-                normalize_source(source, index + 1, origin="web")
-                for index, source in enumerate(raw_web_sources)
-            ]
-
-            private_by_id = {
-                source["id"]: source
-                for source in private_sources
-                if source.get("id") is not None
-            }
-
-            web_by_id = {
-                source["id"]: source
-                for source in web_sources
-                if source.get("id") is not None
-            }
-
-            answer_sources = []
-
-            for raw_source in raw_answer_sources:
-                source_id = (
-                    raw_source.get("id") if isinstance(raw_source, dict) else None
+            if not isinstance(data, dict):
+                status.update(
+                    label="Invalid backend response", state="error", expanded=False
+                )
+                _assistant_error(
+                    "**Invalid backend response.**\n\nExpected a JSON object.",
+                    response.status_code,
+                    response.text[:4000],
                 )
 
-                if source_id is not None and source_id in private_by_id:
-                    answer_sources.append(private_by_id[source_id])
-                    continue
+                return
 
-                if source_id is not None and source_id in web_by_id:
-                    answer_sources.append(web_by_id[source_id])
-                    continue
-
-                raw_origin = (
-                    raw_source.get("origin")
-                    if isinstance(raw_source, dict)
-                    else "unknown"
-                )
-
-                answer_sources.append(
-                    normalize_source(
-                        raw_source,
-                        len(answer_sources) + 1,
-                        origin=raw_origin,
-                    )
-                )
-
-            status_text = data.get(
-                "status",
-                "Response generated.",
+            answer, trace, completion_state, completion_label = parse_response(
+                data, elapsed, response.status_code
             )
-
-            query_type = infer_query_type(thought_process)
-
-            search_query = data.get("search_query") or extract_search_query(
-                thought_process
-            )
-
-            visited_nodes = infer_visited_nodes(
-                thought_process,
-                private_sources,
-                status_text,
-                context_quality=context_quality,
-                web_search_used=web_search_used,
-                citation_valid=citation_valid,
-                is_grounded=is_grounded,
-            )
-
-            if query_type == "conversational" or not retrieval_used:
-                private_retrieval_status = "Not used"
-            elif web_search_used:
-                private_retrieval_status = "Attempted"
-            else:
-                private_retrieval_status = "Used"
-
-            completion_state, completion_label = derive_completion_state(
-                status_text,
-                citation_valid,
-                is_grounded,
-                web_search_used,
-                thought_process,
-            )
-
             status.update(
                 label=f"{completion_label} in {elapsed:.2f}s",
                 state=completion_state,
                 expanded=False,
             )
 
-        trace = {
-            "steps": thought_process,
-            "visited": list(visited_nodes),
-            "query_type": query_type,
-            "search_query": search_query,
-            "sources": private_sources,
-            "private_sources": private_sources,
-            "web_sources": web_sources,
-            "answer_sources": answer_sources,
-            "citation_provenance": citation_provenance,
-            "context_quality": context_quality,
-            "context_reason": context_reason,
-            "should_search_web": should_search_web,
-            "web_search_required": web_search_required,
-            "web_search_used": web_search_used,
-            "private_retrieval_status": private_retrieval_status,
-            "citation_valid": citation_valid,
-            "is_grounded": is_grounded,
-            "answer_supported": answer_supported,
-            "answer_useful": answer_useful,
-            "support_score": support_score,
-            "usefulness_score": usefulness_score,
-            "grounding_scores": grounding_scores,
-            "grounding_feedback": grounding_feedback,
-            "revision_count": revision_count,
-            "support_retry_count": support_retry_count,
-            "retrieval_rewrite_count": retrieval_rewrite_count,
-            "web_rewrite_count": web_rewrite_count,
-            "latency": elapsed,
-            "backend_latency_ms": backend_latency_ms,
-            "retrieval_latency_ms": retrieval_latency_ms,
-            "rerank_latency_ms": rerank_latency_ms,
-            "grader_latency_ms": grader_latency_ms,
-            "generation_latency_ms": generation_latency_ms,
-            "status": status_text,
-            "http_status": response.status_code,
-        }
-
         st.session_state.messages.append(
-            {
-                "role": "assistant",
-                "content": data.get(
-                    "answer",
-                    "No response was returned.",
-                ),
-                "trace": trace,
-            }
+            {"role": "assistant", "content": answer, "trace": trace}
         )
-
         st.session_state.latencies.append(elapsed)
 
         if LOGFIRE_OK:
             logfire.info(
                 "KnowledgeMesh response rendered",
-                query_type=query_type,
-                private_source_count=len(private_sources),
-                web_source_count=len(web_sources),
-                answer_source_count=len(answer_sources),
-                citation_valid=citation_valid,
-                is_grounded=is_grounded,
+                query_type=trace["query_type"],
+                private_source_count=len(trace["private_sources"]),
+                web_source_count=len(trace["web_sources"]),
+                answer_source_count=len(trace["answer_sources"]),
+                citation_valid=trace["citation_valid"],
+                is_grounded=trace["is_grounded"],
                 latency_seconds=elapsed,
-                retrieval_latency_ms=retrieval_latency_ms,
-                rerank_latency_ms=rerank_latency_ms,
-                grader_latency_ms=grader_latency_ms,
-                generation_latency_ms=generation_latency_ms,
+                retrieval_latency_ms=trace["retrieval_latency_ms"],
+                rerank_latency_ms=trace["rerank_latency_ms"],
+                grader_latency_ms=trace["grader_latency_ms"],
+                generation_latency_ms=trace["generation_latency_ms"],
             )
 
     except requests.exceptions.ConnectionError:
-        st.session_state.messages.append(
-            {
-                "role": "assistant",
-                "content": (
-                    "**Unable to reach KnowledgeMesh backend.**\n\n"
-                    f"I could not connect to `{backend_url}`.\n\n"
-                    "Check that FastAPI is running:\n\n"
-                    "```powershell\n"
-                    "uvicorn app.main:app --reload --host 0.0.0.0 --port 8000\n"
-                    "```"
-                ),
-            }
+        _assistant_error(
+            "**Unable to reach the KnowledgeMesh backend.**\n\n"
+            f"Could not connect to `{backend_url}`.\n\n"
+            "Check that FastAPI is running:\n\n"
+            "```bash\n"
+            "uvicorn app.main:app --reload --host 0.0.0.0 --port 8000\n"
+            "```"
         )
 
     except requests.exceptions.Timeout:
-        st.session_state.messages.append(
-            {
-                "role": "assistant",
-                "content": (
-                    "**KnowledgeMesh took too long to respond.**\n\n"
-                    "The backend may be loading a model or processing a "
-                    "long-running agentic-RAG request.\n\n"
-                    f"Current UI timeout: `{BACKEND_TIMEOUT_SECONDS}` seconds."
-                ),
-            }
+        _assistant_error(
+            "**The backend took too long to respond.**\n\n"
+            "It may be loading a model or running a long agentic request.\n\n"
+            f"Current UI timeout: `{BACKEND_TIMEOUT_SECONDS}` seconds."
         )
 
     except requests.exceptions.RequestException as exc:
-        st.session_state.messages.append(
-            {
-                "role": "assistant",
-                "content": "**Network request failed.**",
-                "error_detail": {
-                    "body": str(exc),
-                },
-            }
-        )
-
-    except ValueError as exc:
-        body_preview = response.text[:4000] if response is not None else ""
-
-        st.session_state.messages.append(
-            {
-                "role": "assistant",
-                "content": (
-                    "**Invalid backend response.**\n\n"
-                    "The backend did not return valid JSON."
-                ),
-                "error_detail": {
-                    "status_code": (
-                        response.status_code if response is not None else None
-                    ),
-                    "body": body_preview or str(exc),
-                },
-            }
-        )
+        _assistant_error("**Network request failed.**", body=str(exc))
 
     except Exception as exc:
         if LOGFIRE_OK:
             logfire.exception(
-                "KnowledgeMesh UI request failed",
-                error_type=type(exc).__name__,
+                "KnowledgeMesh UI request failed", error_type=type(exc).__name__
             )
 
-        st.session_state.messages.append(
-            {
-                "role": "assistant",
-                "content": "**Request failed.**",
-                "error_detail": {
-                    "body": str(exc),
-                },
-            }
-        )
+        _assistant_error("**Request failed.**", body=str(exc))
 
 
 # ============================================================
@@ -3010,20 +2409,16 @@ def ask(question: str):
 # ============================================================
 
 backend_online = check_backend_health(st.session_state.backend_url)
-
-backend_ready = check_backend_ready(st.session_state.backend_url)
+backend_ready = (
+    check_backend_ready(st.session_state.backend_url) if backend_online else False
+)
 
 if backend_ready:
-    system_dot_class = "success"
-    system_text = "KnowledgeMesh ready"
-
+    system_dot_class, system_text = "success", "Ready"
 elif backend_online:
-    system_dot_class = "warning"
-    system_text = "Backend online · not ready"
-
+    system_dot_class, system_text = "warning", "Online, not ready"
 else:
-    system_dot_class = "danger"
-    system_text = "Backend unreachable"
+    system_dot_class, system_text = "danger", "Unreachable"
 
 
 # ============================================================
@@ -3035,517 +2430,403 @@ with st.sidebar:
         """
         <div class="km-brand">
             <div class="km-brand-mark">◈</div>
-            <div>
-                <strong>KnowledgeMesh</strong>
-                <small>Agentic RAG console</small>
-            </div>
+            <div><strong>KnowledgeMesh</strong><small>Agentic RAG console</small></div>
         </div>
-
-        <div class="km-rail-label">Session</div>
         """
     )
 
-    user_turns = len(
-        [
-            message
-            for message in st.session_state.messages
-            if message.get("role") == "user"
-        ]
+    if st.button("New chat", type="primary", key="km_new_session_sidebar", **_STRETCH):
+        start_new_session()
+        st.rerun()
+
+    search_term = (
+        st.text_input(
+            "Search conversations",
+            key="km_history_search",
+            placeholder="Search conversations",
+            label_visibility="collapsed",
+        )
+        .strip()
+        .lower()
     )
+
+    display_html('<div class="km-rail-label">Recent</div>')
+
+    user_turns = len([m for m in st.session_state.messages if m.get("role") == "user"])
+    current_title = session_title(st.session_state.messages)
+
+    if st.session_state.messages and (
+        not search_term or search_term in current_title.lower()
+    ):
+        display_html(
+            f"""
+            <div class="km-hist-active">
+                <b>{esc(current_title)}</b>
+                <small>Current · {user_turns} question(s)</small>
+            </div>
+            """
+        )
+
+    matches = [
+        (i, entry)
+        for i, entry in enumerate(st.session_state.history)
+        if not search_term or search_term in entry["title"].lower()
+    ]
+
+    for i, entry in matches:
+        if st.button(
+            entry["title"],
+            key=f"km_hist_{entry['id']}",
+            help=f"{entry['started']} · {entry['questions']} question(s)",
+            **_STRETCH,
+        ):
+            restore_session(i)
+            st.rerun()
+
+    if not st.session_state.messages and not matches:
+        display_html('<div class="km-empty-note">No conversations yet.</div>')
+
+    kb = fetch_kb_stats(st.session_state.backend_url) or {}
 
     display_html(
         f"""
+        <div class="km-rail-label">Knowledge base</div>
+        <div class="km-side-card kb">
+            <div class="km-kb-head">
+                <span>{esc(kb.get("collection", "Knowledge base"))}</span>
+                <span class="km-chip ok">Qdrant</span>
+            </div>
+            <div class="km-kb-grid">
+                <div><b>{esc(kb.get("documents", "—"))}</b><span>Documents</span></div>
+                <div><b>{esc(kb.get("chunks", "—"))}</b><span>Chunks</span></div>
+            </div>
+            <div class="km-status-row">
+                <span class="label">Last indexed</span>
+                <span class="value">{esc(kb.get("last_indexed", "—"))}</span>
+            </div>
+        </div>
+
+        <div class="km-rail-label">System</div>
         <div class="km-status-card">
             <div class="km-status-row">
                 <span class="label">Backend</span>
-                <span class="value">
-                    <span class="km-dot {esc(system_dot_class)}"></span>
-                    {esc(system_text)}
-                </span>
+                <span class="value"><span class="km-dot {esc(system_dot_class)}"></span> {esc(system_text)}</span>
             </div>
-
             <div class="km-status-row">
                 <span class="label">Session</span>
-                <span class="value">
-                    {esc(st.session_state.session_id[:8].upper())}
-                </span>
+                <span class="value">{esc(st.session_state.session_id[:8].upper())}</span>
             </div>
-
             <div class="km-status-row">
                 <span class="label">Started</span>
-                <span class="value">
-                    {esc(st.session_state.session_started_at)}
-                </span>
-            </div>
-
-            <div class="km-status-row">
-                <span class="label">Questions</span>
-                <span class="value">{user_turns}</span>
+                <span class="value">{esc(st.session_state.session_started_at)}</span>
             </div>
         </div>
         """
     )
 
-    display_html('<div class="km-rail-label">Backend connection</div>')
+    with st.expander("Connection"):
+        if DEBUG_UI:
+            backend_url_input = st.text_input(
+                "Backend URL",
+                value=st.session_state.backend_url,
+                label_visibility="collapsed",
+                key="km_backend_url_input",
+                placeholder="http://localhost:8000",
+            ).rstrip("/")
 
-    backend_url_input = st.text_input(
-        "Backend URL",
-        value=st.session_state.backend_url,
-        label_visibility="collapsed",
-        key="km_backend_url_input",
-        placeholder="http://localhost:8000",
-    ).rstrip("/")
+            if backend_url_input and backend_url_input != st.session_state.backend_url:
+                st.session_state.backend_url = backend_url_input
+                clear_backend_caches()
+                st.rerun()
+        else:
+            st.caption(f"Backend: {st.session_state.backend_url}")
 
-    if backend_url_input != st.session_state.backend_url:
-        st.session_state.backend_url = backend_url_input
-
-        check_backend_health.clear()
-        check_backend_ready.clear()
-
-        st.rerun()
-
-    sidebar_left, sidebar_right = st.columns(2)
-
-    with sidebar_left:
-        if st.button(
-            "New chat",
-            width="stretch",
-            key="km_new_session_sidebar",
-        ):
-            start_new_session()
+        if st.button("Refresh status", key="km_test_conn", **_STRETCH):
+            clear_backend_caches()
             st.rerun()
 
-    with sidebar_right:
-        transcript = transcript_markdown(st.session_state.messages)
-
-        st.download_button(
-            "Export",
-            data=transcript,
-            file_name=(f"knowledgemesh-{st.session_state.session_id[:8]}.md"),
-            mime="text/markdown",
-            width="stretch",
-            disabled=not bool(st.session_state.messages),
-            key="km_export_transcript",
+    with st.expander(f"Pipeline · {len(PIPELINE_STAGES)} stages"):
+        display_html(
+            '<div class="km-capability-list">'
+            + "".join(
+                f'<div class="km-capability-row"><span>{icon("check", 13, "#4cc99a")}</span>'
+                f"<span>{esc(title)}</span></div>"
+                for _, title, _ in PIPELINE_STAGES
+            )
+            + "</div>"
         )
 
-    display_html(
-        """
-        <div class="km-rail-label">Agentic workflow</div>
-
-        <div class="km-capability-list">
-            <div class="km-capability-row">
-                <span class="mark">✓</span>
-                <span>Intent-aware planning</span>
-            </div>
-
-            <div class="km-capability-row">
-                <span class="mark">✓</span>
-                <span>Private knowledge retrieval</span>
-            </div>
-
-            <div class="km-capability-row">
-                <span class="mark">✓</span>
-                <span>Semantic reranking</span>
-            </div>
-
-            <div class="km-capability-row">
-                <span class="mark">✓</span>
-                <span>Evidence and context grading</span>
-            </div>
-
-            <div class="km-capability-row">
-                <span class="mark">✓</span>
-                <span>External web fallback</span>
-            </div>
-
-            <div class="km-capability-row">
-                <span class="mark">✓</span>
-                <span>Citation and grounding review</span>
-            </div>
-        </div>
-
-        <div class="km-rail-footer">
-            <span class="km-dot success"></span>
-            <div>
-                <strong>Traceable responses</strong>
-                <small>
-                    Inspect evidence, fallback behavior, validation,
-                    latency, and execution state for every answer.
-                </small>
-            </div>
-        </div>
-        """
+    st.download_button(
+        "Export transcript",
+        data=transcript_markdown(st.session_state.messages)
+        if st.session_state.messages
+        else "",
+        file_name=f"knowledgemesh-{st.session_state.session_id[:8]}.md",
+        mime="text/markdown",
+        disabled=not bool(st.session_state.messages),
+        key="km_export_transcript",
+        **_STRETCH,
     )
-
-
-# ============================================================
-# TOPBAR
-# ============================================================
-
-display_html(
-    """
-    <div class="km-topbar">
-        <div class="km-kicker">KnowledgeMesh</div>
-
-        <h1>Agentic RAG Console</h1>
-
-        <p>
-            Ask questions over private knowledge. KnowledgeMesh plans the
-            request, retrieves and reranks evidence, evaluates context,
-            activates web fallback only when needed, and reviews citations
-            and grounding before presenting the final answer.
-        </p>
-
-        <div class="km-engine-pill">
-            <span class="km-dot success"></span>
-            Private retrieval · Evidence grading · Web fallback · Validation
-        </div>
-    </div>
-    """
-)
-
-
-# ============================================================
-# CONSOLE HEADER
-# ============================================================
-
-console_left, console_right = st.columns([5, 1])
-
-with console_left:
-    display_html(
-        f"""
-        <div class="km-console-head">
-            <div class="km-console-live">
-                <span class="km-dot {esc(system_dot_class)}"></span>
-                Console
-            </div>
-
-            <span class="km-session-id">
-                {esc(st.session_state.session_id[:8].upper())}
-            </span>
-        </div>
-        """
-    )
-
-with console_right:
-    if st.button(
-        "New conversation",
-        width="stretch",
-        key="km_new_session_top",
-    ):
-        start_new_session()
-        st.rerun()
 
 
 # ============================================================
 # EMPTY STATE
+# Edit KB_TOPICS and STARTERS so they match what your knowledge base contains.
 # ============================================================
 
-if not st.session_state.messages:
+KB_TOPICS = (
+    "LLM-based agents",
+    "loop engineering",
+    "reliability and rate limiting",
+)
+
+STARTERS = (
+    "What is loop engineering?",
+    "What are the main components of an LLM-based agent?",
+    "What does the documentation say about rate limiting?",
+)
+
+
+def render_empty_state():
+    stats = fetch_kb_stats(st.session_state.backend_url) or {}
+    documents, chunks = stats.get("documents"), stats.get("chunks")
+
+    scale = (
+        f"{documents} documents and {chunks} indexed passages. "
+        if documents and chunks
+        else ""
+    )
+
     display_html(
-        """
-        <div class="km-msg-row">
-            <div class="km-msg-avatar">K</div>
-            <div class="km-msg-label">KnowledgeMesh</div>
+        f"""
+        <div class="km-hero">
+            <div class="km-eyebrow">Enterprise knowledge assistant</div>
+            <h1>Ask the <em>knowledge base</em></h1>
+            <p>
+                {esc(scale)}Covers {esc(", ".join(KB_TOPICS))}. Every claim in an
+                answer links to its source. When your documents fall short, the
+                system searches the web and labels those sources as web evidence.
+            </p>
         </div>
+        <div class="km-features">
+            <div class="km-feature"><div class="km-feature-icon">✓</div>
+                <b>Grounded answers</b>
+                <span>Every claim cites a source passage you can open and inspect.</span></div>
+            <div class="km-feature"><div class="km-feature-icon">↻</div>
+                <b>Self-correcting</b>
+                <span>Claims are checked against the evidence and revised before you see them.</span></div>
+            <div class="km-feature"><div class="km-feature-icon">◷</div>
+                <b>Fully observable</b>
+                <span>Per-stage timing, retrieval scores and the complete execution trace.</span></div>
+        </div>
+        <div class="km-section-label">Try asking</div>
         """
     )
 
-    with st.container(key="km_bubble_intro"):
-        st.markdown(
-            """
-Welcome to **KnowledgeMesh**.
-
-Ask a question about your private knowledge base. The system can:
-
-**Plan → Retrieve → Rerank → Grade → Use web fallback when needed → Answer → Validate citations → Review grounding**
-
-Each response includes a concise run summary, an agentic pipeline timeline, evidence provenance, quality signals, performance metrics, and a detailed execution trace.
-            """
-        )
-
-    starter_prompts = [
-        (
-            "🔎",
-            "Explain a concept",
-            "What is loop engineering?",
-        ),
-        (
-            "📚",
-            "Summarize documentation",
-            "Summarize the key points from our documentation.",
-        ),
-        (
-            "🛠️",
-            "Troubleshoot",
-            "What does the documentation say about rate limiting?",
-        ),
-    ]
-
-    starter_columns = st.columns(len(starter_prompts))
-
-    for column, (icon, label, question) in zip(
-        starter_columns,
-        starter_prompts,
-    ):
-        with column:
-            display_html(
-                f"""
-                <div class="km-starter-card">
-                    <div class="icon">{esc(icon)}</div>
-                    <div class="title">{esc(label)}</div>
-                    <div class="desc">{esc(question)}</div>
-                </div>
-                """
-            )
-
-            st.write("")
-
-            if st.button(
-                "Ask",
-                key=f"km_starter_{label}",
-                width="stretch",
-            ):
-                ask(question)
+    with st.container(key="km_starters"):
+        for i, question in enumerate(STARTERS):
+            if st.button(question, key=f"km_starter_{i}", **_STRETCH):
+                submit_question(question)
                 st.rerun()
+
+    st.write("")
+
+    with st.expander("How an answer is produced"):
+        st.markdown(
+            " → ".join(title for _, title, _ in PIPELINE_STAGES)
+            + "\n\nEach answer includes a run summary with per-stage timing, "
+            "sources and citations, quality checks, and the full execution trace."
+        )
 
 
 # ============================================================
 # CHAT HISTORY
 # ============================================================
 
-else:
-    for index, message in enumerate(st.session_state.messages):
-        role = message.get("role", "assistant")
 
-        if role == "user":
-            display_html(
-                """
-                <div class="km-msg-row user">
-                    <div class="km-msg-label user">You</div>
-                </div>
-                """
-            )
+def render_topbar() -> str:
+    kb_stats = fetch_kb_stats(st.session_state.backend_url) or {}
 
-            with st.container(key=f"km_user_bubble_{index}"):
-                st.markdown(message.get("content", ""))
+    pills = [
+        f'<span class="km-pill"><span class="km-dot {esc(system_dot_class)}"></span>'
+        f"API · {esc(system_text)}</span>"
+    ]
 
-            continue
+    if kb_stats.get("chunks"):
+        pills.append(
+            f'<span class="km-pill">Index · {esc(kb_stats["chunks"])} chunks</span>'
+        )
 
+    pills.append(
+        f'<span class="km-pill mono">Thread {esc(st.session_state.session_id[:8].upper())}</span>'
+    )
+
+    return (
+        '<div class="km-topbar"><div>'
+        '<div class="km-topbar-title">Ask KnowledgeMesh</div>'
+        '<div class="km-topbar-sub">Grounded answers with visible evidence and validation</div>'
+        f'</div><div class="km-topbar-pills">{"".join(pills)}</div></div>'
+    )
+
+
+def render_message(index: int, message: dict, last_index: int):
+    if message.get("role") == "user":
         display_html(
-            """
-            <div class="km-msg-row">
-                <div class="km-msg-avatar">K</div>
-                <div class="km-msg-label">KnowledgeMesh</div>
-            </div>
-            """
+            '<div class="km-msg-row user">'
+            f'<div class="km-msg-avatar">{icon("user", 14, "#c5ccda")}</div>'
+            '<div class="km-msg-label">You</div></div>'
         )
 
-        with st.container(key=f"km_bubble_{index}"):
-            st.markdown(message.get("content", "No response."))
+        with st.container(key=f"km_user_bubble_{index}"):
+            st.markdown(message.get("content", ""))
 
-        error_detail = message.get("error_detail")
+        return
 
-        if error_detail:
-            with st.expander("Technical error details", expanded=False):
-                if error_detail.get("status_code") is not None:
-                    st.write(f"HTTP status: `{error_detail['status_code']}`")
+    answer_latency = safe_float((message.get("trace") or {}).get("latency"))
+    meta_html = (
+        f'<span class="km-msg-meta">{esc(format_seconds(answer_latency))}</span>'
+        if answer_latency is not None
+        else ""
+    )
 
-                st.code(
-                    error_detail.get("body", ""),
-                    language="text",
-                )
+    display_html(
+        '<div class="km-msg-row"><div class="km-msg-avatar">◈</div>'
+        f'<div class="km-msg-label">KnowledgeMesh</div>{meta_html}</div>'
+    )
 
-            continue
+    with st.container(key=f"km_bubble_{index}"):
+        st.markdown(message.get("content", "No response."))
 
-        trace = message.get("trace")
+    error_detail = message.get("error_detail")
 
-        if not trace:
-            continue
+    if error_detail:
+        with st.expander("Technical error details", expanded=False):
+            if error_detail.get("status_code") is not None:
+                st.write(f"HTTP status: `{error_detail['status_code']}`")
 
-        private_source_list = trace.get(
-            "private_sources",
-            trace.get("sources", []),
-        )
+            st.code(error_detail.get("body", ""), language="text")
 
-        web_source_list = trace.get("web_sources", [])
-        answer_source_list = trace.get("answer_sources", [])
+        return
 
-        private_count = len(private_source_list)
-        web_count = len(web_source_list)
-        answer_count = len(answer_source_list)
+    trace = message.get("trace")
 
-        query_type = trace.get("query_type", "technical")
-        search_query = trace.get("search_query")
+    if not trace:
+        return
 
-        context_reason = trace.get("context_reason")
-        grounding_feedback = trace.get("grounding_feedback")
+    private_list = trace.get("private_sources", trace.get("sources", []))
+    web_list = trace.get("web_sources", [])
+    answer_list = trace.get("answer_sources", [])
+    citation_provenance = trace.get("citation_provenance", [])
+    query_type = trace.get("query_type", "technical")
 
-        citation_provenance = trace.get(
-            "citation_provenance",
-            [],
-        )
+    # Interactive citations -> evidence dialog, then the answer health panel.
+    render_citation_row(index, message.get("content", ""), trace)
 
-        status_text = trace.get("status")
+    health_html = render_answer_health(trace)
 
-        # Professional summary immediately after the assistant answer.
-        display_html(render_run_banner(trace))
+    if health_html:
+        display_html(health_html)
 
-        # Clear visual representation of execution stages.
+    display_html(render_run_banner(trace))
+
+    with st.expander("Execution details", expanded=(index == last_index)):
+        display_html(render_latency_panel(trace))
         display_html(render_pipeline_rail(trace))
 
-        # Render only when fallback, recovery, or validation event occurred.
+        stage_keys = [key for key, _, _ in PIPELINE_STAGES]
+        picked_stage = st.radio(
+            "Inspect stage",
+            stage_keys,
+            index=stage_keys.index(bottleneck_key(trace) or "retrieval"),
+            format_func=lambda key: STAGE_TITLES[key],
+            horizontal=True,
+            key=f"km_stage_{index}",
+            label_visibility="collapsed",
+        )
+        display_html(render_stage_detail(trace, picked_stage))
+
         recovery_notice = render_recovery_notice(trace)
 
         if recovery_notice:
             display_html(recovery_notice)
 
-        overview_tab, evidence_tab, quality_tab, performance_tab, trace_tab = st.tabs(
+        overview_tab, evidence_tab, quality_tab, trace_tab = st.tabs(
             [
                 "Overview",
-                f"Evidence ({private_count + web_count})",
+                f"Evidence ({len(private_list) + len(web_list)})",
                 "Quality",
-                "Performance",
                 "Trace",
             ]
         )
 
         with overview_tab:
-            overview_chips = [
+            chips = [
+                ("Mode", query_type.title()),
                 (
-                    '<span class="km-chip">'
-                    f'Mode <span class="num">'
-                    f"{esc(query_type.title())}</span></span>"
+                    "Private retrieval",
+                    trace.get("private_retrieval_status", "Not reported"),
                 ),
                 (
-                    '<span class="km-chip">'
-                    "Private retrieval "
-                    f'<span class="num">'
-                    f"{esc(trace.get('private_retrieval_status', 'Not reported'))}"
-                    "</span></span>"
+                    "Web fallback",
+                    "Used" if trace.get("web_search_used") else "Not used",
                 ),
-                (
-                    '<span class="km-chip">'
-                    "Web fallback "
-                    f'<span class="num">'
-                    f"{'Used' if trace.get('web_search_used') else 'Not used'}"
-                    "</span></span>"
-                ),
-                (
-                    '<span class="km-chip">'
-                    f'Private sources <span class="num">'
-                    f"{private_count}</span></span>"
-                ),
-                (
-                    '<span class="km-chip">'
-                    f'Answer sources <span class="num">'
-                    f"{answer_count}</span></span>"
-                ),
+                ("Private sources", len(private_list)),
+                ("Answer sources", len(answer_list)),
             ]
-
+            chips_html = "".join(
+                f'<span class="km-chip">{esc(label)} <span class="num">{esc(value)}</span></span>'
+                for label, value in chips
+            )
             display_html(
-                """
-                <div class="km-tab-panel">
-                    <div class="km-tab-heading">Run overview</div>
-                    <div class="km-signal-row">
-                """
-                + "".join(overview_chips)
-                + """
-                    </div>
-                </div>
-                """
+                '<div class="km-tab-panel"><div class="km-tab-heading">Run overview</div>'
+                f'<div class="km-signal-row">{chips_html}</div></div>'
             )
 
-            if context_reason:
+            if trace.get("context_reason"):
                 display_html(
-                    f"""
-                    <div class="km-info-card">
-                        <div class="km-info-card-title">
-                            Context evaluation
-                        </div>
-                        <div class="km-info-card-body">
-                            {esc(context_reason)}
-                        </div>
-                    </div>
-                    """
+                    '<div class="km-info-card"><div class="km-info-card-title">'
+                    "Context evaluation</div>"
+                    f'<div class="km-info-card-body">{esc(trace["context_reason"])}</div></div>'
                 )
 
-            if search_query:
+            if trace.get("search_query"):
                 display_html(
-                    f"""
-                    <div class="km-info-card">
-                        <div class="km-info-card-title">
-                            Planner search query
-                        </div>
-                        <div class="km-info-card-body">
-                            <code>{esc(search_query)}</code>
-                        </div>
-                    </div>
-                    """
+                    '<div class="km-info-card"><div class="km-info-card-title">'
+                    "Planner search query</div>"
+                    f'<div class="km-info-card-body"><code>{esc(trace["search_query"])}</code></div></div>'
                 )
 
-            if status_text:
+            if trace.get("status"):
                 display_html(
-                    f"""
-                    <div class="km-status-note">
-                        Status: {esc(status_text)}
-                    </div>
-                    """
+                    f'<div class="km-status-note">Status: {esc(trace["status"])}</div>'
                 )
 
         with evidence_tab:
-            if private_source_list:
-                st.markdown("#### Private knowledge sources")
-
-                display_html(
-                    '<div class="km-sources">'
-                    f"{render_source_cards(private_source_list)}"
-                    "</div>"
-                )
-
-            if web_source_list:
-                st.markdown("#### Web fallback sources")
-
-                display_html(
-                    '<div class="km-sources">'
-                    f"{render_source_cards(web_source_list)}"
-                    "</div>"
-                )
-
-            if answer_source_list:
-                st.markdown("#### Sources used in the answer")
-
-                display_html(
-                    '<div class="km-sources">'
-                    f"{render_source_cards(answer_source_list)}"
-                    "</div>"
-                )
-
-            elif private_source_list or web_source_list:
-                display_html(
-                    """
-                    <div class="km-empty-note">
-                        Retrieved evidence is available above, but the backend
-                        did not record any source as directly used in the final
-                        answer.
-                    </div>
-                    """
-                )
-
-            provenance_table_html = render_citation_provenance_table(
-                citation_provenance
-            )
-
-            if provenance_table_html:
-                st.markdown("#### Citation provenance")
-                display_html(provenance_table_html)
-
-            if not (
-                private_source_list
-                or web_source_list
-                or answer_source_list
-                or citation_provenance
+            for heading, items in (
+                ("Private knowledge sources", private_list),
+                ("Web fallback sources", web_list),
+                ("Sources used in the answer", answer_list),
             ):
+                if items:
+                    st.markdown(f"#### {heading}")
+                    display_html(
+                        f'<div class="km-sources">{render_source_cards(items)}</div>'
+                    )
+
+            if not answer_list and (private_list or web_list):
+                display_html(
+                    '<div class="km-empty-note">Retrieved evidence is listed above, '
+                    "but the backend did not record any source as directly used in "
+                    "the final answer.</div>"
+                )
+
+            provenance_html = render_citation_provenance_table(citation_provenance)
+
+            if provenance_html:
+                st.markdown("#### Citation provenance")
+                display_html(provenance_html)
+
+            if not (private_list or web_list or answer_list or citation_provenance):
                 st.info("No source evidence was reported for this response.")
 
         with quality_tab:
@@ -3553,162 +2834,87 @@ else:
 
             if quality_html:
                 display_html(
-                    """
-                    <div class="km-tab-panel">
-                        <div class="km-tab-heading">
-                            Validation signals
-                        </div>
-                        <div class="km-signal-row">
-                    """
-                    + quality_html
-                    + """
-                        </div>
-                    </div>
-                    """
+                    '<div class="km-tab-panel"><div class="km-tab-heading">Validation signals</div>'
+                    f'<div class="km-signal-row">{quality_html}</div></div>'
                 )
-
             else:
                 st.info("No validation results were reported for this response.")
+
+            claims_html = render_claims(
+                trace.get("claims") or [], trace.get("grounding_details")
+            )
+
+            if claims_html:
+                st.markdown("#### Claim-level grounding review")
+                display_html(claims_html)
 
             recovery_html = render_recovery_summary(trace)
 
             if recovery_html:
                 display_html(
-                    """
-                    <div class="km-tab-panel">
-                        <div class="km-tab-heading">
-                            Self-RAG and recovery
-                        </div>
-                        <div class="km-signal-row">
-                    """
-                    + recovery_html
-                    + """
-                        </div>
-                    </div>
-                    """
+                    '<div class="km-tab-panel"><div class="km-tab-heading">Self-correction and recovery</div>'
+                    f'<div class="km-signal-row">{recovery_html}</div></div>'
                 )
 
-            if grounding_feedback:
-                display_html(
-                    f"""
-                    <div class="km-info-card">
-                        <div class="km-info-card-title">
-                            Grounding feedback
-                        </div>
-                        <div class="km-info-card-body">
-                            {esc(grounding_feedback)}
-                        </div>
-                    </div>
-                    """
+            feedback = trace.get("grounding_feedback")
+
+            if feedback:
+                items = feedback if isinstance(feedback, list) else [feedback]
+                feedback_html = "".join(
+                    f"<li>{esc(item)}</li>" for item in items if str(item).strip()
                 )
 
-        with performance_tab:
-            metric_1, metric_2, metric_3, metric_4, metric_5 = st.columns(5)
-
-            metric_1.metric(
-                "Total",
-                format_seconds(trace.get("latency")),
-                help="End-to-end Streamlit request duration.",
-            )
-
-            metric_2.metric(
-                "Retrieval",
-                format_ms(trace.get("retrieval_latency_ms")),
-                help="Private knowledge retrieval latency.",
-            )
-
-            metric_3.metric(
-                "Reranking",
-                format_ms(trace.get("rerank_latency_ms")),
-                help="Semantic reranking latency.",
-            )
-
-            metric_4.metric(
-                "Grading",
-                format_ms(trace.get("grader_latency_ms")),
-                help="Document and context evaluation latency.",
-            )
-
-            metric_5.metric(
-                "Generation",
-                format_ms(trace.get("generation_latency_ms")),
-                help="LLM response generation latency.",
-            )
-
-            backend_latency_ms = trace.get("backend_latency_ms")
-
-            if backend_latency_ms is not None:
-                display_html(
-                    f"""
-                    <div class="km-status-note">
-                        Backend-reported total latency:
-                        <strong>{esc(format_ms(backend_latency_ms))}</strong>
-                    </div>
-                    """
-                )
+                if feedback_html:
+                    display_html(
+                        '<div class="km-info-card"><div class="km-info-card-title">'
+                        "Grounding feedback</div>"
+                        f'<div class="km-info-card-body"><ul class="km-trace-list">{feedback_html}</ul></div></div>'
+                    )
 
         with trace_tab:
             steps = trace.get("steps", [])
 
             if steps:
-                trace_items = []
-
-                for step in steps:
-                    _, code, detail = classify_step(step)
-
-                    trace_items.append(f"<li><b>{esc(code)}</b> — {esc(detail)}</li>")
-
-                display_html(
-                    f"""
-                    <div class="km-tab-panel">
-                        <div class="km-tab-heading">
-                            Execution trace
-                        </div>
-                        <ol class="km-trace-list">
-                            {"".join(trace_items)}
-                        </ol>
-                    </div>
-                    """
+                items = "".join(
+                    f"<li><b>{esc(code)}</b> — {esc(detail)}</li>"
+                    for _, code, detail in (classify_step(step) for step in steps)
                 )
-
+                display_html(
+                    '<div class="km-tab-panel"><div class="km-tab-heading">Execution trace</div>'
+                    f'<ol class="km-trace-list">{items}</ol></div>'
+                )
             else:
                 st.info("No reasoning trace was reported for this response.")
 
 
+display_html(render_topbar())
+
+if not st.session_state.messages:
+    render_empty_state()
+else:
+    _last_index = len(st.session_state.messages) - 1
+
+    for _index, _message in enumerate(st.session_state.messages):
+        render_message(_index, _message, _last_index)
+
+    # The user's message is already on screen; now run the request below it.
+    if st.session_state.pending:
+        run_pending_query()
+        st.rerun()
+
+
 # ============================================================
-# CHAT INPUT
+# CHAT INPUT + FOOTER
 # ============================================================
 
-prompt = st.chat_input("Ask about your documentation...")
+prompt = st.chat_input("Ask about your documentation…")
 
 if prompt:
-    ask(prompt)
+    submit_question(prompt)
     st.rerun()
 
-
-# ============================================================
-# FOOTER
-# ============================================================
-
 display_html(
-    """
-    <div style="
-        display:flex;
-        flex-wrap:wrap;
-        gap:8px;
-        margin-top:10px;
-        color:var(--km-muted-soft);
-        font-size:10px;
-    ">
-        <span>KnowledgeMesh Agentic RAG</span>
-        <span>·</span>
-        <span>Private retrieval</span>
-        <span>·</span>
-        <span>Evidence grading</span>
-        <span>·</span>
-        <span>Web fallback</span>
-        <span>·</span>
-        <span>Answer validation</span>
-    </div>
-    """
+    '<div class="km-status-note" style="margin-top:14px">'
+    "KnowledgeMesh · self-correcting agentic RAG over your local FastAPI backend."
+    "</div>"
 )

@@ -297,3 +297,22 @@ class AgentState(TypedDict, total=False):
     # ============================================================
 
     thread_id: str
+
+    # ============================================================
+    # Agent trajectory / evaluation
+    #
+    # Records meaningful agent execution events without treating
+    # every LangGraph node execution as a reasoning hop.
+    # ============================================================
+
+    evaluation_trace: List[Dict[str, Any]]
+
+    hop_count: int
+
+    required_hops: int
+
+    trajectory_status: str
+
+    failure_taxonomy: List[str]
+    trajectory_metrics: Dict[str, float]
+

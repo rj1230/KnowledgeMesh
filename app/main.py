@@ -1,11 +1,3 @@
-# ============================================================
-# KnowledgeMesh · Enterprise Agentic RAG API
-#
-# IMPORTANT:
-# Logfire MUST be configured before importing application
-# modules so spans from all modules are captured.
-# ============================================================
-
 from __future__ import annotations
 
 import logging
@@ -178,8 +170,13 @@ def startup_event() -> None:
     except Exception:
         _guardrails_initialized = False
 
-        logfire.exception(
-            "❌ Failed to initialize NeMo Guardrails",
+        logger.exception(
+            "❌ Backend execution failed | "
+            "thread_id=%s | error_type=%s | error_message=%s | latency_ms=%s",
+            thread_id,
+            type(exc).__name__,
+            str(exc),
+            elapsed_ms,
         )
 
         raise
@@ -1408,6 +1405,29 @@ def graph():
 # ============================================================
 
 
+# ============================================================
+# STATS
+# ============================================================
+
+
+@app.get("/stats")
+def stats() -> Dict[str, Any]:
+    return {
+        "status": "ok",
+        "service": APP_NAME,
+        "version": APP_VERSION,
+        "guardrails_initialized": _guardrails_initialized,
+        "routes": {
+            "root": "/",
+            "health": "/health",
+            "ready": "/ready",
+            "stats": "/stats",
+            "graph": "/graph",
+            "query": "/query",
+        },
+    }
+
+
 @app.post("/query")
 def query(
     request: QueryRequest,
@@ -1519,6 +1539,14 @@ def query(
         # ----------------------------------------------------
         # Execution
         # ----------------------------------------------------
+        # Trajectory evaluation is execution-scoped.
+        # Conversation memory remains thread-scoped via MemorySaver.
+        "evaluation_trace": [],
+        "hop_count": 0,
+        "required_hops": 0,
+        "trajectory_status": "",
+        "failure_taxonomy": [],
+        "trajectory_metrics": {},
         "plan": ["Start"],
         "status": "Initializing Graph...",
     }
@@ -2050,6 +2078,30 @@ def query(
             # Execution trace
             # ------------------------------------------------
             "thought_process": plan,
+
+            # ------------------------------------------------
+            # Agentic RAG trajectory evaluation
+            # ------------------------------------------------
+            "trajectory": {
+                "status": final_output.get("trajectory_status"),
+                "hop_count": _safe_int(
+                    final_output.get("hop_count"),
+                    default=0,
+                ),
+                "required_hops": _safe_int(
+                    final_output.get("required_hops"),
+                    default=0,
+                ),
+                "failure_taxonomy": (
+                    final_output.get("failure_taxonomy") or []
+                ),
+                "metrics": (
+                    final_output.get("trajectory_metrics") or {}
+                ),
+                "trace": (
+                    final_output.get("evaluation_trace") or []
+                ),
+            },
             # ------------------------------------------------
             # Sources
             # ------------------------------------------------
@@ -2128,15 +2180,17 @@ def query(
             2,
         )
 
-        logfire.exception(
-            "❌ Backend execution failed",
-            thread_id=thread_id,
-            error_type=type(exc).__name__,
-            error_message=str(exc),
-            latency_ms=elapsed_ms,
+        logger.exception(
+            "❌ Backend execution failed | "
+            "thread_id=%s | error_type=%s | error_message=%s | latency_ms=%s",
+            thread_id,
+            type(exc).__name__,
+            str(exc),
+            elapsed_ms,
         )
 
         return _build_error_response(
             question=q,
             elapsed_ms=elapsed_ms,
         )
+

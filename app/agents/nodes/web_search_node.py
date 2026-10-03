@@ -48,6 +48,7 @@ import logging
 import logfire
 
 from app.agents.state import AgentState
+from app.evaluation.trace import append_trace_event
 from app.services.web_search import search_web
 
 
@@ -149,7 +150,17 @@ def web_search_node(state: AgentState):
 
         plan.append("Web Search: attempted but skipped because query was empty")
 
+        trace_update = append_trace_event(
+            state,
+            step="web_search",
+            status="empty_query",
+            attempted=True,
+            used=False,
+            source_count=0,
+        )
+
         return {
+            **trace_update,
             # Current retrieval batch is empty.
             "documents": [],
             # Preserve private evidence.
@@ -235,7 +246,18 @@ def web_search_node(state: AgentState):
             ]
         )
 
+        trace_update = append_trace_event(
+            state,
+            step="web_search",
+            status="failed",
+            attempted=True,
+            used=False,
+            source_count=0,
+            error_type=type(exc).__name__,
+        )
+
         return {
+            **trace_update,
             "documents": [],
             "private_documents": preserved_private_documents,
             "web_documents": [],
@@ -325,10 +347,24 @@ def web_search_node(state: AgentState):
     )
 
     # ============================================================
+    # TRAJECTORY TRACE
+    # ============================================================
+
+    trace_update = append_trace_event(
+        state,
+        step="web_search",
+        status="recovered" if web_search_used else "empty",
+        attempted=True,
+        used=web_search_used,
+        source_count=len(web_documents),
+    )
+
+    # ============================================================
     # RETURN STATE
     # ============================================================
 
     return {
+        **trace_update,
         # --------------------------------------------------------
         # CURRENT RETRIEVAL BATCH
         #

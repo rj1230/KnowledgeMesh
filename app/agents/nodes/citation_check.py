@@ -29,6 +29,7 @@ from typing import Any, Dict, List, Tuple
 import logfire
 
 from app.agents.state import AgentState
+from app.evaluation.trace import append_trace_event
 
 
 # ============================================================
@@ -717,7 +718,18 @@ def citation_check_node(
     # --------------------------------------------------------
 
     if not final_answer.strip():
+        trace_update = append_trace_event(
+            state,
+            step="citation_check",
+            status="skipped",
+            citation_valid=True,
+            uncited_claims=0,
+            invalid_citations=0,
+            reason="empty_answer",
+        )
+
         return {
+            **trace_update,
             "citation_valid": True,
             "citation_feedback": "",
             "citation_errors": [],
@@ -806,7 +818,18 @@ def citation_check_node(
             citation_count=result["citation_count"],
         )
 
+    trace_update = append_trace_event(
+        state,
+        step="citation_check",
+        status="passed" if citation_valid else "failed",
+        citation_valid=citation_valid,
+        uncited_claims=len(uncited_claims),
+        invalid_citations=len(invalid_citations),
+        citation_count=result["citation_count"],
+    )
+
     return {
+        **trace_update,
         "citation_valid": citation_valid,
         "citation_feedback": feedback,
         "citation_errors": errors,
@@ -814,3 +837,4 @@ def citation_check_node(
         "plan": state.get("plan", [])
         + [(f"Citation Check: {'PASS' if citation_valid else 'FAIL'}")],
     }
+

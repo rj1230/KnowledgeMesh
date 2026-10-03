@@ -45,7 +45,7 @@ from qdrant_client.http import models
 from app.config import settings
 
 from app.services.retrieval.embedding import (
-    embed_texts,
+    embed_documents,
     get_embedding_dim,
     get_active_model_type,
 )
@@ -424,7 +424,7 @@ def process_file(
                 model=embedding_model,
                 dimension=embedding_dimension,
             ):
-                embeddings = embed_texts(chunks)
+                embeddings = embed_documents(chunks)
 
             if len(embeddings) != len(chunks):
                 raise RuntimeError(

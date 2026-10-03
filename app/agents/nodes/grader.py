@@ -49,6 +49,7 @@ import logfire
 
 from app.gateway import create_chat_completion
 from app.services.evidence_quality import rank_evidence
+from app.evaluation.trace import append_trace_event
 
 MIN_RELEVANT_DOCS = 2
 
@@ -69,6 +70,18 @@ MAX_GENERATION_DOCUMENTS = 5
 
 # Keep grading prompts smaller than the final generation context.
 MAX_GRADER_DOCUMENT_CHARS = 2500
+
+
+def _safe_bool(value: Any) -> bool:
+    """Normalize LLM boolean-like values without treating 'false' as truthy."""
+
+    if isinstance(value, bool):
+        return value
+
+    if isinstance(value, str):
+        return value.strip().lower() in {"true", "yes", "1"}
+
+    return bool(value)
 
 
 def _extract_json(text: str) -> Any:
@@ -351,7 +364,17 @@ def grade_documents_node(state):
     print(f"\n🧪 GRADER INPUT | query={query!r} | documents={len(documents)}")
 
     if not documents:
+        trace_update = append_trace_event(
+            state,
+            step="grader",
+            status="skipped",
+            document_count=0,
+            grading_mode="no_documents",
+            context_quality="empty",
+        )
+
         return {
+            **trace_update,
             "documents": [],
             "generation_documents": [],
             "graded_documents": [],
@@ -381,7 +404,7 @@ def grade_documents_node(state):
                 score = max(0.0, min(1.0, score))
 
                 grade_map[index] = {
-                    "relevant": bool(item.get("relevant", False)),
+                    "relevant": _safe_bool(item.get("relevant", False)),
                     "score": score,
                     "reason": str(item.get("reason", "")),
                 }
@@ -527,7 +550,21 @@ def grade_documents_node(state):
             ]
         )
 
+        trace_update = append_trace_event(
+            state,
+            step="grader",
+            status="success",
+            document_count=len(documents),
+            graded_count=len(graded_documents),
+            generation_count=len(relevant_documents),
+            content_count=content_count,
+            reference_count=reference_count,
+            navigation_count=navigation_count,
+            context_quality=context_quality,
+        )
+
         return {
+            **trace_update,
             "documents": documents,
             "graded_documents": graded_documents,
             "generation_documents": relevant_documents,
@@ -569,7 +606,20 @@ def grade_documents_node(state):
             generation_documents=0,
         )
 
+        trace_update = append_trace_event(
+            state,
+            step="grader",
+            status="failed",
+            document_count=len(documents),
+            graded_count=0,
+            generation_count=0,
+            grading_mode="unavailable",
+            context_quality="unverified",
+            error_type=error_type,
+        )
+
         return {
+            **trace_update,
             "documents": documents,
             "graded_documents": [],
             "generation_documents": [],

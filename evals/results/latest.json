@@ -1,0 +1,302 @@
+{
+  "retrieval": {
+    "total_cases": 1,
+    "successful_cases": 1,
+    "failed_cases": 0,
+    "metrics": {
+      "retrieval_recall_at_5": 1.0,
+      "retrieval_precision_at_5": 0.4,
+      "retrieval_hit_at_5": 1.0,
+      "retrieval_document_hit_at_5": 1.0,
+      "retrieval_neighbor_hit_at_5": 1.0,
+      "ndcg_at_5": 0.6934264036172708,
+      "reciprocal_rank": 0.5,
+      "web_hit_at_5": null,
+      "web_reciprocal_rank": null,
+      "web_domain_precision_at_5": null,
+      "answer_relevancy": 0.6923076923076923,
+      "answer_point_coverage": 1.0,
+      "citation_precision": 1.0,
+      "citation_recall": 1.0,
+      "grounding_score": 1.0,
+      "unsupported_claim_rate": 0.0,
+      "retrieved_unknown_id_rate": 0.0,
+      "routing_accuracy": 1.0,
+      "web_decision_accuracy": 1.0,
+      "web_use_recall": null,
+      "unnecessary_web_rate": 0.0,
+      "correct_abstention_rate": null,
+      "false_abstention_rate": 0.0,
+      "final_gate_pass_rate": 1.0
+    },
+    "metrics_n": {
+      "retrieval_recall_at_5": 1,
+      "retrieval_precision_at_5": 1,
+      "retrieval_hit_at_5": 1,
+      "retrieval_document_hit_at_5": 1,
+      "retrieval_neighbor_hit_at_5": 1,
+      "ndcg_at_5": 1,
+      "reciprocal_rank": 1,
+      "web_hit_at_5": 0,
+      "web_reciprocal_rank": 0,
+      "web_domain_precision_at_5": 0,
+      "answer_relevancy": 1,
+      "answer_point_coverage": 1,
+      "citation_precision": 1,
+      "citation_recall": 1,
+      "grounding_score": 1,
+      "unsupported_claim_rate": 1,
+      "retrieved_unknown_id_rate": 1,
+      "routing_accuracy": 1,
+      "web_decision_accuracy": 1,
+      "web_use_recall": 0,
+      "unnecessary_web_rate": 1,
+      "correct_abstention_rate": 0,
+      "false_abstention_rate": 1,
+      "final_gate_pass_rate": 1
+    },
+    "quality_gate": {
+      "passed": false,
+      "checks": {
+        "retrieval_recall_at_5": {
+          "value": 1.0,
+          "threshold": 0.7,
+          "passed": true
+        },
+        "answer_relevancy": {
+          "value": 0.6923076923076923,
+          "threshold": 0.7,
+          "passed": false
+        },
+        "grounding_score": {
+          "value": 1.0,
+          "threshold": 0.9,
+          "passed": true
+        },
+        "citation_precision": {
+          "value": 1.0,
+          "threshold": 0.9,
+          "passed": true
+        },
+        "final_gate_pass_rate": {
+          "value": 1.0,
+          "threshold": 0.9,
+          "passed": true
+        },
+        "unsupported_claim_rate": {
+          "value": 0.0,
+          "threshold": 0.1,
+          "passed": true
+        },
+        "web_decision_accuracy": {
+          "value": 1.0,
+          "threshold": 0.8,
+          "passed": true
+        },
+        "correct_abstention_rate": {
+          "value": null,
+          "threshold": 0.8,
+          "passed": true,
+          "skipped": true
+        },
+        "false_abstention_rate": {
+          "value": 0.0,
+          "threshold": 0.1,
+          "passed": true
+        },
+        "attack_success_rate": {
+          "value": null,
+          "threshold": 0.0,
+          "passed": true,
+          "skipped": true
+        },
+        "leaked_sensitive_content": {
+          "value": null,
+          "threshold": 0.0,
+          "passed": true,
+          "skipped": true
+        },
+        "false_refusal": {
+          "value": null,
+          "threshold": 0.2,
+          "passed": true,
+          "skipped": true
+        },
+        "safety_correct": {
+          "value": null,
+          "threshold": 0.9,
+          "passed": true,
+          "skipped": true
+        }
+      }
+    },
+    "cases": [
+      {
+        "case_id": "gp001",
+        "category": "golden",
+        "question": "What is retrieval-augmented generation and what two types of memory does it combine?",
+        "answer": "Retrieval‑augmented generation (RAG) is a fine‑tuning approach that equips a pre‑trained seq2seq generation model with an external retrieval component, so the model generates text conditioned on documents retrieved from a knowledge source . [chunk_4][chunk_1]\nIt combines two kinds of memory: a parametric memory that is a pre‑trained seq2seq transformer, and a non‑parametric memory that is a dense vector index of Wikipedia accessed by a neural retriever . [chunk_1][chunk_2]",
+        "metrics": {
+          "retrieval_recall_at_5": 1.0,
+          "retrieval_precision_at_5": 0.4,
+          "retrieval_hit_at_5": 1.0,
+          "retrieval_document_hit_at_5": 1.0,
+          "retrieval_neighbor_hit_at_5": 1.0,
+          "ndcg_at_5": 0.6934264036172708,
+          "reciprocal_rank": 0.5,
+          "web_hit_at_5": null,
+          "web_reciprocal_rank": null,
+          "web_domain_precision_at_5": null,
+          "routing_accuracy": 1.0,
+          "web_decision_accuracy": 1.0,
+          "web_use_recall": null,
+          "unnecessary_web_rate": 0.0,
+          "correct_abstention_rate": null,
+          "false_abstention_rate": 0.0,
+          "answer_relevancy": 0.6923076923076923,
+          "answer_point_coverage": 1.0,
+          "citation_precision": 1.0,
+          "citation_recall": 1.0,
+          "grounding_score": 1.0,
+          "unsupported_claim_rate": 0.0,
+          "retrieved_unknown_id_rate": 0.0
+        },
+        "retrieval": {
+          "retrieved_ids": [
+            "89e40c0de3ce2081b9d726b9::3",
+            "89e40c0de3ce2081b9d726b9::0",
+            "89e40c0de3ce2081b9d726b9::1",
+            "89e40c0de3ce2081b9d726b9::4",
+            "89e40c0de3ce2081b9d726b9::47"
+          ],
+          "reranked_ids": [
+            "89e40c0de3ce2081b9d726b9::3",
+            "89e40c0de3ce2081b9d726b9::0",
+            "89e40c0de3ce2081b9d726b9::1",
+            "89e40c0de3ce2081b9d726b9::4",
+            "89e40c0de3ce2081b9d726b9::47"
+          ],
+          "relevant_ids": [
+            "89e40c0de3ce2081b9d726b9::0",
+            "89e40c0de3ce2081b9d726b9::1"
+          ],
+          "web_urls": [],
+          "expected_urls": [],
+          "expected_domains": [],
+          "first_relevant_rank": 2,
+          "expected_route": "private",
+          "actual_route": "private",
+          "abstained": false,
+          "relevant_labels": [
+            "RAG.pdf#0",
+            "RAG.pdf#1"
+          ],
+          "retrieved_labels": [
+            "RAG.pdf#3",
+            "RAG.pdf#0",
+            "RAG.pdf#1",
+            "RAG.pdf#4",
+            "RAG.pdf#47"
+          ],
+          "unknown_retrieved_ids": []
+        },
+        "citations": {
+          "cited_ids": [
+            "chunk_4",
+            "chunk_1",
+            "chunk_2"
+          ],
+          "supported_ids": [
+            "chunk_4",
+            "chunk_1",
+            "chunk_2"
+          ],
+          "required_ids": []
+        },
+        "self_rag": {
+          "revision_count": 1,
+          "total_claims": 2,
+          "unsupported_claims": 0,
+          "final_gate_passed": true
+        },
+        "latency_ms": 98955.52659999885,
+        "error": null
+      }
+    ],
+    "latency": {
+      "average_ms": 98955.52659999885,
+      "p50_ms": 98955.52659999885,
+      "p95_ms": 98955.52659999885,
+      "p99_ms": 98955.52659999885,
+      "max_ms": 98955.52659999885
+    },
+    "errors": [],
+    "metadata": {
+      "api_base_url": "http://127.0.0.1:8000",
+      "dataset": "C:\\Users\\HP\\OneDrive\\Desktop\\KnowledgeMesh\\evals\\datasets\\golden_questions.json",
+      "case_count": 1,
+      "private_identity": "document_id::chunk_id",
+      "web_identity": "normalized URL / domain",
+      "inventory": {
+        "source": "C:\\Users\\HP\\OneDrive\\Desktop\\KnowledgeMesh\\evals\\datasets\\true_chunk_inventory.csv",
+        "n_chunks": 756,
+        "n_documents": 7,
+        "chunks_per_document": {
+          "Attention.pdf": 28,
+          "LLM Based-learning.pdf": 243,
+          "LLM.pdf": 167,
+          "RAG.pdf": 49,
+          "Training Llm.pdf": 129,
+          "harness.pdf": 94,
+          "loop.pdf": 46
+        },
+        "issues": []
+      },
+      "dataset_audit": {
+        "total_cases": 11,
+        "unknown_gold": {},
+        "cases_without_gold": [],
+        "cases_per_document": {
+          "Attention.pdf": 2,
+          "LLM Based-learning.pdf": 3,
+          "LLM.pdf": 1,
+          "RAG.pdf": 2,
+          "Training Llm.pdf": 1,
+          "harness.pdf": 1,
+          "loop.pdf": 1
+        },
+        "documents_without_cases": [],
+        "gold_chunk_coverage": 0.018518518518518517,
+        "route_counts": {
+          "private": 11
+        },
+        "unrecognized_routes": {},
+        "ok": true
+      },
+      "evaluation_runtime_ms": 98956.76960000128
+    },
+    "by_document": {
+      "RAG.pdf": {
+        "n": 1.0,
+        "retrieval_recall_at_5": 1.0,
+        "retrieval_hit_at_5": 1.0,
+        "retrieval_neighbor_hit_at_5": 1.0,
+        "reciprocal_rank": 0.5
+      }
+    },
+    "by_route": {
+      "private": {
+        "n": 1.0,
+        "routing_accuracy": 1.0,
+        "web_decision_accuracy": 1.0,
+        "unnecessary_web_rate": 0.0,
+        "false_abstention_rate": 0.0
+      }
+    }
+  },
+  "unanswerable": null,
+  "adversarial": null,
+  "metadata": {
+    "api_base_url": "http://127.0.0.1:8000"
+  }
+}

@@ -925,6 +925,23 @@ def _extract_response_text(
 # ============================================================
 
 _CITATION_PATTERN = re.compile(r"\[chunk_\d+\]")
+_UNICODE_CITATION_PATTERN = re.compile(r"【(chunk_\d+)】")
+
+
+def _normalize_citation_markers(text: str) -> str:
+    """
+    Normalize Unicode citation brackets emitted by the model.
+
+    The canonical KnowledgeMesh citation format is [chunk_N].
+    Models may occasionally emit 【chunk_N】 instead. Normalize
+    that variant before citation enforcement and grounding so
+    downstream components see one citation namespace.
+    """
+
+    if not text:
+        return ""
+
+    return _UNICODE_CITATION_PATTERN.sub(r"[\1]", text)
 
 
 def _contains_valid_citation(
@@ -1196,6 +1213,60 @@ def _document_quality_bonus(
     )
 
 
+def _citation_detail_tokens(text: str) -> set[str]:
+    """Return high-information factual/detail tokens used for citation attribution."""
+    tokens = _citation_tokens(text)
+
+    detail_tokens: set[str] = set()
+
+    for token in tokens:
+        normalized = token.replace("-", "")
+        if any(char.isdigit() for char in normalized):
+            detail_tokens.add(normalized)
+
+    for token in tokens:
+        if token in {"gpt-3", "few-shot", "sft", "instructgpt"}:
+            detail_tokens.add(token)
+
+    return detail_tokens
+
+
+def _has_citation_detail_overlap(sentence: str, evidence: str) -> bool:
+    """Require citation evidence to preserve important claim-specific details."""
+    sentence_details = _citation_detail_tokens(sentence)
+    evidence_details = _citation_detail_tokens(evidence)
+
+    if not sentence_details:
+        return True
+
+    normalized_sentence = {
+        token.replace("-", "") for token in sentence_details
+    }
+    normalized_evidence = {
+        token.replace("-", "") for token in evidence_details
+    }
+
+    # If the claim explicitly compares against GPT-3, the evidence must
+    # also contain GPT-3. This prevents generic InstructGPT/SFT evidence
+    # from being accepted for a GPT-3 comparison claim.
+    if "gpt3" in normalized_sentence:
+        if "gpt3" not in normalized_evidence:
+            return False
+
+    # If the claim explicitly mentions few-shot evaluation, preserve
+    # that comparison anchor in the cited evidence.
+    if "fewshot" in normalized_sentence:
+        if "fewshot" not in normalized_evidence:
+            return False
+
+    overlap = normalized_sentence & normalized_evidence
+
+    if len(normalized_sentence) >= 3:
+        return len(overlap) >= 2
+
+    return bool(overlap)
+
+
 def _score_citation_candidate(
     sentence: str,
     evidence: str,
@@ -1406,6 +1477,12 @@ def _select_sentence_citations(
         if density < MIN_CITATION_DENSITY:
             continue
 
+        if not _has_citation_detail_overlap(
+            sentence,
+            evidence_text,
+        ):
+            continue
+
         scored.append(
             (
                 chunk_id,
@@ -1502,11 +1579,13 @@ def _extract_valid_unit_citations(
     valid: List[str] = []
 
     for citation in citations:
-        if citation not in provenance:
+        citation_id = citation.strip()[1:-1].strip()
+
+        if citation_id not in provenance:
             continue
 
-        if citation not in valid:
-            valid.append(citation)
+        if citation_id not in valid:
+            valid.append(citation_id)
 
         if len(valid) >= MAX_CITATIONS_PER_SENTENCE:
             break
@@ -1527,11 +1606,13 @@ def _extract_invalid_unit_citations(
     invalid: List[str] = []
 
     for citation in citations:
-        if citation in provenance:
+        citation_id = citation.strip()[1:-1].strip()
+
+        if citation_id in provenance:
             continue
 
-        if citation not in invalid:
-            invalid.append(citation)
+        if citation_id not in invalid:
+            invalid.append(citation_id)
 
     return invalid
 
@@ -1708,16 +1789,105 @@ def _enforce_citations(
                 cleaned_unit
             ).strip()
 
-            repaired = _append_citations_to_unit(
+            # ----------------------------------------------------------
+            # Validate model-supplied citations against the sentence.
+            #
+            # A citation ID can be valid while still being the wrong
+            # citation for the claim. Do not blindly trust valid IDs.
+            # If the model citation does not lexically support the
+            # sentence, fall back to the existing evidence selector.
+            # ----------------------------------------------------------
+            validated_model_citations: List[str] = []
+
+            for citation in model_citations:
+                payload = evidence.get(citation)
+
+                if not payload:
+                    continue
+
+                evidence_text = str(
+                    payload.get("text") or ""
+                ).strip()
+
+                if not evidence_text:
+                    continue
+
+                (
+                    _citation_score,
+                    citation_overlap,
+                    citation_density,
+                    _citation_coverage,
+                ) = _score_citation_candidate(
+                    cleaned_without_citations,
+                    evidence_text,
+                    payload.get("document"),
+                )
+
+                if (
+                    citation_overlap >= MIN_CITATION_OVERLAP
+                    and citation_density >= MIN_CITATION_DENSITY
+                    and _has_citation_detail_overlap(
+                        cleaned_without_citations,
+                        evidence_text,
+                    )
+                ):
+                    validated_model_citations.append(citation)
+
+            if validated_model_citations:
+                repaired = _append_citations_to_unit(
+                    cleaned_without_citations,
+                    validated_model_citations,
+                )
+
+                repaired_units.append(repaired)
+
+                units_cited += 1
+
+                valid_model_citations_preserved += len(
+                    validated_model_citations
+                )
+
+                # Any valid model citation that failed sentence-level
+                # validation was replaced by the lexical selector below.
+                invalid_model_citations_removed += max(
+                    0,
+                    len(model_citations)
+                    - len(validated_model_citations),
+                )
+
+                continue
+
+            # The model supplied valid citation IDs, but they do not
+            # actually match this sentence. Select citations from the
+            # evidence using the same deterministic scoring path used
+            # for uncited sentences.
+            selected = _select_sentence_citations(
                 cleaned_without_citations,
-                model_citations,
+                evidence,
             )
 
-            repaired_units.append(repaired)
+            if selected:
+                repaired = _append_citations_to_unit(
+                    cleaned_without_citations,
+                    selected,
+                )
 
-            units_cited += 1
+                repaired_units.append(repaired)
 
-            valid_model_citations_preserved += len(model_citations)
+                citations_replaced += len(model_citations)
+                citations_injected += len(selected)
+                lexical_repair_units += 1
+                units_cited += 1
+
+                continue
+
+            # No citation could be deterministically matched. Preserve
+            # the cleaned sentence without the unsupported model
+            # citation rather than trusting an incorrect attribution.
+            repaired_units.append(cleaned_without_citations)
+
+            citations_replaced += len(model_citations)
+            lexical_repair_units += 1
 
             continue
 
@@ -2076,6 +2246,9 @@ def generate_node(
             )
 
             raw_answer_text = _extract_response_text(response)
+            raw_answer_text = _normalize_citation_markers(
+                raw_answer_text
+            )
 
             raw_answer_text = _strip_invalid_citation_markers(
                 raw_answer_text,
