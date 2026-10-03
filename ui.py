@@ -120,7 +120,6 @@ def get_inprocess_backend():
     return TestClient(app)
 
 
-
 # ============================================================
 # LOGFIRE (configured once per process, not on every rerun)
 # ============================================================
@@ -2054,31 +2053,45 @@ def transcript_markdown(messages):
 # ============================================================
 
 
-@st.cache_data(ttl=10, show_spinner=False)
 def check_backend_health(backend_url):
     try:
         if STREAMLIT_CLOUD_MODE:
-            return get_inprocess_backend().get("/health").ok
+            response = get_inprocess_backend().get("/health")
+            print(
+                f"KnowledgeMesh health response: {response.status_code}",
+                flush=True,
+            )
+            return response.status_code == 200
 
-        return requests.get(f"{backend_url}/health", timeout=4).ok
+        response = requests.get(f"{backend_url}/health", timeout=4)
+        return response.ok
 
-    except Exception:
+    except Exception as exc:
+        print(
+            f"KnowledgeMesh health error: {type(exc).__name__}: {exc}",
+            flush=True,
+        )
         return False
 
 
-@st.cache_data(ttl=10, show_spinner=False)
 def check_backend_ready(backend_url):
     try:
         if STREAMLIT_CLOUD_MODE:
             response = get_inprocess_backend().get("/ready")
-        else:
-            response = requests.get(f"{backend_url}/ready", timeout=4)
+            return (
+                response.status_code == 200 and response.json().get("status") == "ready"
+            )
 
+        response = requests.get(f"{backend_url}/ready", timeout=4)
         return response.ok and response.json().get("status") == "ready"
 
     except (requests.RequestException, ValueError):
         return False
-    except Exception:
+    except Exception as exc:
+        print(
+            f"KnowledgeMesh ready error: {type(exc).__name__}: {exc}",
+            flush=True,
+        )
         return False
 
 
@@ -2088,18 +2101,22 @@ def fetch_kb_stats(backend_url):
     try:
         if STREAMLIT_CLOUD_MODE:
             response = get_inprocess_backend().get("/stats")
+            if response.status_code == 200:
+                payload = response.json()
+                return payload if isinstance(payload, dict) else None
         else:
             response = requests.get(f"{backend_url}/stats", timeout=4)
-
-        if response.ok:
-            payload = response.json()
-
-            return payload if isinstance(payload, dict) else None
+            if response.ok:
+                payload = response.json()
+                return payload if isinstance(payload, dict) else None
 
     except (requests.RequestException, ValueError):
         pass
-    except Exception:
-        pass
+    except Exception as exc:
+        print(
+            f"KnowledgeMesh stats error: {type(exc).__name__}: {exc}",
+            flush=True,
+        )
 
     return None
 
@@ -3000,5 +3017,4 @@ display_html(
     "KnowledgeMesh · self-correcting agentic RAG over your local FastAPI backend."
     "</div>"
 )
-
 
