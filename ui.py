@@ -71,6 +71,8 @@ STREAMLIT_CLOUD_MODE = str(
     _secret_or_env("STREAMLIT_CLOUD_MODE", "false")
 ).strip().lower() in {"1", "true", "yes", "on"}
 
+print(f"KnowledgeMesh runtime: STREAMLIT_CLOUD_MODE={STREAMLIT_CLOUD_MODE}")
+
 if STREAMLIT_CLOUD_MODE:
     DEFAULT_BACKEND_URL = "in-process://knowledgemesh"
 else:
@@ -2998,3 +3000,5 @@ display_html(
     "KnowledgeMesh · self-correcting agentic RAG over your local FastAPI backend."
     "</div>"
 )
+
+
