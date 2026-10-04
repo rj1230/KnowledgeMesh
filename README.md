@@ -1,119 +1,201 @@
+<div align="center">
+
 # 🧠 KnowledgeMesh
 
-**Enterprise Agentic RAG platform** built with LangGraph, Qdrant, Gemini Embeddings, FlashRank reranking, Portkey LLM routing, and NeMo Guardrails — for secure, grounded AI knowledge retrieval.
+### Production-Grade Agentic RAG Platform
 
-KnowledgeMesh separates **"True Data" from "Noisy Data"** using semantic re-ranking and history-aware planning. The result is a RAG pipeline that stays grounded, traceable, and resistant to prompt injection — not just a wrapper around a vector search call.
+**Self-correcting, evidence-grounded enterprise RAG with measurable retrieval quality, citation provenance, safety guardrails, and full observability.**
 
-🔗 **Live demo:** [knowledgemesh.streamlit.app](https://knowledgemesh-eturkr3qigc6cugmjdvifh.streamlit.app/)
+[![Python](https://img.shields.io/badge/Python-3.11+-blue?logo=python&logoColor=white)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-Backend-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![LangGraph](https://img.shields.io/badge/LangGraph-Agent_Orchestration-1C3C3C)](https://github.com/langchain-ai/langgraph)
+[![Qdrant](https://img.shields.io/badge/Qdrant-Vector_Search-DC382D)](https://qdrant.tech/)
+[![Streamlit](https://img.shields.io/badge/Streamlit-UI-FF4B4B?logo=streamlit&logoColor=white)](https://streamlit.io/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+🔗 **Live Demo:** [KnowledgeMesh Streamlit App](https://knowledgemesh-eturkr3qigc6cugmjdvifh.streamlit.app/)
+
+</div>
 
 ---
 
-## ✨ Key Features
+## 📌 Overview
 
-**Reasoning & safety**
-- **LangGraph agentic reasoning** — multi-step planning (Planner → Retriever → Responder) with conversation memory, not a single-shot RAG call
-- **NeMo Guardrails** — gates off-topic, jailbreak, and injection inputs *before* retrieval runs, and validates responses on the way out
-- **Portkey LLM Gateway** — routes every LLM call with automatic fallback between primary and backup Groq keys
+**KnowledgeMesh** is a production-oriented Agentic RAG platform designed for secure, grounded, and traceable enterprise knowledge retrieval.
 
-**Retrieval**
-- **Qdrant Cloud + FlashRank** — vector search paired with local semantic reranking to separate true signal from noise
-- **Gemini embeddings** — `gemini-embedding-2-preview` (3072-dim) via `langchain-google-genai`
+Instead of treating retrieval as a single vector-search call, KnowledgeMesh uses a LangGraph-based multi-stage agent pipeline that plans queries, retrieves candidates, reranks evidence, generates answers, validates citations, evaluates claim-level grounding, and revises or abstains when evidence is insufficient.
 
-**Ingestion**
-- **Local document parsing** — PDF, HTML, TXT, DOCX, and PPTX parsed locally with no external OCR dependency
+The platform is built around one core principle:
 
-**Observability & evaluation**
-- **Full tracing** — Pydantic Logfire + LangSmith trace nesting across every agent node
-- **RAGAS eval suite** — 6-metric evaluation pipeline with a dedicated Streamlit demo app
+> **Do not return an answer unless it can be traced back to valid, document-scoped evidence.**
+
+---
+
+## ✨ Key Capabilities
+
+### 🤖 Agentic Reasoning
+
+- **LangGraph orchestration** for a multi-step reasoning workflow rather than a one-shot RAG request.
+- **History-aware query planning** that adapts retrieval to conversational context.
+- **Controlled answer revision and abstention** when generated claims are unsupported by retrieved evidence.
+- **Reasoning transparency** through an inspectable agent execution trajectory.
+
+### 🔍 Production Retrieval
+
+- **Qdrant Cloud** for scalable dense vector search.
+- **Gemini embeddings** for high-dimensional semantic representations.
+- **FlashRank** for local semantic reranking.
+- **Multi-stage retrieval pipeline:** `Dense@50 → FlashRank@50 → Final@5`.
+- **Canonical evidence identity** using `(document_id, chunk_id)` and Qdrant point IDs to prevent cross-document citation collisions.
+
+### 🛡️ Safety & Grounding
+
+- **Fail-closed technical-scope guard** that rejects non-technical, ambiguous, and scope-bypass requests before retrieval.
+- **NeMo Guardrails** for input filtering, topic control, jailbreak resistance, and output validation.
+- **HHEMv2 claim-level grounding** to detect unsupported generated claims.
+- **Citation validation** to ensure every user-facing citation maps to valid retrieved evidence.
+- **Bounded revision loop** that corrects unsupported claims using the exact supporting evidence.
+
+### 📈 Evaluation & Reliability
+
+- **Retrieval benchmarking** with Hit@5 and MRR.
+- **Claim-level grounding evaluation** using HHEMv2.
+- **Citation validity, answer relevance, and execution-trajectory checks.**
+- **63 automated tests**, including adversarial, boundary-case, and critical failure-mode regression coverage.
+- **RAGAS-based evaluation suite** for broader RAG quality assessment.
+
+### 📡 Observability & Operations
+
+- **FastAPI backend** with health and readiness endpoints.
+- **Portkey LLM Gateway** with primary and fallback Groq key routing.
+- **Pydantic Logfire and LangSmith tracing** across agent nodes.
+- **SQLite audit logging** for query and execution history.
+- **Streamlit Cloud-ready UI** with reasoning and pipeline visibility.
+
+---
+
+## 📊 Results
+
+| Evaluation Area | Result |
+|---|---:|
+| Retrieval benchmark | 70 probes |
+| Retrieval pipeline | Dense@50 → FlashRank@50 → Final@5 |
+| Overall Hit@5 | **0.857** |
+| Dense-dominant evaluation Hit@5 | **0.871** |
+| Dense-dominant evaluation MRR | **0.758** |
+| Automated tests | **63** |
+
+> Retrieval metrics are measured on the project’s curated technical evaluation benchmark. Grounding, citation validity, relevance, and trajectory checks are part of the automated evaluation and regression suite.
 
 ---
 
 ## 🏗️ Architecture
 
-### Query pipeline
-
 ```mermaid
 flowchart TD
-    A[User Query] --> B[NeMo Guardrails<br/>input gate]
-    B -->|blocked| Z[Rejected / Safe Response]
-    B -->|passed| C[Planner Node<br/>LangGraph]
-    C --> D[Retriever Node]
-    D --> E[Qdrant Cloud<br/>Vector Search]
-    E --> F[FlashRank<br/>Reranking]
-    F --> G[Responder Node]
-    G --> H[NeMo Guardrails<br/>output gate]
-    H --> I[Final Response]
+    A[User Query] --> B[Technical Scope Guard]
+    B -->|Rejected| Z[Safe Rejection Response]
+    B -->|Accepted| C[NeMo Guardrails Input Gate]
+    C --> D[Planner Node]
+    D --> E[Retriever Node]
+    E --> F[Qdrant Cloud Dense Search]
+    F --> G[FlashRank Reranker]
+    G --> H[Context Selection]
+    H --> I[Responder Node]
+    I --> J[Citation Validator]
+    J --> K[HHEMv2 Grounding Critic]
+    K -->|Unsupported Claims| L[Bounded Answer Revision]
+    L --> K
+    K -->|Grounded| M[NeMo Guardrails Output Gate]
+    K -->|Insufficient Evidence| N[Abstain / Controlled Response]
+    M --> O[Final Grounded Answer]
+    N --> O
 
     subgraph Gateway
-    P[Portkey LLM Gateway<br/>Groq primary + fallback]
+    P[Portkey LLM Gateway<br/>Groq Primary + Fallback]
     end
-    C -.-> P
-    G -.-> P
+
+    D -.-> P
+    I -.-> P
+    L -.-> P
 ```
 
-1. **Input gate** — NeMo Guardrails blocks off-topic, jailbreak, and injection queries
-2. **Planner** — plans multi-step retrieval using conversation history
-3. **Retriever** — queries Qdrant Cloud with Gemini embeddings
-4. **Reranker** — FlashRank reorders results to surface true signal over noise
-5. **Responder** — generates a grounded answer through the Portkey-routed LLM
-6. **Output gate** — Guardrails validates the response before it is returned
+### Query Flow
 
-Every node emits Logfire and LangSmith spans for full trace visibility.
+1. **Technical Scope Guard** rejects non-technical, ambiguous, or scope-bypass requests before retrieval.
+2. **NeMo Guardrails** filters jailbreak, injection, and off-topic inputs.
+3. **Planner** creates a retrieval strategy using conversation history.
+4. **Retriever** queries Qdrant using Gemini embeddings.
+5. **FlashRank** reranks retrieved candidates to prioritize relevant evidence.
+6. **Responder** generates an answer from the selected context.
+7. **Citation Validator** verifies that citations map to valid document-scoped evidence.
+8. **HHEMv2 Grounding Critic** detects unsupported atomic claims.
+9. **Revision Node** revises unsupported claims using evidence-specific feedback or triggers abstention.
+10. **Output Guardrails** validate the final response before returning it to the user.
 
-### Ingestion pipeline
+---
+
+## 📥 Ingestion Pipeline
 
 ```mermaid
 flowchart LR
-    A[DATA/<br/>PDF · HTML · TXT · DOCX · PPTX] --> B[Local loaders]
-    B --> C[Paragraph chunker<br/>1500 chars max]
-    C --> D[Gemini embeddings<br/>3072-dim]
+    A[DATA/<br/>PDF · HTML · TXT · DOCX · PPTX] --> B[Local Document Loaders]
+    B --> C[Paragraph Chunker<br/>1500-char max]
+    C --> D[Gemini Embeddings<br/>3072-dim]
     D --> E[Qdrant Cloud]
-    C --> F[processed_data/<br/>parsed + chunked JSON]
+    C --> F[processed_data/<br/>Parsed + Chunked JSON]
 ```
+
+- Documents are parsed locally with no external OCR dependency.
+- Content is chunked into paragraph-based segments with a maximum length of 1,500 characters.
+- Each chunk retains a canonical `(document_id, chunk_id)` identity.
+- Embeddings and Qdrant point IDs are linked to the same evidence identity used by citations and grounding checks.
 
 ---
 
 ## 🧩 Tech Stack
 
-| Layer                 | Tool                                                                        |
-| --------------------- | --------------------------------------------------------------------------- |
-| Agent orchestration   | [LangGraph](https://github.com/langchain-ai/langgraph)                      |
-| LLM gateway / routing | [Portkey](https://portkey.ai/) (Groq primary + fallback key)                |
-| Guardrails            | [NeMo Guardrails](https://github.com/NVIDIA/NeMo-Guardrails)                |
-| Vector database       | [Qdrant Cloud](https://qdrant.tech/)                                        |
-| Reranking             | [FlashRank](https://github.com/PrithivirajDamodaran/FlashRank) (local)      |
-| Embeddings            | Google `gemini-embedding-2-preview` (3072-dim) via `langchain-google-genai` |
-| Document parsing      | `pypdf` (PDF) + local HTML/TXT/DOCX/PPTX parsers                            |
-| Observability         | Pydantic Logfire + LangSmith                                                |
-| Evaluation            | [RAGAS](https://github.com/explodinggradients/ragas) (6-metric suite)       |
-| API                   | FastAPI                                                                     |
-| Demo UI               | Streamlit                                                                   |
+| Layer | Tools |
+|---|---|
+| Agent orchestration | LangGraph |
+| Backend API | FastAPI |
+| Vector database | Qdrant Cloud |
+| Embeddings | Google Gemini Embeddings, 3072-dim |
+| Reranking | FlashRank |
+| LLM routing | Portkey LLM Gateway with Groq primary and fallback keys |
+| Safety | NeMo Guardrails |
+| Grounding evaluation | HHEMv2 |
+| Observability | Pydantic Logfire, LangSmith |
+| Evaluation | RAGAS, custom retrieval/grounding/citation suite |
+| Document parsing | pypdf, HTML, TXT, DOCX, PPTX loaders |
+| Audit storage | SQLite |
+| UI | Streamlit |
 
 ---
 
 ## 📂 Project Structure
 
-```
+```text
 KnowledgeMesh/
 ├── app/
-│   ├── agents/          # Planner / Retriever / Responder nodes (LangGraph)
-│   ├── gateway/         # Portkey routing config
-│   ├── guardrails/      # NeMo Guardrails config (jailbreak, topic filtering, dialogue mgmt)
+│   ├── agents/               # LangGraph planner, retriever, responder, critic, revision nodes
+│   ├── gateway/              # Portkey LLM routing configuration
+│   ├── guardrails/           # NeMo Guardrails input/output safety configuration
 │   ├── ingestion/
-│   │   ├── chunking/    # Paragraph-based splitter, 1500-char max
-│   │   └── loaders/     # pypdf + HTML/TXT/DOCX/PPTX parsers
+│   │   ├── chunking/         # Paragraph-based chunking
+│   │   └── loaders/          # PDF, HTML, TXT, DOCX, and PPTX parsers
 │   ├── services/
-│   │   └── retrieval/   # Gemini embeddings + Qdrant + FlashRank
+│   │   └── retrieval/        # Gemini embeddings, Qdrant search, FlashRank reranking
 │   ├── config.py
-│   └── main.py          # FastAPI entrypoint — guardrails gate + /query endpoint
-├── evals/               # RAGAS suite + 3-tab Streamlit demo
-├── frontend/
-├── tests/
-├── DATA/                # Sample True vs Noisy datasets
-├── processed_data/      # Auto-generated parsed/chunked JSON per document
-├── ui.py                # Streamlit chat interface with reasoning-step transparency
-├── check_env.py         # Environment / API key check
-├── .devcontainer/       # Dev container config
+│   └── main.py               # FastAPI entrypoint and query endpoint
+├── evals/                    # Retrieval, grounding, citation, relevance, and RAGAS evaluation
+├── frontend/                 # Frontend assets
+├── tests/                    # Automated unit, integration, and regression tests
+├── DATA/                     # Sample technical and noisy datasets
+├── processed_data/           # Generated parsed and chunked JSON
+├── ui.py                     # Streamlit Agentic RAG console
+├── check_env.py              # Environment and API-key validation
+├── .devcontainer/            # Development container configuration
 └── requirements.txt
 ```
 
@@ -121,45 +203,175 @@ KnowledgeMesh/
 
 ## 🚀 Quick Start
 
+### 1. Clone and install
+
 ```bash
-# 1. Clone and install
-git clone https://github.com/rj1230/KnowledgeMesh.git
+git clone [https://github.com/rj1230/KnowledgeMesh.git](https://github.com/rj1230/KnowledgeMesh.git)
 cd KnowledgeMesh
 pip install -r requirements.txt
+```
 
-# 2. Add your API keys to a .env file (see the table below)
+### 2. Configure environment variables
 
-# 3. Verify the environment
+Create a `.env` file in the project root:
+
+```env
+# LLM routing
+PORTKEY_API_KEY=your_portkey_api_key
+GROQ_API_KEY_PRIMARY=your_primary_groq_key
+GROQ_API_KEY_BACKUP=your_backup_groq_key
+
+# Embeddings
+GOOGLE_API_KEY=your_google_ai_api_key
+
+# Vector database
+QDRANT_URL=your_qdrant_cloud_url
+QDRANT_API_KEY=your_qdrant_api_key
+
+# Observability
+LANGSMITH_API_KEY=your_langsmith_api_key
+LOGFIRE_TOKEN=your_logfire_token
+```
+
+### 3. Verify the environment
+
+```bash
 python check_env.py
+```
 
-# 4. Start the API
-uvicorn app.main:app --reload
+### 4. Start the FastAPI backend
 
-# 5. Launch the chat UI
+```bash
+uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+```
+
+### 5. Launch the Streamlit UI
+
+```bash
 streamlit run ui.py
 ```
 
-**Services you'll need keys for**
+### 6. Run the evaluation suite
 
-| Service | Used for |
-|---|---|
-| Portkey + Groq (primary and backup key) | LLM routing and fallback |
-| Google AI (Gemini) | Embeddings |
-| Qdrant Cloud | Vector storage and search |
-| LangSmith and Logfire | Tracing (observability) |
+```bash
+python -m evals.run_evaluation
+```
 
-Sample datasets for testing live in `DATA/`, and the RAGAS evaluation suite and its Streamlit demo are in `evals/`.
+To save results to a custom file:
+
+```bash
+python -m evals.run_evaluation --output evals/results/full_eval.json
+```
 
 ---
 
-## 🛡️ Guardrails & Data Quality
+## 🔑 Required Services
 
-- **Input gate** — NeMo Guardrails filters off-topic queries, jailbreak attempts, and prompt injection before retrieval runs
-- **True vs Noisy data separation** — semantic reranking (FlashRank) and history-aware planning surface grounded content over noise
-- **Output gate** — responses are checked before being returned to the user
+| Service | Purpose |
+|---|---|
+| Portkey + Groq | LLM routing, primary model access, and fallback keys |
+| Google AI / Gemini | Embedding generation |
+| Qdrant Cloud | Vector storage and retrieval |
+| LangSmith | Agent tracing and observability |
+| Logfire | Structured application tracing |
+
+---
+
+## 🧪 Evaluation Coverage
+
+KnowledgeMesh evaluates the system across multiple reliability dimensions:
+
+- **Retrieval quality:** Hit@5, MRR, and reranking effectiveness.
+- **Grounding:** HHEMv2-based supported versus unsupported claim detection.
+- **Citation validity:** Verification that citations resolve to valid document-scoped evidence.
+- **Answer relevance:** Whether the final response addresses the user query.
+- **Execution trajectory:** Whether the agent follows the expected pipeline behavior.
+- **Safety regression:** Adversarial, ambiguous, off-topic, jailbreak, and scope-bypass cases.
+
+---
+
+## 🛡️ Safety Model
+
+KnowledgeMesh uses a defense-in-depth approach:
+
+- **Pre-retrieval scope guard:** Blocks requests outside the platform’s technical knowledge domain.
+- **Input guardrails:** Filters prompt injection, jailbreaks, and off-topic requests.
+- **Evidence-grounded generation:** Uses only selected retrieved context.
+- **Citation validation:** Ensures citations point to valid evidence identities.
+- **Claim-level grounding:** Detects unsupported generated claims using HHEMv2.
+- **Bounded revision:** Revises unsupported claims using evidence-specific feedback.
+- **Abstention:** Avoids answering when evidence is insufficient.
+- **Output guardrails:** Performs a final response safety check.
+
+---
+
+## 🖥️ API
+
+### Health check
+
+```http
+GET /health
+```
+
+### Readiness check
+
+```http
+GET /ready
+```
+
+### Query endpoint
+
+```http
+POST /query
+```
+
+Request:
+
+```json
+{
+  "q": "Explain how the retrieval pipeline handles irrelevant documents.",
+  "thread_id": "demo-session"
+}
+```
+
+---
+
+## 📸 Screenshots
+
+<!-- Add screenshots here -->
+<!-- ![KnowledgeMesh Chat](assets/chat.png) -->
+<!-- ![Agent Reasoning Trace](assets/reasoning.png) -->
+<!-- ![Evaluation Dashboard](assets/evaluation.png) -->
+
+---
+
+## 🎯 Why This Project Matters
+
+Most RAG demos stop at “embed documents, search a vector database, and call an LLM.”
+
+KnowledgeMesh focuses on the harder production problems:
+
+- Can the system retrieve the right evidence?
+- Can every citation be traced to a specific document chunk?
+- Can unsupported claims be detected and corrected?
+- Can the system refuse to answer when evidence is insufficient?
+- Can agent behavior be observed, tested, and regression-checked?
+- Can the platform operate safely with fallback routing and production endpoints?
+
+KnowledgeMesh is designed to answer **yes** to each of these questions.
 
 ---
 
 ## 📄 License
 
-MIT
+This project is licensed under the MIT License.
+
+---
+
+## 👤 Author
+
+**Raj Rajput**  
+Aspiring AI/ML Engineer · Agentic AI · RAG Systems · Machine Learning
+
+- GitHub: [@rj1230](https://github.com/rj1230)
+- Live Demo: [KnowledgeMesh Streamlit App](https://knowledgemesh-eturkr3qigc6cugmjdvifh.streamlit.app/)
