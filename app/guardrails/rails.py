@@ -98,7 +98,7 @@ _JAILBREAK_RESPONSE = (
 @action(name="check_topic")
 async def check_topic(
     context: dict | None = None,
-) -> bool:
+) -> str:
     """
     Determine whether a user request is plausibly within the
     KnowledgeMesh technical knowledge domain.
@@ -130,9 +130,9 @@ async def check_topic(
 
     if _check_topic_llm is None:
         logfire.warning(
-            "⚠️ check_topic called before classifier initialization — allowing request."
+            "⚠️ check_topic called before classifier initialization — treating request as ambiguous."
         )
-        return True
+        return "AMBIGUOUS"
 
     ctx = context or {}
 
@@ -150,7 +150,7 @@ async def check_topic(
             "⚠️ check_topic received no user message "
             f"(keys={list(ctx.keys())}) — allowing."
         )
-        return True
+        return "AMBIGUOUS"
 
     # --------------------------------------------------------
     # Deterministic jailbreak protection
@@ -158,7 +158,7 @@ async def check_topic(
 
     if _is_jailbreak_attempt(user_message):
         logfire.warning(f"🛡️ Jailbreak attempt detected | query='{user_message[:120]}'")
-        return False
+        return "NON_TECHNICAL"
 
     # --------------------------------------------------------
     # Scope classifier
@@ -188,10 +188,28 @@ The downstream LangGraph pipeline will determine that by using:
     - citation validation
 
 ============================================================
+CLASSIFICATION
+============================================================
+
+Return exactly one of:
+
+TECHNICAL
+    Clearly related to technical knowledge, engineering,
+    software, AI/ML, infrastructure, or the indexed
+    technical knowledge base.
+
+NON_TECHNICAL
+    Clearly unrelated to the configured technical scope.
+
+AMBIGUOUS
+    The request could be technical, but there is not enough
+    context to determine that safely.
+
+============================================================
 ALLOW
 ============================================================
 
-Return YES for requests involving:
+TECHNICAL requests include:
     - AI
     - machine learning
     - deep learning
@@ -232,14 +250,14 @@ Return YES for requests involving:
 IMPORTANT:
 Requests such as:
     "Summarize the key points from our documentation."
-must be classified as YES. The downstream retrieval system
-decides whether sufficient documentation evidence exists.
+must be classified as TECHNICAL. The downstream retrieval
+system decides whether sufficient documentation evidence exists.
 
 ============================================================
-REJECT
+NON_TECHNICAL
 ============================================================
 
-Return NO for clearly unrelated requests such as:
+Classify clearly unrelated requests as NON_TECHNICAL, such as:
     - recipes
     - restaurant recommendations
     - weather
@@ -254,13 +272,14 @@ Return NO for clearly unrelated requests such as:
     - unrelated general-world questions
 
 ============================================================
-FAIL OPEN
+AMBIGUOUS
 ============================================================
 
-If uncertain, return YES.
+If the request might be technical but lacks enough context,
+return AMBIGUOUS.
 
-Do not reject a potentially technical request merely because
-the exact topic is not explicitly listed above.
+Do not guess the user's intended technical context.
+Do not launch retrieval for an ambiguous request.
 
 ============================================================
 USER REQUEST
@@ -272,10 +291,10 @@ USER REQUEST
 OUTPUT
 ============================================================
 
-Return exactly:
-    YES
-or:
-    NO
+Return exactly one:
+    TECHNICAL
+    NON_TECHNICAL
+    AMBIGUOUS
 """
 
     try:
@@ -285,35 +304,48 @@ or:
 
     except Exception as exc:
         # ----------------------------------------------------
-        # Fail open.
-        #
-        # LangGraph remains responsible for retrieval,
-        # evidence quality, grounding, and final correctness.
+        # Classifier failure -> safe clarification path.
+        # Do not launch retrieval when scope is unknown.
         # ----------------------------------------------------
 
         logfire.warning(
             "⚠️ check_topic classifier failed "
             f"({type(exc).__name__}: {exc}) "
-            "— allowing request."
+            "— treating request as ambiguous."
         )
-        return True
+        return "AMBIGUOUS"
 
-    if answer.startswith("YES"):
+    if answer.startswith("TECHNICAL"):
         logfire.info(f"🟢 KnowledgeMesh scope allowed | query='{user_message[:120]}'")
-        return True
+        return "TECHNICAL"
+
+    # Backward-compatible handling for an older classifier response.
+    if answer.startswith("YES"):
+        logfire.info(
+            f"🟢 KnowledgeMesh scope allowed via legacy YES "
+            f"| query='{user_message[:120]}'"
+        )
+        return "TECHNICAL"
 
     if answer.startswith("NO"):
         logfire.info(f"🔴 KnowledgeMesh scope rejected | query='{user_message[:120]}'")
-        return False
+        return "NON_TECHNICAL"
+
+    if answer.startswith("AMBIGUOUS"):
+        logfire.info(
+            f"🟡 KnowledgeMesh scope ambiguous | query='{user_message[:120]}'"
+        )
+        return "AMBIGUOUS"
 
     # --------------------------------------------------------
-    # Unknown model output -> fail open
+    # Unknown model output -> fail closed into clarification.
     # --------------------------------------------------------
 
     logfire.warning(
-        f"⚠️ check_topic returned unexpected output '{answer}' — allowing request."
+        f"⚠️ check_topic returned unexpected output '{answer}' "
+        "— treating request as ambiguous."
     )
-    return True
+    return "AMBIGUOUS"
 
 
 # ============================================================
@@ -387,7 +419,7 @@ def initialize_rails() -> None:
 
 def _run_topic_classifier(
     message: str,
-) -> bool:
+) -> str:
     """
     Execute the async scope classifier from the synchronous
     FastAPI request path.
@@ -398,11 +430,13 @@ def _run_topic_classifier(
     """
 
     if _check_topic_llm is None:
-        logfire.warning("⚠️ Topic classifier unavailable — allowing request.")
-        return True
+        logfire.warning(
+            "⚠️ Topic classifier unavailable — treating request as ambiguous."
+        )
+        return "AMBIGUOUS"
 
     try:
-        return bool(
+        return str(
             asyncio.run(
                 check_topic(
                     {
@@ -410,15 +444,15 @@ def _run_topic_classifier(
                     }
                 )
             )
-        )
+        ).strip().upper()
 
     except Exception as exc:
         logfire.warning(
             "⚠️ Topic classifier bridge failed "
             f"({type(exc).__name__}: {exc}) "
-            "— allowing request."
+            "— treating request as ambiguous."
         )
-        return True
+        return "AMBIGUOUS"
 
 
 # ============================================================
@@ -479,11 +513,11 @@ def guard(
         # GATE B · BROAD KNOWLEDGE SCOPE
         # ====================================================
 
-        allowed = _run_topic_classifier(message)
+        scope = _run_topic_classifier(message)
 
-        if not allowed:
+        if scope == "NON_TECHNICAL":
             response = (
-                "I'm Knowldemina, a KnowledgeMesh technical "
+                "I'm KnowledgeMesh, a KnowledgeMesh technical "
                 "knowledge assistant. This request falls outside "
                 "the configured technical knowledge scope, so I "
                 "can't provide a grounded answer for it. Please "
@@ -492,7 +526,28 @@ def guard(
                 "technical knowledge question."
             )
 
-            logfire.info(f"🔴 Pre-RAG guard blocked request | query='{message[:120]}'")
+            logfire.info(
+                f"🔴 Pre-RAG guard blocked non-technical request "
+                f"| query='{message[:120]}'"
+            )
+
+            return (
+                True,
+                response,
+            )
+
+        if scope == "AMBIGUOUS":
+            response = (
+                "I can help with technical questions, but I need "
+                "more technical context to route this request safely. "
+                "Please specify the technology, system, code, "
+                "architecture, or engineering problem you mean."
+            )
+
+            logfire.info(
+                f"🟡 Pre-RAG guard requested clarification "
+                f"| query='{message[:120]}'"
+            )
 
             return (
                 True,

@@ -28,9 +28,19 @@ def planner_node(state: AgentState):
 
     Task:
     1. If the latest message is a greeting (hi, hello) or a question that can be answered using ONLY the conversation history above (e.g., "what is my name"), respond with 'CONVERSATIONAL'.
-    2. If it is a technical question about Kubernetes, Intel, or Networking that requires fresh documentation, output a refined search query.
+    2. For a technical knowledge request, output a concise refined search query.
 
-    Output ONLY 'CONVERSATIONAL' or the search query.
+    Technical requests may include AI, machine learning, LLMs,
+    RAG, retrieval, agents, evaluation, software engineering,
+    programming, APIs, infrastructure, networking, cloud,
+    architecture, system design, or other technical subjects
+    covered by the KnowledgeMesh knowledge base.
+
+    The pre-RAG guard has already handled clearly non-technical
+    and ambiguous requests. Do not add scope restrictions based
+    on a short fixed topic list.
+
+    Output ONLY 'CONVERSATIONAL' or the refined search query.
     """
 
     with logfire.span("🧠 Planner Decision"):
