@@ -851,6 +851,88 @@ def _resolve_citation_provenance(
     }
 
 
+def _resolve_citation_metadata(
+    citation_provenance: Any,
+) -> Dict[str, Dict[str, Any]]:
+    """Resolve citation IDs to canonical corpus provenance."""
+
+    result: Dict[str, Dict[str, Any]] = {}
+
+    if not citation_provenance:
+        return result
+
+    if isinstance(citation_provenance, dict):
+        iterable: List[Any] = []
+
+        for key, value in citation_provenance.items():
+            if isinstance(value, dict):
+                item = dict(value)
+
+                if not item.get("citation_id"):
+                    item["citation_id"] = key
+
+                iterable.append(item)
+    elif isinstance(citation_provenance, (list, tuple)):
+        iterable = list(citation_provenance)
+    else:
+        iterable = []
+
+    for item in iterable:
+        if not isinstance(item, dict):
+            continue
+
+        citation_id = _safe_text(
+            item.get("citation_id")
+            or item.get("citation")
+            or item.get("id")
+        )
+
+        if not citation_id:
+            continue
+
+        document_id = item.get("document_id")
+        chunk_id = item.get("chunk_id")
+        point_id = item.get("point_id")
+
+        nested = item.get("document")
+
+        if isinstance(nested, dict):
+            if document_id is None:
+                document_id = nested.get("document_id")
+
+            if chunk_id is None:
+                chunk_id = nested.get("chunk_id")
+
+            if point_id is None:
+                point_id = (
+                    nested.get("point_id")
+                    or nested.get("id")
+                )
+
+        document_id = _safe_text(document_id) or None
+        point_id = _safe_text(point_id) or None
+
+        if chunk_id is not None:
+            try:
+                chunk_id = int(chunk_id)
+            except (TypeError, ValueError):
+                chunk_id = _safe_text(chunk_id) or None
+
+        canonical_evidence_id = None
+
+        if document_id is not None and chunk_id is not None:
+            canonical_evidence_id = f"{document_id}::{chunk_id}"
+
+        result[citation_id] = {
+            "citation_id": citation_id,
+            "document_id": document_id,
+            "chunk_id": chunk_id,
+            "point_id": point_id,
+            "canonical_evidence_id": canonical_evidence_id,
+        }
+
+    return result
+
 def _resolve_documents_by_citation(
     documents: Sequence[Any],
 ) -> Dict[str, List[str]]:
@@ -2059,6 +2141,10 @@ def grounding_critic_node(
 
     evidence_map = _build_evidence_map(state)
 
+    citation_metadata = _resolve_citation_metadata(
+        state.get("citation_provenance")
+    )
+
     available_citations = {
         citation_id for citation_id, windows in evidence_map.items() if windows
     }
@@ -2126,6 +2212,20 @@ def grounding_critic_node(
                 evidence_map,
             )
 
+            best_citation = _safe_text(
+                result.get("best_citation")
+            )
+
+            result["evidence_provenance"] = citation_metadata.get(
+                best_citation,
+                {
+                    "citation_id": best_citation or None,
+                    "document_id": None,
+                    "chunk_id": None,
+                    "point_id": None,
+                    "canonical_evidence_id": None,
+                },
+            )
             result["parent_claim"] = claim_text
 
             record_atomic_results.append(result)
