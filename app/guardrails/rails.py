@@ -145,6 +145,12 @@ async def check_topic(
 
     user_message = str(user_message).strip()
 
+    logfire.info(
+        "TOPIC_DIAG: classifier_state=INITIALIZED "
+        f"message_present={bool(user_message)} "
+        f"message_length={len(user_message)}"
+    )
+
     if not user_message:
         logfire.warning(
             "⚠️ check_topic received no user message "
@@ -298,9 +304,12 @@ Return exactly one:
 """
 
     try:
+        logfire.info("TOPIC_DIAG: invoking_classifier")
         response = await _check_topic_llm.ainvoke(prompt)
-
         answer = str(response.content).strip().upper()
+        logfire.info(
+        f"TOPIC_DIAG: classifier_returned={answer[:80]}"
+    )
 
     except Exception as exc:
         # ----------------------------------------------------
@@ -309,10 +318,10 @@ Return exactly one:
         # ----------------------------------------------------
 
         logfire.warning(
-            "⚠️ check_topic classifier failed "
-            f"({type(exc).__name__}: {exc}) "
-            "— treating request as ambiguous."
-        )
+    "TOPIC_DIAG: classifier_failed "
+    f"error_type={type(exc).__name__} "
+    f"error={exc}"
+)
         return "AMBIGUOUS"
 
     if answer.startswith("TECHNICAL"):
@@ -431,7 +440,7 @@ def _run_topic_classifier(
 
     if _check_topic_llm is None:
         logfire.warning(
-            "⚠️ Topic classifier unavailable — treating request as ambiguous."
+            "TOPIC_DIAG: classifier_state=UNINITIALIZED"
         )
         return "AMBIGUOUS"
 
