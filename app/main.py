@@ -91,6 +91,7 @@ from pydantic import BaseModel, Field
 from app.agents.graph import rag_agent
 from app.config import settings
 from app.services.retrieval.qdrant_service import client
+from app.services.retrieval.embedding import get_embedding_dim
 
 from app.guardrails import (
     guard,
@@ -158,6 +159,20 @@ def startup_event() -> None:
 
     try:
         # ----------------------------------------------------
+        # Embedding model
+        # ----------------------------------------------------
+        # Warm the canonical BGE model before accepting requests.
+        # This moves the expensive SentenceTransformer initialization
+        # out of the first user request.
+
+        embedding_dim = get_embedding_dim()
+
+        logfire.info(
+            "✅ Embedding model initialized successfully",
+            dimension=embedding_dim,
+        )
+
+        # ----------------------------------------------------
         # NeMo Guardrails
         # ----------------------------------------------------
 
@@ -169,16 +184,14 @@ def startup_event() -> None:
             "✅ NeMo Guardrails initialized successfully",
         )
 
-    except Exception:
+    except Exception as exc:
         _guardrails_initialized = False
 
         logger.exception(
-            "❌ Backend execution failed | "
-            "thread_id=%s | error_type=%s | error_message=%s | latency_ms=%s",
-            thread_id,
+            "❌ KnowledgeMesh startup failed | "
+            "error_type=%s | error_message=%s",
             type(exc).__name__,
             str(exc),
-            elapsed_ms,
         )
 
         raise

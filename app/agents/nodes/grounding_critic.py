@@ -1438,9 +1438,17 @@ def _deterministic_exact_support(
 
     claim_tokens = claim_normalized.split()
 
+    # An exact whole-evidence match is safe even for short claims.
+    if claim_normalized == evidence_normalized:
+        return True, 1.0
+
+    # Keep the minimum-token guard for short claims that only appear
+    # inside a larger evidence unit.
     if len(claim_tokens) < EXACT_MATCH_MIN_TOKENS:
         return False, 0.0
 
+    # Longer literal claims can be safely accepted when contained
+    # within a larger evidence unit.
     if claim_normalized in evidence_normalized:
         return True, 1.0
 
@@ -1511,6 +1519,7 @@ def _get_entailment_scorer():
 def _score_claim_against_evidence(
     claim: str,
     evidence_units: Sequence[str],
+    entailment_cache: Dict[Tuple[str, str], float] | None = None,
 ) -> Tuple[float, str]:
 
     claim = _clean_claim_text(claim)
@@ -1537,26 +1546,37 @@ def _score_claim_against_evidence(
         if not evidence_unit:
             continue
 
-        try:
-            score = scorer(
-                premise=evidence_unit,
-                hypothesis=claim,
-            )
+        cache_key = (claim, evidence_unit)
 
-            score = max(
-                0.0,
-                min(
-                    1.0,
-                    float(score),
-                ),
-            )
+        if entailment_cache is not None and cache_key in entailment_cache:
+            score = entailment_cache[cache_key]
+        else:
+            try:
+                score = scorer(
+                    premise=evidence_unit,
+                    hypothesis=claim,
+                )
 
-        except Exception:
-            continue
+                score = max(
+                    0.0,
+                    min(
+                        1.0,
+                        float(score),
+                    ),
+                )
+
+            except Exception:
+                continue
+
+            if entailment_cache is not None:
+                entailment_cache[cache_key] = score
 
         if score > best_score:
             best_score = score
             best_evidence_unit = evidence_unit
+
+            if best_score >= ENTAILMENT_THRESHOLD:
+                break
 
     return (
         best_score,
@@ -1619,6 +1639,7 @@ def _discover_supporting_evidence(
     claim: str,
     evidence_map: Dict[str, List[str]],
     excluded_citations: Sequence[str] = (),
+    entailment_cache: Dict[Tuple[str, str], float] | None = None,
 ) -> Dict[str, Any]:
     """
     Search all available evidence citations for independent support.
@@ -1683,6 +1704,7 @@ def _discover_supporting_evidence(
             ) = _score_claim_against_evidence(
                 claim,
                 evidence_windows,
+                entailment_cache,
             )
         except Exception:
             score = 0.0
@@ -1712,6 +1734,7 @@ def _validate_atomic_claim(
     claim: str,
     citations: Sequence[str],
     evidence_map: Dict[str, List[str]],
+    entailment_cache: Dict[Tuple[str, str], float] | None = None,
 ) -> Dict[str, Any]:
     """
     Validate one atomic claim against its cited evidence.
@@ -1767,6 +1790,12 @@ def _validate_atomic_claim(
                     best_citation = citation_id
                     best_method = "deterministic_exact_match"
 
+                    if exact_score >= 1.0:
+                        break
+
+            if best_score >= 1.0:
+                break
+
             # Semantic entailment fallback.
             try:
                 (
@@ -1775,6 +1804,7 @@ def _validate_atomic_claim(
                 ) = _score_claim_against_evidence(
                     claim,
                     evidence_windows,
+                    entailment_cache,
                 )
             except Exception:
                 score = 0.0
@@ -1810,6 +1840,7 @@ def _validate_atomic_claim(
         claim=claim,
         evidence_map=evidence_map,
         excluded_citations=citations,
+        entailment_cache=entailment_cache,
     )
 
     if discovered.get("supported"):
@@ -1875,6 +1906,7 @@ def _validate_atomic_claim(
 def _audit_citation_consistency(
     atomic_results: Sequence[Dict[str, Any]],
     evidence_map: Dict[str, List[str]],
+    entailment_cache: Dict[Tuple[str, str], float] | None = None,
 ) -> Dict[str, Any]:
     """
     Strictly verify that every citation attached to every atomic claim
@@ -1950,18 +1982,26 @@ def _audit_citation_consistency(
                     best_evidence_unit = evidence_window
                     best_method = "deterministic_exact_match"
 
-            try:
-                (
-                    score,
-                    evidence_window,
-                ) = _score_claim_against_evidence(
-                    claim,
-                    evidence_windows,
-                )
+                    if exact_score >= 1.0:
+                        break
 
-            except Exception:
+            if best_score >= 1.0:
                 score = 0.0
                 evidence_window = ""
+            else:
+                try:
+                    (
+                        score,
+                        evidence_window,
+                    ) = _score_claim_against_evidence(
+                    claim,
+                    evidence_windows,
+                    entailment_cache,
+                    )
+
+                except Exception:
+                    score = 0.0
+                    evidence_window = ""
 
             if score > best_score:
                 best_score = score
@@ -2139,6 +2179,9 @@ def grounding_critic_node(
 
     claim_records = _extract_claim_records(final_answer)
 
+    # Reuse repeated HHEMv2 claim/evidence scores within this request only.
+    entailment_cache: Dict[Tuple[str, str], float] = {}
+
     evidence_map = _build_evidence_map(state)
 
     citation_metadata = _resolve_citation_metadata(
@@ -2210,6 +2253,7 @@ def grounding_critic_node(
                 atomic_claim,
                 citations,
                 evidence_map,
+                entailment_cache,
             )
 
             best_citation = _safe_text(
@@ -2289,6 +2333,7 @@ def grounding_critic_node(
     citation_consistency = _audit_citation_consistency(
         atomic_results,
         evidence_map,
+        entailment_cache,
     )
 
     # ------------------------------------------------------------------
