@@ -13,7 +13,7 @@
 [![Streamlit](https://img.shields.io/badge/Streamlit-UI-FF4B4B?logo=streamlit&logoColor=white)](https://streamlit.io/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-🔗 **Live Demo:** [KnowledgeMesh Streamlit App](https://knowledgemesh-eturkr3qigc6cugmjdvifh.streamlit.app/)
+🔗 **Live Demo:** [KnowledgeMesh Streamlit App](https://knowledgemesh-e9thzvnbeeghgbeokytqml.streamlit.app/)
 
 </div>
 
