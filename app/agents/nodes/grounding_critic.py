@@ -2683,6 +2683,25 @@ def grounding_critic_node(
         2,
     )
 
+    # Request-scoped grounding / HHEMv2 diagnostics.
+    # Per-pass metrics above remain unchanged; these accumulate across
+    # every grounding pass executed during this request.
+    request_hhem_call_count = (
+        int(state.get("request_hhem_call_count", 0))
+        + hhem_call_count
+    )
+
+    request_hhem_total_ms = round(
+        float(state.get("request_hhem_total_ms", 0.0))
+        + hhem_total_ms,
+        2,
+    )
+
+    grounding_pass_count = (
+        int(state.get("grounding_pass_count", 0))
+        + 1
+    )
+
     trace_update = append_trace_event(
         state,
         step="grounding_critic",
@@ -2712,6 +2731,9 @@ def grounding_critic_node(
         "grounding_ms": grounding_ms,
         "hhem_call_count": hhem_call_count,
         "hhem_total_ms": hhem_total_ms,
+        "request_hhem_call_count": request_hhem_call_count,
+        "request_hhem_total_ms": request_hhem_total_ms,
+        "grounding_pass_count": grounding_pass_count,
         "grounding_feedback": feedback,
         "unsupported_atomic_claims": (unsupported_atomic_claims),
         "citation_consistency": citation_consistency,

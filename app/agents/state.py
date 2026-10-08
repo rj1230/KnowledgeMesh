@@ -226,6 +226,21 @@ class AgentState(TypedDict, total=False):
     # Structured grounding metrics.
     grounding_scores: Dict[str, Any]
 
+    # HHEMv2 / grounding performance diagnostics.
+    # These fields are observational only and do not affect validation.
+    grounding_ms: float
+    hhem_call_count: int
+    hhem_total_ms: float
+
+    # Request-scoped HHEMv2 / grounding diagnostics.
+    #
+    # hhem_call_count / hhem_total_ms above describe the current
+    # grounding pass. These fields aggregate across every grounding
+    # pass executed during this request, including revisions.
+    request_hhem_call_count: int
+    request_hhem_total_ms: float
+    grounding_pass_count: int
+
     # Detailed per-claim / per-evidence grounding information.
     grounding_details: Dict[str, Any]
 
