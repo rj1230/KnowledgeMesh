@@ -345,31 +345,6 @@ Request:
 
 ---
 
-## 🎯 Why This Project Matters
-
-Most RAG demos stop at “embed documents, search a vector database, and call an LLM.”
-
-KnowledgeMesh focuses on the harder production problems:
-
-- Can the system retrieve the right evidence?
-- Can every citation be traced to a specific document chunk?
-- Can unsupported claims be detected and corrected?
-- Can the system refuse to answer when evidence is insufficient?
-- Can agent behavior be observed, tested, and regression-checked?
-- Can the platform operate safely with fallback routing and production endpoints?
-
-KnowledgeMesh is designed to answer **yes** to each of these questions.
-
----
-
-## 📄 License
-
-This project is licensed under the MIT License.
-
----
-
-## 👤 Author
-
 **Raj Rajput**  
 Aspiring AI/ML Engineer · Agentic AI · RAG Systems · Machine Learning
 
