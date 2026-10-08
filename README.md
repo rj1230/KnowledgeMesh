@@ -304,47 +304,6 @@ KnowledgeMesh uses a defense-in-depth approach:
 - **Output guardrails:** Performs a final response safety check.
 
 ---
-
-## 🖥️ API
-
-### Health check
-
-```http
-GET /health
-```
-
-### Readiness check
-
-```http
-GET /ready
-```
-
-### Query endpoint
-
-```http
-POST /query
-```
-
-Request:
-
-```json
-{
-  "q": "Explain how the retrieval pipeline handles irrelevant documents.",
-  "thread_id": "demo-session"
-}
-```
-
----
-
-## 📸 Screenshots
-
-<!-- Add screenshots here -->
-<!-- ![KnowledgeMesh Chat](assets/chat.png) -->
-<!-- ![Agent Reasoning Trace](assets/reasoning.png) -->
-<!-- ![Evaluation Dashboard](assets/evaluation.png) -->
-
----
-
 **Raj Rajput**  
 Aspiring AI/ML Engineer · Agentic AI · RAG Systems · Machine Learning
 
