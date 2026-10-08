@@ -42,6 +42,7 @@ from pydantic import BaseModel, Field
 
 import re
 from difflib import SequenceMatcher
+from time import perf_counter
 from typing import Any, Dict, Iterable, List, Sequence, Tuple
 from app.evaluation.trace import append_trace_event
 
@@ -60,6 +61,8 @@ EVIDENCE_WINDOW_RADIUS = 1
 EVIDENCE_LARGE_WINDOW_RADIUS = 2
 
 MAX_ENTAILMENT_CANDIDATES = 8
+MAX_CITED_ENTAILMENT_CANDIDATES = 3
+MAX_DISCOVERY_ENTAILMENT_CANDIDATES = 3
 
 MIN_WINDOW_OVERLAP = 1
 FALLBACK_WINDOW_COUNT = 3
@@ -1505,7 +1508,7 @@ def _deterministic_exact_support(
 
 def _get_entailment_scorer():
     try:
-        from app.tools.entailment_tool import score_entailment
+        from app.tools.entailment_tool import score_entailment, get_hhem_profile
 
         return score_entailment
 
@@ -1520,6 +1523,7 @@ def _score_claim_against_evidence(
     claim: str,
     evidence_units: Sequence[str],
     entailment_cache: Dict[Tuple[str, str], float] | None = None,
+    max_candidates: int | None = None,
 ) -> Tuple[float, str]:
 
     claim = _clean_claim_text(claim)
@@ -1531,6 +1535,8 @@ def _score_claim_against_evidence(
         claim,
         evidence_units,
     )
+    if max_candidates is not None:
+        candidates = candidates[:max_candidates]
 
     if not candidates:
         return 0.0, ""
@@ -1635,6 +1641,114 @@ Answer:
 
 
 
+def _select_global_entailment_candidates(
+    claim: str,
+    evidence_map: Dict[str, List[str]],
+    excluded_citations: Sequence[str] = (),
+    included_citations: Sequence[str] = (),
+    limit: int = MAX_DISCOVERY_ENTAILMENT_CANDIDATES,
+) -> List[Tuple[str, str]]:
+    """
+    Select a globally bounded semantic-entailment candidate pool for one claim.
+
+    All eligible evidence windows compete in one relevance-ranked pool.
+    The caller controls the global HHEMv2 budget through ``limit`` so the
+    same helper can be used for cited verification and independent discovery
+    without multiplying calls by citation count.
+
+    Returns:
+        List of (citation_id, evidence_window) pairs.
+    """
+
+    claim = _clean_claim_text(claim)
+
+    if not claim:
+        return []
+
+    excluded = set(
+        _dedupe_preserve_order(excluded_citations)
+    )
+
+    included = set(
+        _dedupe_preserve_order(included_citations)
+    )
+
+    scored: List[
+        Tuple[
+            str,
+            str,
+            float,
+            int,
+            float,
+            int,
+        ]
+    ] = []
+
+    stable_index = 0
+
+    for citation_id, evidence_windows in evidence_map.items():
+        if citation_id in excluded:
+            continue
+
+        if included and citation_id not in included:
+            continue
+
+        if not evidence_windows:
+            continue
+
+        for evidence_window in _dedupe_preserve_order(evidence_windows):
+            evidence_window = _safe_text(evidence_window)
+
+            if not evidence_window:
+                continue
+
+            (
+                relevance,
+                overlap,
+                density,
+            ) = _window_relevance_score(
+                claim,
+                evidence_window,
+            )
+
+            if overlap >= MIN_WINDOW_OVERLAP:
+                scored.append(
+                    (
+                        citation_id,
+                        evidence_window,
+                        relevance,
+                        overlap,
+                        density,
+                        stable_index,
+                    )
+                )
+
+            stable_index += 1
+
+    scored.sort(
+        key=lambda item: (
+            item[2],
+            item[3],
+            item[4],
+            -item[5],
+        ),
+        reverse=True,
+    )
+
+    limit = max(1, int(limit))
+
+    return [
+        (citation_id, evidence_window)
+        for (
+            citation_id,
+            evidence_window,
+            _relevance,
+            _overlap,
+            _density,
+            _stable_index,
+        ) in scored[:limit]
+    ]
+
 def _discover_supporting_evidence(
     claim: str,
     evidence_map: Dict[str, List[str]],
@@ -1644,9 +1758,12 @@ def _discover_supporting_evidence(
     """
     Search all available evidence citations for independent support.
 
-    This is intentionally separate from citation validation:
-    an answer may cite the wrong chunk, or omit a citation entirely,
-    while another available generation chunk contains direct support.
+    Deterministic exact support scans all eligible evidence first.
+
+    Semantic discovery uses one GLOBAL candidate budget per claim rather
+    than spending MAX_DISCOVERY_ENTAILMENT_CANDIDATES for every citation.
+    This prevents HHEMv2 call multiplication when many citations are
+    available.
     """
 
     claim = _clean_claim_text(claim)
@@ -1669,6 +1786,10 @@ def _discover_supporting_evidence(
     best_citation = ""
     best_method = "entailment"
 
+    # -----------------------------------------------------------
+    # Phase 1: deterministic exact support across ALL evidence.
+    # This remains cheap and citation-aware.
+    # -----------------------------------------------------------
     for citation_id, evidence_windows in evidence_map.items():
         if citation_id in excluded:
             continue
@@ -1676,9 +1797,6 @@ def _discover_supporting_evidence(
         if not evidence_windows:
             continue
 
-        # -----------------------------------------------------------
-        # Deterministic exact support first.
-        # -----------------------------------------------------------
         for evidence_window in evidence_windows:
             (
                 exact_supported,
@@ -1694,27 +1812,65 @@ def _discover_supporting_evidence(
                 best_citation = citation_id
                 best_method = "deterministic_exact_match"
 
-        # -----------------------------------------------------------
-        # Semantic entailment fallback.
-        # -----------------------------------------------------------
-        try:
-            (
-                score,
-                evidence_window,
-            ) = _score_claim_against_evidence(
-                claim,
-                evidence_windows,
-                entailment_cache,
-            )
-        except Exception:
-            score = 0.0
-            evidence_window = ""
+                if best_score >= ENTAILMENT_THRESHOLD:
+                    break
 
-        if score > best_score:
-            best_score = score
-            best_evidence_unit = evidence_window
-            best_citation = citation_id
-            best_method = "entailment"
+        if best_score >= ENTAILMENT_THRESHOLD:
+            break
+
+    # -----------------------------------------------------------
+    # Phase 2: semantic discovery with ONE global budget.
+    # -----------------------------------------------------------
+    if best_score < ENTAILMENT_THRESHOLD:
+        candidates = _select_global_entailment_candidates(
+            claim,
+            evidence_map,
+            excluded_citations=excluded,
+            limit=MAX_DISCOVERY_ENTAILMENT_CANDIDATES,
+        )
+
+        for citation_id, evidence_window in candidates:
+            if citation_id in excluded:
+                continue
+
+            try:
+                scorer = _get_entailment_scorer()
+
+                cache_key = (
+                    claim,
+                    _safe_text(evidence_window),
+                )
+
+                if (
+                    entailment_cache is not None
+                    and cache_key in entailment_cache
+                ):
+                    score = entailment_cache[cache_key]
+                else:
+                    score = scorer(
+                        premise=evidence_window,
+                        hypothesis=claim,
+                    )
+                    score = max(
+                        0.0,
+                        min(1.0, float(score)),
+                    )
+
+                    if entailment_cache is not None:
+                        entailment_cache[cache_key] = score
+
+            except Exception:
+                continue
+
+            if score > best_score:
+                best_score = score
+                best_evidence_unit = evidence_window
+                best_citation = citation_id
+                best_method = "entailment"
+
+            # Stop immediately once the grounding threshold is met.
+            if best_score >= ENTAILMENT_THRESHOLD:
+                break
 
     supported = bool(
         best_score >= ENTAILMENT_THRESHOLD
@@ -1729,7 +1885,6 @@ def _discover_supporting_evidence(
         "support_method": best_method,
     }
 
-
 def _validate_atomic_claim(
     claim: str,
     citations: Sequence[str],
@@ -1739,10 +1894,14 @@ def _validate_atomic_claim(
     """
     Validate one atomic claim against its cited evidence.
 
-    If the cited evidence does not support the claim, search the other
-    available evidence citations for an independently supporting chunk.
-    This allows grounding validation to repair wrong or missing citations
-    instead of treating the first citation assignment as authoritative.
+    Deterministic exact support scans all cited evidence windows.
+
+    Semantic cited verification uses ONE global candidate budget across
+    all citations attached to the claim. This prevents the semantic
+    budget from multiplying by citation count.
+
+    If cited evidence does not support the claim, independent discovery
+    searches other available evidence using its own global budget.
     """
 
     claim = _clean_claim_text(claim)
@@ -1768,13 +1927,16 @@ def _validate_atomic_claim(
         best_citation = ""
         best_method = "entailment"
 
+        # -----------------------------------------------------------
+        # Phase 1A: deterministic exact support across ALL cited
+        # evidence. This is cheap and remains citation-aware.
+        # -----------------------------------------------------------
         for citation_id in citations:
             evidence_windows = evidence_map.get(citation_id, [])
 
             if not evidence_windows:
                 continue
 
-            # Deterministic exact support first.
             for evidence_window in evidence_windows:
                 (
                     exact_supported,
@@ -1790,31 +1952,70 @@ def _validate_atomic_claim(
                     best_citation = citation_id
                     best_method = "deterministic_exact_match"
 
-                    if exact_score >= 1.0:
-                        break
+        if best_score >= 1.0:
+            return {
+                "claim": claim,
+                "score": round(best_score, 4),
+                "supported": True,
+                "best_evidence_unit": best_evidence_unit,
+                "best_citation": best_citation,
+                "citations": [best_citation] if best_citation else [],
+                "support_method": best_method,
+            }
 
-            if best_score >= 1.0:
-                break
+        # -----------------------------------------------------------
+        # Phase 1B: semantic cited verification.
+        #
+        # IMPORTANT: all cited evidence competes in ONE global pool.
+        # MAX_CITED_ENTAILMENT_CANDIDATES therefore means exactly
+        # what it says: at most N HHEMv2 candidates per claim,
+        # regardless of how many citations the claim has.
+        # -----------------------------------------------------------
+        candidates = _select_global_entailment_candidates(
+            claim=claim,
+            evidence_map=evidence_map,
+            included_citations=citations,
+            limit=MAX_CITED_ENTAILMENT_CANDIDATES,
+        )
 
-            # Semantic entailment fallback.
+        for citation_id, evidence_window in candidates:
             try:
-                (
-                    score,
-                    evidence_window,
-                ) = _score_claim_against_evidence(
+                scorer = _get_entailment_scorer()
+
+                cache_key = (
                     claim,
-                    evidence_windows,
-                    entailment_cache,
+                    _safe_text(evidence_window),
                 )
+
+                if (
+                    entailment_cache is not None
+                    and cache_key in entailment_cache
+                ):
+                    score = entailment_cache[cache_key]
+                else:
+                    score = scorer(
+                        premise=evidence_window,
+                        hypothesis=claim,
+                    )
+                    score = max(
+                        0.0,
+                        min(1.0, float(score)),
+                    )
+
+                    if entailment_cache is not None:
+                        entailment_cache[cache_key] = score
+
             except Exception:
-                score = 0.0
-                evidence_window = ""
+                continue
 
             if score > best_score:
                 best_score = score
                 best_evidence_unit = evidence_window
                 best_citation = citation_id
                 best_method = "entailment"
+
+            if best_score >= ENTAILMENT_THRESHOLD:
+                break
 
         if (
             best_score >= ENTAILMENT_THRESHOLD
@@ -1826,16 +2027,16 @@ def _validate_atomic_claim(
                 "supported": True,
                 "best_evidence_unit": best_evidence_unit,
                 "best_citation": best_citation,
-                "citations": citations,
+                "citations": [best_citation] if best_citation else [],
                 "support_method": best_method,
             }
 
-    # ----------------------------------------------------------------
+    # ---------------------------------------------------------------
     # Second: cited evidence failed, or the claim was uncited.
     #
     # Search other available citations independently. Exclude the
     # original citations so a bad citation cannot simply validate itself.
-    # ----------------------------------------------------------------
+    # ---------------------------------------------------------------
     discovered = _discover_supporting_evidence(
         claim=claim,
         evidence_map=evidence_map,
@@ -1849,9 +2050,6 @@ def _validate_atomic_claim(
         )
 
         if discovered_citation:
-            # Replace stale citations with the independently discovered
-            # supporting citation. For an originally uncited claim this
-            # naturally produces a single repaired citation.
             repaired_citations = [discovered_citation]
         else:
             repaired_citations = list(citations)
@@ -1870,18 +2068,8 @@ def _validate_atomic_claim(
                 "support_method",
                 "discovered_support",
             ),
-            "citation_repaired": bool(
-                discovered_citation
-                and (
-                    not citations
-                    or citations != repaired_citations
-                )
-            ),
         }
 
-    # ---------------------------------------------------------------
-    # Final failure: preserve the original citation state.
-    # ---------------------------------------------------------------
     return {
         "claim": claim,
         "score": discovered.get("score", 0.0),
@@ -1895,10 +2083,9 @@ def _validate_atomic_claim(
             "",
         ),
         "citations": citations,
-        "support_method": (
-            "uncited"
-            if not citations
-            else discovered.get("support_method", "entailment")
+        "support_method": discovered.get(
+            "support_method",
+            "unsupported",
         ),
     }
 
@@ -1909,14 +2096,13 @@ def _audit_citation_consistency(
     entailment_cache: Dict[Tuple[str, str], float] | None = None,
 ) -> Dict[str, Any]:
     """
-    Strictly verify that every citation attached to every atomic claim
-    independently supports that claim.
+    Verify that every effective citation attached to every atomic claim
+    independently corresponds to the support result already established
+    during `_validate_atomic_claim()`.
 
-    This is intentionally separate from `_validate_atomic_claim()`.
-
-    Grounding semantics allow one citation to establish support for a claim
-    that carries multiple citation markers. Citation consistency is stricter:
-    every attached citation must independently support the claim.
+    The atomic validation pass is authoritative for entailment. This audit
+    deliberately performs no additional HHEMv2 inference so that citation
+    diagnostics do not duplicate expensive grounding work.
     """
 
     citation_results: List[Dict[str, Any]] = []
@@ -1942,6 +2128,19 @@ def _audit_citation_consistency(
 
         claims_checked += 1
 
+        best_citation = _safe_text(
+            atomic_result.get("best_citation")
+        )
+        best_score = float(
+            atomic_result.get("score", 0.0) or 0.0
+        )
+        best_evidence_unit = _safe_text(
+            atomic_result.get("best_evidence_unit")
+        )
+        best_method = _safe_text(
+            atomic_result.get("support_method")
+        ) or "entailment"
+
         for citation_id in citations:
             citations_checked += 1
 
@@ -1964,65 +2163,31 @@ def _audit_citation_consistency(
                 violations.append(result)
                 continue
 
-            best_score = 0.0
-            best_evidence_unit = ""
-            best_method = "entailment"
-
-            for evidence_window in evidence_windows:
-                (
-                    exact_supported,
-                    exact_score,
-                ) = _deterministic_exact_support(
-                    claim,
-                    evidence_window,
-                )
-
-                if exact_supported and exact_score > best_score:
-                    best_score = exact_score
-                    best_evidence_unit = evidence_window
-                    best_method = "deterministic_exact_match"
-
-                    if exact_score >= 1.0:
-                        break
-
-            if best_score >= 1.0:
-                score = 0.0
-                evidence_window = ""
-            else:
-                try:
+            if citation_id == best_citation:
+                score = best_score
+                supported = bool(
                     (
-                        score,
-                        evidence_window,
-                    ) = _score_claim_against_evidence(
-                    claim,
-                    evidence_windows,
-                    entailment_cache,
+                        atomic_result.get("supported")
+                        and score >= ENTAILMENT_THRESHOLD
                     )
+                    or best_method == "deterministic_exact_match"
+                )
+                evidence_unit = best_evidence_unit
+                support_method = best_method
 
-                except Exception:
-                    score = 0.0
-                    evidence_window = ""
-
-            if score > best_score:
-                best_score = score
-                best_evidence_unit = evidence_window
-                best_method = "entailment"
-
-            supported = bool(
-                best_score >= ENTAILMENT_THRESHOLD
-                or best_method == "deterministic_exact_match"
-            )
+            else:
+                score = 0.0
+                supported = False
+                evidence_unit = ""
+                support_method = "not_selected"
 
             result = {
                 "claim": claim,
                 "citation": citation_id,
-                "score": round(
-                    best_score,
-                    4,
-                ),
+                "score": round(score, 4),
                 "supported": supported,
-                "support_method": best_method,
-                "best_evidence_unit": best_evidence_unit,
+                "support_method": support_method,
+                "best_evidence_unit": evidence_unit,
             }
 
             citation_results.append(result)
@@ -2031,18 +2196,13 @@ def _audit_citation_consistency(
                 violations.append(result)
 
     return {
-        "passed": bool(
-            claims_checked > 0
-            and not violations
-        ),
+        "passed": not violations,
         "claims_checked": claims_checked,
         "citations_checked": citations_checked,
         "violation_count": len(violations),
         "violations": violations,
         "results": citation_results,
-        "entailment_threshold": ENTAILMENT_THRESHOLD,
     }
-
 
 def _build_revision_prompt(
     unsupported_atomic_claims: Sequence[Dict[str, Any]],
@@ -2115,6 +2275,12 @@ def grounding_critic_node(
     Strict post-generation grounding validator.
     """
 
+    grounding_started = perf_counter()
+
+    # Per-pass HHEMv2 profiling baseline.
+    from app.tools.entailment_tool import get_hhem_profile
+    hhem_profile_start = get_hhem_profile()
+
     final_answer = _safe_text(
         state.get("final_answer")
         or state.get("candidate_answer")
@@ -2165,9 +2331,6 @@ def grounding_critic_node(
             "answer_supported": False,
             "support_score": 0.0,
             "grounding_scores": grounding_scores,
-            "grounding_feedback": (
-                "No final answer was produced for grounding validation."
-            ),
             "unsupported_atomic_claims": [],
             "revision_prompt": "",
             "status": ("Grounding validation failed: empty answer."),
@@ -2235,12 +2398,6 @@ def grounding_critic_node(
                 }
             )
 
-        if not citations:
-            uncited_claims.append(
-                {
-                    "claim": claim_text,
-                }
-            )
 
         # --------------------------------------------------------------
         # Atomic validation
@@ -2260,6 +2417,8 @@ def grounding_critic_node(
                 result.get("best_citation")
             )
 
+            if result.get("supported") and best_citation:
+                result["citations"] = [best_citation]
             result["evidence_provenance"] = citation_metadata.get(
                 best_citation,
                 {
@@ -2294,6 +2453,28 @@ def grounding_critic_node(
                 )
 
         # --------------------------------------------------------------
+        # Effective citations after atomic validation / repair
+        # --------------------------------------------------------------
+
+        effective_citations = _dedupe_preserve_order(
+            citation
+            for result in record_atomic_results
+            for citation in result.get("citations", [])
+            if _safe_text(citation)
+        )
+
+        # If no atomic result repaired or supplied a citation, preserve
+        # the original responder citations.
+        if not effective_citations:
+            effective_citations = list(citations)
+
+        if not effective_citations:
+            uncited_claims.append(
+                {
+                    "claim": claim_text,
+                }
+            )
+
         # Top-level claim status
         # --------------------------------------------------------------
 
@@ -2317,7 +2498,7 @@ def grounding_critic_node(
                 4,
             ),
             "supported": claim_supported,
-            "citations": citations,
+            "citations": effective_citations,
             "atomic_claims": record_atomic_results,
         }
 
@@ -2443,6 +2624,22 @@ def grounding_critic_node(
     # Final state update
     # ------------------------------------------------------------------
 
+    hhem_profile_end = get_hhem_profile()
+    hhem_call_count = (
+        int(hhem_profile_end.get("call_count", 0))
+        - int(hhem_profile_start.get("call_count", 0))
+    )
+    hhem_total_ms = round(
+        float(hhem_profile_end.get("total_ms", 0.0))
+        - float(hhem_profile_start.get("total_ms", 0.0)),
+        2,
+    )
+
+    grounding_ms = round(
+        (perf_counter() - grounding_started) * 1000,
+        2,
+    )
+
     trace_update = append_trace_event(
         state,
         step="grounding_critic",
@@ -2455,6 +2652,9 @@ def grounding_critic_node(
         unsupported_atomic_count=len(unsupported_atomic_claims),
         uncited_claim_count=len(uncited_claims),
         invalid_citation_count=len(invalid_citations),
+        grounding_ms=grounding_ms,
+        hhem_call_count=hhem_call_count,
+        hhem_total_ms=hhem_total_ms,
     )
 
     return {
@@ -2466,6 +2666,9 @@ def grounding_critic_node(
             4,
         ),
         "grounding_scores": grounding_scores,
+        "grounding_ms": grounding_ms,
+        "hhem_call_count": hhem_call_count,
+        "hhem_total_ms": hhem_total_ms,
         "grounding_feedback": feedback,
         "unsupported_atomic_claims": (unsupported_atomic_claims),
         "citation_consistency": citation_consistency,
@@ -2480,4 +2683,3 @@ def grounding_critic_node(
             )
         ),
     }
-
