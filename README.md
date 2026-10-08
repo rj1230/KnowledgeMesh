@@ -304,8 +304,3 @@ KnowledgeMesh uses a defense-in-depth approach:
 - **Output guardrails:** Performs a final response safety check.
 
 ---
-**Raj Rajput**  
-Aspiring AI/ML Engineer · Agentic AI · RAG Systems · Machine Learning
-
-- GitHub: [@rj1230](https://github.com/rj1230)
-- Live Demo: [KnowledgeMesh Streamlit App](https://knowledgemesh-eturkr3qigc6cugmjdvifh.streamlit.app/)
