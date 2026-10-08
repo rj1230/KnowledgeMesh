@@ -63,6 +63,7 @@ EVIDENCE_LARGE_WINDOW_RADIUS = 2
 MAX_ENTAILMENT_CANDIDATES = 8
 MAX_CITED_ENTAILMENT_CANDIDATES = 3
 MAX_DISCOVERY_ENTAILMENT_CANDIDATES = 3
+MAX_ATOMIC_SEMANTIC_BUDGET = 3
 
 MIN_WINDOW_OVERLAP = 1
 FALLBACK_WINDOW_COUNT = 3
@@ -1754,16 +1755,16 @@ def _discover_supporting_evidence(
     evidence_map: Dict[str, List[str]],
     excluded_citations: Sequence[str] = (),
     entailment_cache: Dict[Tuple[str, str], float] | None = None,
+    semantic_budget: int = MAX_DISCOVERY_ENTAILMENT_CANDIDATES,
 ) -> Dict[str, Any]:
     """
     Search all available evidence citations for independent support.
 
     Deterministic exact support scans all eligible evidence first.
 
-    Semantic discovery uses one GLOBAL candidate budget per claim rather
-    than spending MAX_DISCOVERY_ENTAILMENT_CANDIDATES for every citation.
-    This prevents HHEMv2 call multiplication when many citations are
-    available.
+    Semantic discovery receives the REMAINING shared per-claim semantic
+    budget after cited verification. Deterministic exact support remains
+    unlimited and does not consume the HHEMv2 budget.
     """
 
     claim = _clean_claim_text(claim)
@@ -1821,17 +1822,23 @@ def _discover_supporting_evidence(
     # -----------------------------------------------------------
     # Phase 2: semantic discovery with ONE global budget.
     # -----------------------------------------------------------
-    if best_score < ENTAILMENT_THRESHOLD:
+    if best_score < ENTAILMENT_THRESHOLD and semantic_budget > 0:
         candidates = _select_global_entailment_candidates(
             claim,
             evidence_map,
             excluded_citations=excluded,
-            limit=MAX_DISCOVERY_ENTAILMENT_CANDIDATES,
+            limit=min(
+                MAX_DISCOVERY_ENTAILMENT_CANDIDATES,
+                semantic_budget,
+            ),
         )
 
         for citation_id, evidence_window in candidates:
             if citation_id in excluded:
                 continue
+
+            if semantic_budget <= 0:
+                break
 
             try:
                 scorer = _get_entailment_scorer()
@@ -1851,6 +1858,7 @@ def _discover_supporting_evidence(
                         premise=evidence_window,
                         hypothesis=claim,
                     )
+                    semantic_budget -= 1
                     score = max(
                         0.0,
                         min(1.0, float(score)),
@@ -1896,12 +1904,11 @@ def _validate_atomic_claim(
 
     Deterministic exact support scans all cited evidence windows.
 
-    Semantic cited verification uses ONE global candidate budget across
-    all citations attached to the claim. This prevents the semantic
-    budget from multiplying by citation count.
+    Semantic verification uses ONE shared HHEMv2 budget per atomic claim
+    across both cited verification and independent discovery.
 
-    If cited evidence does not support the claim, independent discovery
-    searches other available evidence using its own global budget.
+    Deterministic exact support is performed first and does not consume
+    the semantic budget.
     """
 
     claim = _clean_claim_text(claim)
@@ -1971,14 +1978,24 @@ def _validate_atomic_claim(
         # what it says: at most N HHEMv2 candidates per claim,
         # regardless of how many citations the claim has.
         # -----------------------------------------------------------
+        semantic_budget_remaining = MAX_ATOMIC_SEMANTIC_BUDGET
+
+        cited_candidate_limit = min(
+            MAX_CITED_ENTAILMENT_CANDIDATES,
+            semantic_budget_remaining,
+        )
+
         candidates = _select_global_entailment_candidates(
             claim=claim,
             evidence_map=evidence_map,
             included_citations=citations,
-            limit=MAX_CITED_ENTAILMENT_CANDIDATES,
+            limit=cited_candidate_limit,
         )
 
         for citation_id, evidence_window in candidates:
+            if semantic_budget_remaining <= 0:
+                break
+
             try:
                 scorer = _get_entailment_scorer()
 
@@ -1997,6 +2014,7 @@ def _validate_atomic_claim(
                         premise=evidence_window,
                         hypothesis=claim,
                     )
+                    semantic_budget_remaining -= 1
                     score = max(
                         0.0,
                         min(1.0, float(score)),
@@ -2037,12 +2055,37 @@ def _validate_atomic_claim(
     # Search other available citations independently. Exclude the
     # original citations so a bad citation cannot simply validate itself.
     # ---------------------------------------------------------------
-    discovered = _discover_supporting_evidence(
-        claim=claim,
-        evidence_map=evidence_map,
-        excluded_citations=citations,
-        entailment_cache=entailment_cache,
+    discovery_budget = min(
+        MAX_DISCOVERY_ENTAILMENT_CANDIDATES,
+        semantic_budget_remaining
+        if citations
+        else MAX_ATOMIC_SEMANTIC_BUDGET,
     )
+
+    if discovery_budget > 0:
+        # Temporarily apply the remaining shared semantic budget to
+        # independent discovery. The discovery helper already performs
+        # deterministic exact support before semantic entailment.
+        discovery_limit = discovery_budget
+    else:
+        discovery_limit = 0
+
+    if discovery_limit > 0:
+        discovered = _discover_supporting_evidence(
+            claim=claim,
+            evidence_map=evidence_map,
+            excluded_citations=citations,
+            entailment_cache=entailment_cache,
+            semantic_budget=discovery_limit,
+        )
+    else:
+        discovered = {
+            "score": best_score if citations else 0.0,
+            "supported": False,
+            "best_evidence_unit": best_evidence_unit if citations else "",
+            "best_citation": best_citation if citations else "",
+            "support_method": "semantic_budget_exhausted",
+        }
 
     if discovered.get("supported"):
         discovered_citation = _safe_text(
@@ -2683,3 +2726,4 @@ def grounding_critic_node(
             )
         ),
     }
+
