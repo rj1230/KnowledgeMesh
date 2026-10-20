@@ -90,6 +90,7 @@ from pydantic import BaseModel, Field
 
 from app.agents.graph import rag_agent
 from app.config import settings
+from app.evaluation.store import record_trajectory
 from app.services.retrieval.qdrant_service import client
 from app.services.retrieval.embedding import get_embedding_dim
 
@@ -2135,6 +2136,42 @@ def query(
             generation_latency_ms=(generation_latency_ms),
             latency_ms=elapsed_ms,
         )
+
+        # ====================================================
+        # BEST-EFFORT TRAJECTORY PERSISTENCE
+        # Store sanitized evaluation metadata only. Persistence
+        # failures must never change the API answer.
+        # ====================================================
+
+        trajectory_status = final_output.get("trajectory_status")
+
+        if isinstance(trajectory_status, str) and trajectory_status in (
+            "success",
+            "recovered",
+            "failed",
+        ):
+            try:
+                record_trajectory(
+                    settings.database_file,
+                    {
+                        "trajectory_status": trajectory_status,
+                        "failure_taxonomy": (
+                            final_output.get("failure_taxonomy") or []
+                        ),
+                        "metrics": (
+                            final_output.get("trajectory_metrics") or {}
+                        ),
+                        "evaluation_trace": (
+                            final_output.get("evaluation_trace") or []
+                        ),
+                    },
+                )
+            except Exception as exc:
+                logger.warning(
+                    "Trajectory persistence failed; preserving query response | "
+                    "error_type=%s",
+                    type(exc).__name__,
+                )
 
         # ====================================================
         # API RESPONSE
