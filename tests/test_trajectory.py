@@ -578,3 +578,101 @@ def test_prepare_revision_relevance_failure_targets_question_not_related_evidenc
     assert "directly answer the user's question" in prompt
     assert "Do not substitute a related model" in prompt
     assert "specific one requested by the user" in prompt
+
+
+def test_prepare_revision_preserves_citation_feedback_with_grounding_prompt():
+    from app.agents.graph import prepare_revision_node
+
+    state = {
+        "answer_useful": True,
+        "is_grounded": False,
+        "answer_supported": False,
+        "grounding_feedback": ["Claim X is unsupported by the evidence."],
+        "citation_feedback": "Citation [2] does not support the claim.",
+        "revision_prompt": "Grounding validation failed: remove unsupported atomic claims.",
+        "answer_revision_count": 0,
+        "revision_count": 0,
+        "max_revisions": 2,
+        "evaluation_trace": [],
+    }
+
+    result = prepare_revision_node(state)
+    prompt = result["revision_prompt"]
+
+    assert "Citation [2] does not support the claim." in prompt
+    assert prompt.count("Citation [2] does not support the claim.") == 1
+
+
+def test_prepare_revision_appends_grounding_feedback_to_generic_prompt():
+    from app.agents.graph import prepare_revision_node
+
+    state = {
+        "answer_useful": True,
+        "is_grounded": False,
+        "answer_supported": False,
+        "grounding_feedback": ["Claim X is unsupported by the evidence."],
+        "citation_feedback": "",
+        "revision_prompt": (
+            "Revise the previous answer using only the supplied evidence. "
+            "Remove unsupported claims and ensure every factual statement "
+            "has a valid citation."
+        ),
+        "answer_revision_count": 0,
+        "revision_count": 0,
+        "max_revisions": 2,
+        "evaluation_trace": [],
+    }
+
+    result = prepare_revision_node(state)
+
+    assert "Validation feedback:" in result["revision_prompt"]
+    assert "Claim X is unsupported by the evidence." in result["revision_prompt"]
+
+
+def test_prepare_revision_does_not_duplicate_grounding_feedback():
+    from app.agents.graph import prepare_revision_node
+
+    feedback = "Claim X is unsupported by the evidence."
+    state = {
+        "answer_useful": True,
+        "is_grounded": False,
+        "answer_supported": False,
+        "grounding_feedback": [feedback],
+        "citation_feedback": "",
+        "revision_prompt": f"Grounding feedback: {feedback}",
+        "answer_revision_count": 0,
+        "revision_count": 0,
+        "max_revisions": 2,
+        "evaluation_trace": [],
+    }
+
+    result = prepare_revision_node(state)
+
+    assert result["revision_prompt"].count(feedback) == 1
+
+
+def test_prepare_revision_appends_missing_detail_to_detailed_grounding_prompt():
+    from app.agents.graph import prepare_revision_node
+
+    missing_detail = "Claim Y is unsupported by the retrieved evidence."
+    state = {
+        "answer_useful": True,
+        "is_grounded": False,
+        "answer_supported": False,
+        "grounding_feedback": [missing_detail],
+        "citation_feedback": "",
+        "revision_prompt": (
+            "Grounding validation failed. Remove each unsupported atomic claim "
+            "and use only claims supported by the evidence."
+        ),
+        "answer_revision_count": 0,
+        "revision_count": 0,
+        "max_revisions": 2,
+        "evaluation_trace": [],
+    }
+
+    result = prepare_revision_node(state)
+    prompt = result["revision_prompt"]
+
+    assert missing_detail in prompt
+    assert prompt.count(missing_detail) == 1

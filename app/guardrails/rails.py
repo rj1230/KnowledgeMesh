@@ -109,10 +109,13 @@ async def check_topic(
     Determine whether a user request is within the broad
     KnowledgeMesh technical knowledge domain.
 
-    This function has exactly TWO runtime outcomes:
+    Runtime outcomes:
 
         TECHNICAL
         NON_TECHNICAL
+        AMBIGUOUS
+
+    Only an explicit TECHNICAL result may pass the pre-RAG gate.
 
     It does NOT determine whether the exact answer exists.
 
@@ -134,17 +137,17 @@ async def check_topic(
     """
 
     # --------------------------------------------------------
-    # Classifier unavailable
+    # Classifier unavailable.
     #
-    # Fail OPEN to TECHNICAL.
-    #
-    # A classifier infrastructure failure must not turn a
-    # valid technical request into a false guardrail block.
+    # Fail closed: without a trustworthy scope decision, do not
+    # authorize retrieval. The request-level gate blocks AMBIGUOUS.
     # --------------------------------------------------------
 
     if _check_topic_llm is None:
-        logger.warning("TOPIC_DIAG: classifier_state=UNINITIALIZED result=TECHNICAL")
-        return "TECHNICAL"
+        logger.warning(
+            "TOPIC_DIAG: classifier_state=UNINITIALIZED result=AMBIGUOUS"
+        )
+        return "AMBIGUOUS"
 
     ctx = context or {}
 
@@ -166,16 +169,16 @@ async def check_topic(
     # --------------------------------------------------------
     # Empty request
     #
-    # Keep this non-blocking. main.py already handles an empty
-    # request separately.
+    # Fail closed: missing input cannot authorize retrieval.
+    # main.py also validates empty requests at the API boundary.
     # --------------------------------------------------------
 
     if not user_message:
         logger.warning(
-            "TOPIC_DIAG: empty_user_message result=TECHNICAL keys=%s",
+            "TOPIC_DIAG: empty_user_message result=AMBIGUOUS keys=%s",
             list(ctx.keys()),
         )
-        return "TECHNICAL"
+        return "AMBIGUOUS"
 
     # --------------------------------------------------------
     # Deterministic jailbreak protection
@@ -198,9 +201,22 @@ You are the BROAD SCOPE CLASSIFIER for KnowledgeMesh.
 KnowledgeMesh is an enterprise technical knowledge assistant
 connected to a private indexed document corpus.
 
-Your ONLY task is to determine whether the user's request is
-PLAUSIBLY a technical knowledge request that should be passed
-to the downstream retrieval system.
+Your ONLY task is to determine whether the user's actual intent
+falls within KnowledgeMesh's configured technical knowledge scope.
+
+Do not classify a request as TECHNICAL merely because it contains
+a technical-sounding word. Classify the request by its overall intent
+and subject domain, not by whether the answer could come from general
+knowledge or whether the answer exists in the indexed document corpus.
+
+A direct conceptual question about software engineering, systems
+engineering, AI/ML, or another listed technical domain is TECHNICAL,
+even when it is short or asks only "what is" or "how does" something
+work. For example, "What is loop engineering?" is TECHNICAL.
+
+A request for an ordinary recipe or cooking instructions remains
+NON_TECHNICAL. A technical question about the engineering or control
+systems of a cooking appliance can be TECHNICAL.
 
 You MUST NOT decide whether the exact answer exists.
 
@@ -223,14 +239,20 @@ Return exactly ONE label:
 
 TECHNICAL
 NON_TECHNICAL
+AMBIGUOUS
 
 ============================================================
 TECHNICAL
 ============================================================
 
-Classify as TECHNICAL when the request is clearly or plausibly
-related to technical knowledge, engineering, software, AI/ML,
-infrastructure, or the indexed technical knowledge base.
+Classify as TECHNICAL when the user's actual request is within
+the technical domains supported by KnowledgeMesh, such as AI/ML,
+LLMs, retrieval, agent systems, software engineering, programming,
+infrastructure, networking, cloud engineering, or technical
+documentation.
+
+The request need not use specialist terminology if its intent is
+clearly within one of these domains.
 
 Examples include:
 
@@ -308,12 +330,24 @@ Examples include:
 IMPORTANT
 ============================================================
 
-There is NO ambiguous category.
+Use NON_TECHNICAL for requests whose actual intent is outside
+the configured technical scope, including ordinary recipes, cooking
+instructions, greetings that ask no technical question, weather,
+sports, entertainment, and unrelated general-world requests.
 
-If the request could reasonably be interpreted as a technical
-knowledge request, classify it as TECHNICAL.
+Examples:
+- "How do I make coffee?" -> NON_TECHNICAL
+- "What is loop engineering?" -> TECHNICAL
+- "How does an espresso machine's temperature controller work?"
+  -> TECHNICAL, because the intent is engineering.
 
-Only clearly unrelated requests should be NON_TECHNICAL.
+Use AMBIGUOUS only when the request is genuinely unclear or you
+cannot confidently determine its domain. Do not treat ambiguity
+as permission to retrieve.
+
+Do not decide whether an answer exists in the indexed documents;
+that remains the responsibility of downstream retrieval and
+evidence validation.
 
 ============================================================
 USER REQUEST
@@ -328,8 +362,9 @@ OUTPUT
 Return exactly one label:
 
 TECHNICAL
-or
 NON_TECHNICAL
+or
+AMBIGUOUS
 """
 
     try:
@@ -346,19 +381,17 @@ NON_TECHNICAL
 
     except Exception as exc:
         # ----------------------------------------------------
-        # Classifier failure -> fail OPEN.
-        #
-        # Do not block a technical request because the scope
-        # classifier itself failed.
+        # Classifier failure -> fail CLOSED for this request.
+        # Do not authorize retrieval without a scope decision.
         # ----------------------------------------------------
 
         logger.warning(
-            "TOPIC_DIAG: classifier_failed error_type=%s error=%s result=TECHNICAL",
+            "TOPIC_DIAG: classifier_failed error_type=%s error=%s result=AMBIGUOUS",
             type(exc).__name__,
             exc,
         )
 
-        return "TECHNICAL"
+        return "AMBIGUOUS"
 
     # --------------------------------------------------------
     # Explicit TECHNICAL
@@ -383,6 +416,17 @@ NON_TECHNICAL
         return "NON_TECHNICAL"
 
     # --------------------------------------------------------
+    # Explicit AMBIGUOUS: a valid fail-closed decision.
+    # --------------------------------------------------------
+
+    if answer.startswith("AMBIGUOUS"):
+        logger.info(
+            "TOPIC_DIAG: scope_result=AMBIGUOUS query=%r",
+            user_message[:120],
+        )
+        return "AMBIGUOUS"
+
+    # --------------------------------------------------------
     # Backward compatibility with older classifier output.
     # --------------------------------------------------------
 
@@ -401,17 +445,15 @@ NON_TECHNICAL
         return "NON_TECHNICAL"
 
     # --------------------------------------------------------
-    # Unknown model output -> fail OPEN to TECHNICAL.
-    #
-    # There is deliberately no third state.
+    # Unknown model output is not a trustworthy scope decision.
     # --------------------------------------------------------
 
     logger.warning(
-        "TOPIC_DIAG: classifier_unexpected_output=%r result=TECHNICAL",
+        "TOPIC_DIAG: classifier_unexpected_output=%r result=AMBIGUOUS",
         answer[:120],
     )
 
-    return "TECHNICAL"
+    return "AMBIGUOUS"
 
 
 # ============================================================
@@ -496,17 +538,18 @@ def _run_topic_classifier(
     so asyncio.run() is safe here because FastAPI executes
     the synchronous endpoint outside the running event loop.
 
-    Runtime output is always normalized to:
+    Runtime output is normalized to one of three states:
 
         TECHNICAL
         NON_TECHNICAL
+        AMBIGUOUS
     """
 
     if _check_topic_llm is None:
         logger.warning(
-            "TOPIC_DIAG: classifier_state=UNINITIALIZED bridge_result=TECHNICAL"
+            "TOPIC_DIAG: classifier_state=UNINITIALIZED bridge_result=AMBIGUOUS"
         )
-        return "TECHNICAL"
+        return "AMBIGUOUS"
 
     try:
         result = (
@@ -524,23 +567,33 @@ def _run_topic_classifier(
         )
 
         # ----------------------------------------------------
-        # Enforce the two-state contract at the bridge.
+        # Accept only the three documented scope states.
         # ----------------------------------------------------
+
+        if result == "TECHNICAL":
+            return "TECHNICAL"
 
         if result == "NON_TECHNICAL":
             return "NON_TECHNICAL"
 
-        return "TECHNICAL"
+        if result == "AMBIGUOUS":
+            return "AMBIGUOUS"
+
+        logger.warning(
+            "TOPIC_DIAG: invalid_classifier_result=%r result=AMBIGUOUS",
+            result[:80],
+        )
+        return "AMBIGUOUS"
 
     except Exception as exc:
         logger.warning(
             "TOPIC_DIAG: classifier_bridge_failed "
-            "error_type=%s error=%s result=TECHNICAL",
+            "error_type=%s error=%s result=AMBIGUOUS",
             type(exc).__name__,
             exc,
         )
 
-        return "TECHNICAL"
+        return "AMBIGUOUS"
 
 
 # ============================================================
@@ -562,10 +615,8 @@ def guard(
         (False, None)
             Request is allowed to continue into LangGraph.
 
-    Scope decision has exactly two outcomes:
-
-        TECHNICAL
-        NON_TECHNICAL
+    Only an explicit TECHNICAL result is allowed through.
+    NON_TECHNICAL and AMBIGUOUS results are blocked.
 
     CRITICAL:
     This function intentionally does NOT call:
@@ -606,7 +657,7 @@ def guard(
         scope = _run_topic_classifier(message)
 
         # ----------------------------------------------------
-        # ONLY explicit NON_TECHNICAL can block.
+        # Explicitly out-of-scope requests are blocked.
         # ----------------------------------------------------
 
         if scope == "NON_TECHNICAL":
@@ -631,7 +682,28 @@ def guard(
             )
 
         # ====================================================
-        # ALLOW
+        # GATE C · UNCERTAIN OR UNAVAILABLE CLASSIFIER
+        # ====================================================
+
+        if scope != "TECHNICAL":
+            response = (
+                "I couldn't confidently verify that request's technical "
+                "scope right now. Please provide more technical context "
+                "or retry shortly. No retrieval or generation was run."
+            )
+
+            logger.warning(
+                "TOPIC_DIAG: PRE_RAG_BLOCK scope=AMBIGUOUS query=%r",
+                message[:120],
+            )
+
+            return (
+                True,
+                response,
+            )
+
+        # ====================================================
+        # ALLOW ONLY EXPLICIT TECHNICAL
         # ====================================================
 
         logger.info(

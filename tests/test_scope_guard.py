@@ -78,3 +78,28 @@ def test_classifier_failure_is_ambiguous(monkeypatch):
     )
 
     assert result == "AMBIGUOUS"
+
+
+def test_empty_classifier_message_is_ambiguous(monkeypatch):
+    monkeypatch.setattr(
+        rails,
+        "_check_topic_llm",
+        object(),
+    )
+
+    result = rails._run_topic_classifier("")
+
+    assert result == "AMBIGUOUS"
+
+
+def test_technical_request_is_allowed_by_scope_guard(monkeypatch):
+    monkeypatch.setattr(
+        rails,
+        "_run_topic_classifier",
+        lambda message: "TECHNICAL",
+    )
+
+    blocked, response = rails.guard("What is loop engineering?")
+
+    assert blocked is False
+    assert response is None
