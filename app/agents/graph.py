@@ -482,7 +482,7 @@ def route_after_citation_check(
         bounded revision
 
     If the revision budget is exhausted:
-        END
+        safe abstention
     """
 
     citation_valid = bool(
@@ -510,14 +510,14 @@ def route_after_citation_check(
     if revision_count >= MAX_ANSWER_REVISIONS:
         logger.warning(
             "Citation validation failed but answer revision "
-            "budget is exhausted. Ending graph.",
+            "budget is exhausted. Abstaining from final answer.",
             extra={
                 "revision_count": revision_count,
                 "max_answer_revisions": MAX_ANSWER_REVISIONS,
             },
         )
 
-        return "end"
+        return "abstain"
 
     # --------------------------------------------------------
     # Citation FAIL → revision
@@ -616,14 +616,14 @@ def route_after_grounding_critic(
     if revision_count >= MAX_ANSWER_REVISIONS:
         logger.warning(
             "Grounding validation failed but answer revision "
-            "budget is exhausted. Ending graph.",
+            "budget is exhausted. Abstaining from final answer.",
             extra={
                 "revision_count": revision_count,
                 "max_answer_revisions": MAX_ANSWER_REVISIONS,
             },
         )
 
-        return "end"
+        return "abstain"
 
     # --------------------------------------------------------
     # Grounding FAIL → revision
@@ -1145,6 +1145,7 @@ def build_graph():
         {
             "grounding_critic": "grounding_critic",
             "revision": "prepare_revision",
+            "abstain": "answer_abstention",
             "end": "trajectory_evaluation",
         },
     )
@@ -1159,6 +1160,7 @@ def build_graph():
         {
             "revision": "prepare_revision",
             "answer_relevance": "answer_relevance",
+            "abstain": "answer_abstention",
             "end": "trajectory_evaluation",
         },
     )
