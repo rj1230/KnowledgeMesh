@@ -825,13 +825,24 @@ def prepare_revision_node(
     # append the concrete validation feedback.
     # --------------------------------------------------------
 
-    if (
-        combined_feedback
-        and "Grounding validation failed" not in revision_prompt
-        and "unsupported" not in revision_prompt.lower()
-    ):
+    feedback_to_append: list[str] = []
+
+    # Preserve independent citation feedback even when the grounding
+    # prompt already contains detailed unsupported-claim instructions.
+    if citation_feedback and citation_feedback not in revision_prompt:
+        feedback_to_append.append(citation_feedback)
+
+    # Add each missing grounding detail independently. A general grounding
+    # instruction does not guarantee that every current detail is included.
+    feedback_to_append.extend(
+        item for item in grounding_feedback
+        if item and item not in revision_prompt
+    )
+
+    if feedback_to_append:
         revision_prompt = (
-            f"{revision_prompt}\n\nValidation feedback:\n{combined_feedback}"
+            f"{revision_prompt}\n\nValidation feedback:\n"
+            + "\n\n".join(feedback_to_append)
         )
 
     # --------------------------------------------------------
