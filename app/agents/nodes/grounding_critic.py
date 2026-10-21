@@ -40,6 +40,8 @@ from __future__ import annotations
 from enum import Enum
 from pydantic import BaseModel, Field
 
+import logging
+import math
 import re
 from difflib import SequenceMatcher
 from time import perf_counter
@@ -67,6 +69,23 @@ MAX_ATOMIC_SEMANTIC_BUDGET = 3
 
 MIN_WINDOW_OVERLAP = 1
 FALLBACK_WINDOW_COUNT = 3
+
+
+class _CountingEntailmentCache(dict):
+    """Dictionary that counts cache membership hits and misses."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.hits = 0
+        self.misses = 0
+
+    def __contains__(self, key):
+        found = super().__contains__(key)
+        if found:
+            self.hits += 1
+        else:
+            self.misses += 1
+        return found
 
 
 class SupportType(str, Enum):
@@ -2087,15 +2106,20 @@ def _validate_atomic_claim(
             "support_method": "semantic_budget_exhausted",
         }
 
-    if discovered.get("supported"):
-        discovered_citation = _safe_text(
-            discovered.get("best_citation")
-        )
+    discovered_citation = _safe_text(
+        discovered.get("best_citation")
+    )
+    discovered_windows = evidence_map.get(
+        discovered_citation,
+        [],
+    )
 
-        if discovered_citation:
-            repaired_citations = [discovered_citation]
-        else:
-            repaired_citations = list(citations)
+    if (
+        discovered.get("supported")
+        and discovered_citation
+        and discovered_windows
+    ):
+
 
         return {
             "claim": claim,
@@ -2106,7 +2130,7 @@ def _validate_atomic_claim(
                 "",
             ),
             "best_citation": discovered_citation,
-            "citations": repaired_citations,
+            "citations": [discovered_citation],
             "support_method": discovered.get(
                 "support_method",
                 "discovered_support",
@@ -2209,11 +2233,11 @@ def _audit_citation_consistency(
             if citation_id == best_citation:
                 score = best_score
                 supported = bool(
-                    (
-                        atomic_result.get("supported")
-                        and score >= ENTAILMENT_THRESHOLD
+                    atomic_result.get("supported")
+                    and (
+                        score >= ENTAILMENT_THRESHOLD
+                        or best_method == "deterministic_exact_match"
                     )
-                    or best_method == "deterministic_exact_match"
                 )
                 evidence_unit = best_evidence_unit
                 support_method = best_method
@@ -2385,8 +2409,26 @@ def grounding_critic_node(
 
     claim_records = _extract_claim_records(final_answer)
 
-    # Reuse repeated HHEMv2 claim/evidence scores within this request only.
-    entailment_cache: Dict[Tuple[str, str], float] = {}
+    # Restore cached scores from earlier passes in this request.
+    cached_entailment_entries = state.get("entailment_cache", [])
+    entailment_cache = _CountingEntailmentCache()
+    if isinstance(cached_entailment_entries, list):
+        for entry in cached_entailment_entries:
+            if isinstance(entry, dict):
+                claim = entry.get("claim")
+                evidence = entry.get("evidence")
+                score = entry.get("score")
+                if (
+                    isinstance(claim, str)
+                    and isinstance(evidence, str)
+                    and isinstance(score, (int, float))
+                    and not isinstance(score, bool)
+                    and math.isfinite(score)
+                    and 0.0 <= score <= 1.0
+                ):
+                    entailment_cache[(claim, evidence)] = float(score)
+
+    cache_entries_received = len(entailment_cache)
 
     evidence_map = _build_evidence_map(state)
 
@@ -2702,6 +2744,17 @@ def grounding_critic_node(
         + 1
     )
 
+    logging.getLogger(__name__).debug(
+        "GROUNDING_CACHE_METRICS pass=%s received=%s hits=%s misses=%s returned=%s hhem_calls=%s hhem_ms=%s",
+        grounding_pass_count,
+        cache_entries_received,
+        entailment_cache.hits,
+        entailment_cache.misses,
+        len(entailment_cache),
+        hhem_call_count,
+        hhem_total_ms,
+    )
+
     trace_update = append_trace_event(
         state,
         step="grounding_critic",
@@ -2734,6 +2787,18 @@ def grounding_critic_node(
         "request_hhem_call_count": request_hhem_call_count,
         "request_hhem_total_ms": request_hhem_total_ms,
         "grounding_pass_count": grounding_pass_count,
+        "entailment_cache_hits": entailment_cache.hits,
+        "entailment_cache_misses": entailment_cache.misses,
+        "cache_entries_received": cache_entries_received,
+        "cache_entries_returned": len(entailment_cache),
+        "entailment_cache": [
+            {
+                "claim": claim,
+                "evidence": evidence,
+                "score": score,
+            }
+            for (claim, evidence), score in entailment_cache.items()
+        ],
         "grounding_feedback": feedback,
         "unsupported_atomic_claims": (unsupported_atomic_claims),
         "citation_consistency": citation_consistency,
@@ -2748,4 +2813,3 @@ def grounding_critic_node(
             )
         ),
     }
-

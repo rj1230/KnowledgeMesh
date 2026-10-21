@@ -240,6 +240,13 @@ class AgentState(TypedDict, total=False):
     request_hhem_call_count: int
     request_hhem_total_ms: float
     grounding_pass_count: int
+    # Per-pass cache diagnostics; cache contents remain internal.
+    entailment_cache_hits: int
+    entailment_cache_misses: int
+    cache_entries_received: int
+    cache_entries_returned: int
+    # JSON-compatible cache carried across grounding passes.
+    entailment_cache: List[Dict[str, Any]]
 
     # Detailed per-claim / per-evidence grounding information.
     grounding_details: Dict[str, Any]
