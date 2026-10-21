@@ -262,3 +262,131 @@ def test_citation_audit_cannot_override_unsupported_exact_match():
     assert result["violations"][0]["support_method"] == (
         "deterministic_exact_match"
     )
+
+
+def test_explicit_query_source_entity_mismatch_detects_different_company():
+    from app.agents.nodes.grounding_critic import (
+        _explicit_query_source_entity_mismatch as mismatch,
+    )
+
+    assert mismatch(
+        "What was the exact 2024 revenue of the fictional company ZephyrNexus?",
+        "Zephyr Energy plc Annual Report and Financial Statements 2024",
+    ) is True
+
+
+def test_explicit_query_source_entity_mismatch_accepts_matching_company():
+    from app.agents.nodes.grounding_critic import (
+        _explicit_query_source_entity_mismatch as mismatch,
+    )
+
+    assert mismatch(
+        "What was the exact 2024 revenue of the fictional company ZephyrNexus?",
+        "ZephyrNexus Annual Report 2024",
+    ) is False
+
+
+def test_explicit_query_source_entity_mismatch_ignores_generic_source():
+    from app.agents.nodes.grounding_critic import (
+        _explicit_query_source_entity_mismatch as mismatch,
+    )
+
+    assert mismatch(
+        "What was the exact 2024 revenue of the fictional company ZephyrNexus?",
+        "Annual Report 2024",
+    ) is False
+
+
+def test_explicit_query_source_entity_mismatch_ignores_unrelated_query():
+    from app.agents.nodes.grounding_critic import (
+        _explicit_query_source_entity_mismatch as mismatch,
+    )
+
+    assert mismatch(
+        "Explain retrieval-augmented generation.",
+        "Zephyr Energy plc Annual Report 2024",
+    ) is False
+
+
+def test_grounding_node_rejects_claim_when_source_company_mismatches_query(
+    monkeypatch,
+):
+    import app.agents.nodes.grounding_critic as grounding
+    import app.tools.entailment_tool as entailment_tool
+
+    claim = "ZephyrNexus reported 2024 revenue of US$24,279 thousand."
+    evidence = claim
+
+    def fake_scorer(*, premise, hypothesis):
+        return 0.99
+
+    monkeypatch.setattr(
+        grounding, "_get_entailment_scorer", lambda: fake_scorer
+    )
+    monkeypatch.setattr(
+        grounding, "_split_compound_claim", lambda text: [text]
+    )
+    monkeypatch.setattr(
+        grounding,
+        "_select_global_entailment_candidates",
+        lambda claim, evidence_map, excluded_citations=(),
+               included_citations=(), limit=grounding.MAX_DISCOVERY_ENTAILMENT_CANDIDATES:
+            [
+                (citation_id, window)
+                for citation_id, windows in evidence_map.items()
+                if citation_id not in excluded_citations
+                and (
+                    not included_citations
+                    or citation_id in included_citations
+                )
+                for window in windows
+            ][:limit],
+    )
+
+    monkeypatch.setattr(
+        entailment_tool,
+        "get_hhem_profile",
+        lambda: {"call_count": 0, "total_ms": 0.0},
+    )
+
+    state = {
+        "original_query": (
+            "What was the exact 2024 revenue of the fictional "
+            "company ZephyrNexus?"
+        ),
+        "final_answer": f"{claim} [chunk_1]",
+        "citation_provenance": {
+            "chunk_1": {
+                "citation_id": "chunk_1",
+                "text": evidence,
+                "source": (
+                    "Zephyr Energy plc Annual Report and "
+                    "Financial Statements 2024"
+                ),
+                "document_id": "doc_1",
+                "chunk_id": 1,
+            }
+        },
+        "evaluation_trace": [],
+    }
+
+    result = grounding.grounding_critic_node(state)
+
+    atomic_results = result["grounding_scores"]["atomic_claims"]
+    mismatch_results = [
+        item for item in atomic_results
+        if item.get("entity_consistency") == "mismatch"
+    ]
+
+    assert mismatch_results, (
+        "Expected the grounding node to flag the source-company mismatch."
+    )
+    assert all(item["supported"] is False for item in mismatch_results)
+    assert result["is_grounded"] is False
+    assert result["answer_supported"] is False
+    assert result["unsupported_atomic_claims"], (
+        "The mismatched claim must enter the unsupported-claim path."
+    )
+    assert result["revision_prompt"], (
+        "The unsupported claim should produce revision guidance."
+    )

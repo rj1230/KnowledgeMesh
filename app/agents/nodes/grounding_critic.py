@@ -874,6 +874,63 @@ def _resolve_citation_provenance(
     }
 
 
+
+def _explicit_query_source_entity_mismatch(
+    query: Any,
+    source: Any,
+) -> bool:
+    """Flag clear company-name mismatches in identifiable source titles."""
+    query_text = _safe_text(query)
+    source_text = _safe_text(source)
+
+    if not query_text or not source_text:
+        return False
+
+    query_match = re.search(
+        r"\bcompany\s+(?:named\s+)?([A-Z][A-Za-z0-9&.-]*(?:\s+[A-Z][A-Za-z0-9&.-]*)*)",
+        query_text,
+    )
+    if not query_match:
+        return False
+
+    expected = re.sub(r"[^a-z0-9]", "", query_match.group(1).lower())
+    if not expected:
+        return False
+
+    # Only infer identity from a recognizable company prefix before
+    # common report/document markers. Generic titles are inconclusive.
+    title = source_text.strip()
+    if title.lower().startswith(("http://", "https://")):
+        return False
+
+    marker = re.search(
+        r"\b(annual report|financial statements|financial results|"
+        r"investor relations|quarterly report|company profile)\b",
+        title,
+        flags=re.IGNORECASE,
+    )
+    if not marker:
+        return False
+
+    source_entity = title[:marker.start()].strip(" \t-–—:|,")
+    source_entity_normalized = re.sub(
+        r"[^a-z0-9]", "", source_entity.lower()
+    )
+
+    if not source_entity_normalized:
+        return False
+
+    # The source prefix must identify an entity; generic prefixes are
+    # not reliable evidence of a different company.
+    generic_prefixes = {
+        "the", "company", "annual", "financial", "report",
+        "official", "investor", "consolidated",
+    }
+    if source_entity.lower() in generic_prefixes:
+        return False
+
+    return expected not in source_entity_normalized
+
 def _resolve_citation_metadata(
     citation_provenance: Any,
 ) -> Dict[str, Dict[str, Any]]:
@@ -952,6 +1009,20 @@ def _resolve_citation_metadata(
             "chunk_id": chunk_id,
             "point_id": point_id,
             "canonical_evidence_id": canonical_evidence_id,
+            "source": _safe_text(
+                item.get("source")
+                or item.get("title")
+                or (nested.get("source") if isinstance(nested, dict) else None)
+                or (nested.get("title") if isinstance(nested, dict) else None)
+            ),
+            "url": _safe_text(
+                item.get("url")
+                or (nested.get("url") if isinstance(nested, dict) else None)
+            ),
+            "source_type": _safe_text(
+                item.get("source_type")
+                or (nested.get("source_type") if isinstance(nested, dict) else None)
+            ),
         }
 
     return result
@@ -2514,6 +2585,22 @@ def grounding_critic_node(
                     "canonical_evidence_id": None,
                 },
             )
+            original_query = state.get("original_query") or state.get(
+                "current_query"
+            )
+            provenance = result["evidence_provenance"]
+
+            if _explicit_query_source_entity_mismatch(
+                original_query,
+                provenance.get("source"),
+            ):
+                result["supported"] = False
+                result["entity_consistency"] = "mismatch"
+                result["entity_consistency_reason"] = (
+                    "The cited source label does not match the explicitly "
+                    "named company in the original query."
+                )
+
             result["parent_claim"] = claim_text
 
             record_atomic_results.append(result)
