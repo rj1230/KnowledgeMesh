@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import logging
 import threading
+from time import perf_counter
 from typing import Any
 
 import logfire
@@ -36,6 +37,18 @@ import torch
 from transformers import AutoModelForSequenceClassification
 
 logger = logging.getLogger(__name__)
+
+# Per-process HHEMv2 profiling counters.
+_hhem_call_count = 0
+_hhem_total_ms = 0.0
+
+
+def get_hhem_profile() -> dict[str, float | int]:
+    """Return per-process HHEMv2 profiling counters."""
+    return {
+        "call_count": int(_hhem_call_count),
+        "total_ms": round(float(_hhem_total_ms), 2),
+    }
 
 MODEL_NAME = "vectara/hallucination_evaluation_model"
 
@@ -204,6 +217,8 @@ def _predict_with_safe_truncation(
         hypothesis=hypothesis,
     )
 
+    tokenize_started = perf_counter()
+
     inputs = tokenizer(
         [prompt],
         return_tensors="pt",
@@ -211,6 +226,8 @@ def _predict_with_safe_truncation(
         truncation=True,
         max_length=HHEM_MAX_LENGTH,
     )
+
+    tokenize_ms = round((perf_counter() - tokenize_started) * 1000, 2)
 
     # The upstream implementation uses the T5 component exposed as
     # `model.t5`, so preserve that behavior exactly.
@@ -229,8 +246,18 @@ def _predict_with_safe_truncation(
 
     t5_model.eval()
 
-    with torch.no_grad():
+    inference_started = perf_counter()
+
+    with torch.inference_mode():
         outputs = t5_model(**inputs)
+
+    inference_ms = round((perf_counter() - inference_started) * 1000, 2)
+
+    logger.info(
+        "HHEMv2 inference timing: tokenize_ms=%s inference_ms=%s",
+        tokenize_ms,
+        inference_ms,
+    )
 
     logits = outputs.logits
 
@@ -264,6 +291,9 @@ def score_entailment(
         can continue and treat the claim as unsupported.
     """
 
+    global _hhem_call_count, _hhem_total_ms
+    _hhem_call_count += 1
+    call_started = perf_counter()
     premise = str(premise or "").strip()
     hypothesis = str(hypothesis or "").strip()
 
@@ -292,6 +322,15 @@ def score_entailment(
                 "HHEMv2 grounding score computed",
                 score=round(score, 4),
                 max_input_tokens=HHEM_MAX_LENGTH,
+            )
+
+            call_ms = round((perf_counter() - call_started) * 1000, 2)
+            _hhem_total_ms += call_ms
+            logger.info(
+                "HHEMv2 call profiling: call=%s call_ms=%s cumulative_ms=%s",
+                _hhem_call_count,
+                call_ms,
+                round(_hhem_total_ms, 2),
             )
 
             return score

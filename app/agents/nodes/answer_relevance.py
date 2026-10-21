@@ -276,12 +276,27 @@ def answer_relevance_node(
 def answer_abstention_node(
     state: Dict[str, Any],
 ) -> Dict[str, Any]:
-    """
-    Replace an unrecoverably irrelevant answer with a safe abstention.
+    """Replace an answer that cannot pass validation with a safe abstention."""
 
-    This prevents a grounded-but-irrelevant answer from being exposed as
-    a successful final answer after the revision budget is exhausted.
-    """
+    if state.get("citation_valid") is False:
+        reason = "citation_validation_revision_budget_exhausted"
+        status_message = (
+            "Final answer abstained because citation validation failed."
+        )
+    elif (
+        state.get("is_grounded") is False
+        or state.get("grounding_valid") is False
+        or state.get("answer_supported") is False
+    ):
+        reason = "grounding_validation_revision_budget_exhausted"
+        status_message = (
+            "Final answer abstained because grounding validation failed."
+        )
+    else:
+        reason = "answer_relevance_revision_budget_exhausted"
+        status_message = (
+            "Final answer abstained because relevance could not be recovered."
+        )
 
     abstention = (
         "I couldn't find evidence in the available sources that "
@@ -292,7 +307,7 @@ def answer_abstention_node(
         state,
         step="answer_abstention",
         status="abstained",
-        reason="answer_relevance_revision_budget_exhausted",
+        reason=reason,
     )
 
     return {
@@ -306,5 +321,5 @@ def answer_abstention_node(
         "grounding_valid": False,
         "citation_valid": False,
         "support_score": 0.0,
-        "status": "Final answer abstained because relevance could not be recovered.",
+        "status": status_message,
     }

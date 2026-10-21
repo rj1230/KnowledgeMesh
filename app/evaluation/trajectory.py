@@ -13,6 +13,7 @@ EVIDENCE_SELECTION_FAILURE = "EVIDENCE_SELECTION_FAILURE"
 CITATION_FAILURE = "CITATION_FAILURE"
 GROUNDING_FAILURE = "GROUNDING_FAILURE"
 GENERATION_FAILURE = "GENERATION_FAILURE"
+NO_APPROVED_EVIDENCE = "NO_APPROVED_EVIDENCE"
 REVISION_FAILURE = "REVISION_FAILURE"
 ANSWER_RELEVANCE_FAILURE = "ANSWER_RELEVANCE_FAILURE"
 
@@ -219,7 +220,27 @@ def infer_failure_taxonomy(
     # Generation
     # --------------------------------------------------------
 
-    if bool(state.get("generation_failed", False)):
+    responder_events = _events_by_step(state, "responder")
+    no_approved_evidence = any(
+        str(event.get("status", "")).strip().lower() == "blocked"
+        and _event_details(event).get("reason") == "no_approved_evidence"
+        for event in responder_events
+    )
+
+    if no_approved_evidence:
+        failures.append(NO_APPROVED_EVIDENCE)
+
+    web_search_events = _events_by_step(state, "web_search")
+    web_search_failed = any(
+        str(event.get("status", "")).strip().lower() == "failed"
+        for event in web_search_events
+    )
+
+    # Preserve the existing failure classification when evidence-gated
+    # abstention follows a failed web-search recovery attempt.
+    if bool(state.get("generation_failed", False)) and (
+        not no_approved_evidence or web_search_failed
+    ):
         failures.append(GENERATION_FAILURE)
 
     # --------------------------------------------------------

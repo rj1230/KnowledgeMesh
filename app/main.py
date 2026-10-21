@@ -90,6 +90,7 @@ from pydantic import BaseModel, Field
 
 from app.agents.graph import rag_agent
 from app.config import settings
+from app.evaluation.store import record_trajectory
 from app.services.retrieval.qdrant_service import client
 from app.services.retrieval.embedding import get_embedding_dim
 
@@ -1589,6 +1590,11 @@ def query(
         "grounding_scores": [],
         "grounding_details": {},
         "grounding_feedback": [],
+        # Request-scoped grounding / HHEMv2 observability.
+        # Reset for every request and accumulate across grounding passes.
+        "request_hhem_call_count": 0,
+        "request_hhem_total_ms": 0.0,
+        "grounding_pass_count": 0,
         # ----------------------------------------------------
         # Revision / retry state
         # ----------------------------------------------------
@@ -1973,6 +1979,11 @@ def query(
             default=0,
         )
 
+
+        answer_revision_count = _safe_int(
+            final_output.get("answer_revision_count"),
+            default=revision_count,
+        )
         retrieval_rewrite_count = _safe_int(
             final_output.get("retrieval_rewrite_count"),
             default=0,
@@ -2127,6 +2138,42 @@ def query(
         )
 
         # ====================================================
+        # BEST-EFFORT TRAJECTORY PERSISTENCE
+        # Store sanitized evaluation metadata only. Persistence
+        # failures must never change the API answer.
+        # ====================================================
+
+        trajectory_status = final_output.get("trajectory_status")
+
+        if isinstance(trajectory_status, str) and trajectory_status in (
+            "success",
+            "recovered",
+            "failed",
+        ):
+            try:
+                record_trajectory(
+                    settings.database_file,
+                    {
+                        "trajectory_status": trajectory_status,
+                        "failure_taxonomy": (
+                            final_output.get("failure_taxonomy") or []
+                        ),
+                        "metrics": (
+                            final_output.get("trajectory_metrics") or {}
+                        ),
+                        "evaluation_trace": (
+                            final_output.get("evaluation_trace") or []
+                        ),
+                    },
+                )
+            except Exception as exc:
+                logger.warning(
+                    "Trajectory persistence failed; preserving query response | "
+                    "error_type=%s",
+                    type(exc).__name__,
+                )
+
+        # ====================================================
         # API RESPONSE
         # ====================================================
 
@@ -2223,6 +2270,7 @@ def query(
             # Retry / revision
             # ------------------------------------------------
             "revision_count": revision_count,
+            "answer_revision_count": answer_revision_count,
             "retrieval_rewrite_count": (retrieval_rewrite_count),
             "web_rewrite_count": (web_rewrite_count),
             "support_retry_count": (support_retry_count),
@@ -2234,6 +2282,30 @@ def query(
             "rerank_latency_ms": (rerank_latency_ms),
             "grader_latency_ms": (grader_latency_ms),
             "generation_latency_ms": (generation_latency_ms),
+            "grounding_ms": _get_latency(
+                final_output,
+                "grounding_ms",
+            ),
+            "hhem_call_count": _safe_int(
+                final_output.get("hhem_call_count"),
+                default=0,
+            ),
+            "hhem_total_ms": _safe_float(
+                final_output.get("hhem_total_ms"),
+                default=0.0,
+            ),
+            "request_hhem_call_count": _safe_int(
+                final_output.get("request_hhem_call_count"),
+                default=0,
+            ),
+            "request_hhem_total_ms": _safe_float(
+                final_output.get("request_hhem_total_ms"),
+                default=0.0,
+            ),
+            "grounding_pass_count": _safe_int(
+                final_output.get("grounding_pass_count"),
+                default=0,
+            ),
             "latency_ms": elapsed_ms,
         }
 
