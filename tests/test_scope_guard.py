@@ -28,18 +28,17 @@ def test_guard_blocks_non_technical_request(monkeypatch):
     assert "outside" in response.lower()
 
 
-def test_guard_blocks_ambiguous_request_with_clarification(monkeypatch):
+def test_guard_allows_request_when_classifier_returns_technical(monkeypatch):
     monkeypatch.setattr(
         rails,
         "_run_topic_classifier",
-        lambda message: "AMBIGUOUS",
+        lambda message: "TECHNICAL",
     )
 
     blocked, response = rails.guard("How do I optimize it?")
 
-    assert blocked is True
-    assert response is not None
-    assert "more technical context" in response.lower()
+    assert blocked is False
+    assert response is None
 
 
 def test_guard_blocks_jailbreak_before_classifier(monkeypatch):
@@ -66,7 +65,7 @@ def test_guard_blocks_jailbreak_before_classifier(monkeypatch):
     assert "safety" in response.lower()
 
 
-def test_classifier_failure_is_ambiguous(monkeypatch):
+def test_classifier_uninitialized_returns_unavailable(monkeypatch):
     monkeypatch.setattr(
         rails,
         "_check_topic_llm",
@@ -77,4 +76,96 @@ def test_classifier_failure_is_ambiguous(monkeypatch):
         "How does retrieval work?"
     )
 
-    assert result == "AMBIGUOUS"
+    assert result == "UNAVAILABLE"
+
+
+class _FakeTopicClassifier:
+    def __init__(self, *, result=None, error=None, never_finishes=False):
+        self.result = result
+        self.error = error
+        self.never_finishes = never_finishes
+
+    def invoke(self, _prompt):
+        if self.never_finishes:
+            raise TimeoutError("simulated classifier deadline exceeded")
+        if self.error is not None:
+            raise self.error
+        return type("FakeResponse", (), {"content": self.result})()
+
+    async def ainvoke(self, _prompt):
+        import asyncio
+
+        if self.never_finishes:
+            await asyncio.Event().wait()
+        if self.error is not None:
+            raise self.error
+        return type("FakeResponse", (), {"content": self.result})()
+
+
+def test_topic_classifier_deadline_returns_unavailable(monkeypatch):
+    monkeypatch.setattr(
+        rails,
+        "_check_topic_llm",
+        _FakeTopicClassifier(never_finishes=True),
+    )
+    monkeypatch.setattr(
+        rails,
+        "_TOPIC_CLASSIFIER_DEADLINE_SECONDS",
+        0.01,
+    )
+
+    result = rails._run_topic_classifier("How does RAG retrieval work?")
+
+    assert result == "UNAVAILABLE"
+
+
+def test_topic_classifier_provider_error_returns_unavailable(monkeypatch):
+    monkeypatch.setattr(
+        rails,
+        "_check_topic_llm",
+        _FakeTopicClassifier(error=RuntimeError("provider unavailable")),
+    )
+
+    result = rails._run_topic_classifier("How does RAG retrieval work?")
+
+    assert result == "UNAVAILABLE"
+
+
+def test_topic_classifier_unexpected_output_returns_unavailable(monkeypatch):
+    monkeypatch.setattr(
+        rails,
+        "_check_topic_llm",
+        _FakeTopicClassifier(result="MAYBE"),
+    )
+
+    result = rails._run_topic_classifier("How does RAG retrieval work?")
+
+    assert result == "UNAVAILABLE"
+
+
+def test_topic_classifier_preserves_non_technical_result(monkeypatch):
+    monkeypatch.setattr(
+        rails,
+        "_check_topic_llm",
+        _FakeTopicClassifier(result="NON_TECHNICAL"),
+    )
+
+    result = rails._run_topic_classifier("How do I make coffee?")
+
+    assert result == "NON_TECHNICAL"
+
+
+
+def test_guard_blocks_when_scope_classifier_is_unavailable(monkeypatch):
+    monkeypatch.setattr(
+        rails,
+        "_run_topic_classifier",
+        lambda message: "UNAVAILABLE",
+    )
+
+    blocked, response = rails.guard("How does RAG retrieval work?")
+
+    assert blocked is True
+    assert response is not None
+    assert "retry" in response.lower()
+    assert "no retrieval" in response.lower()

@@ -41,6 +41,7 @@ logger = logging.getLogger(__name__)
 
 _rails: LLMRails | None = None
 _check_topic_llm: ChatGroq | None = None
+_TOPIC_CLASSIFIER_DEADLINE_SECONDS = 12.0
 
 
 # ============================================================
@@ -101,98 +102,9 @@ _JAILBREAK_RESPONSE = (
 # ============================================================
 
 
-@action(name="check_topic")
-async def check_topic(
-    context: dict | None = None,
-) -> str:
-    """
-    Determine whether a user request is within the broad
-    KnowledgeMesh technical knowledge domain.
-
-    This function has exactly TWO runtime outcomes:
-
-        TECHNICAL
-        NON_TECHNICAL
-
-    It does NOT determine whether the exact answer exists.
-
-    Exact answerability is determined later by:
-
-        Planner
-          ↓
-        Qdrant
-          ↓
-        FlashRank
-          ↓
-        Grader
-          ↓
-        Context Evaluator
-          ↓
-        Grounding
-          ↓
-        Citation Validation
-    """
-
-    # --------------------------------------------------------
-    # Classifier unavailable
-    #
-    # Fail OPEN to TECHNICAL.
-    #
-    # A classifier infrastructure failure must not turn a
-    # valid technical request into a false guardrail block.
-    # --------------------------------------------------------
-
-    if _check_topic_llm is None:
-        logger.warning("TOPIC_DIAG: classifier_state=UNINITIALIZED result=TECHNICAL")
-        return "TECHNICAL"
-
-    ctx = context or {}
-
-    user_message = (
-        ctx.get("user_message")
-        or ctx.get("last_user_message")
-        or ctx.get("user_input")
-        or ""
-    )
-
-    user_message = str(user_message).strip()
-
-    logger.info(
-        "TOPIC_DIAG: classifier_state=INITIALIZED message_present=%s message_length=%s",
-        bool(user_message),
-        len(user_message),
-    )
-
-    # --------------------------------------------------------
-    # Empty request
-    #
-    # Keep this non-blocking. main.py already handles an empty
-    # request separately.
-    # --------------------------------------------------------
-
-    if not user_message:
-        logger.warning(
-            "TOPIC_DIAG: empty_user_message result=TECHNICAL keys=%s",
-            list(ctx.keys()),
-        )
-        return "TECHNICAL"
-
-    # --------------------------------------------------------
-    # Deterministic jailbreak protection
-    # --------------------------------------------------------
-
-    if _is_jailbreak_attempt(user_message):
-        logger.warning(
-            "TOPIC_DIAG: jailbreak_detected result=NON_TECHNICAL query=%r",
-            user_message[:120],
-        )
-        return "NON_TECHNICAL"
-
-    # --------------------------------------------------------
-    # Scope classifier
-    # --------------------------------------------------------
-
-    prompt = f"""
+def _build_topic_classifier_prompt(user_message: str) -> str:
+    """Build the shared broad-scope classification prompt."""
+    return f"""
 You are the BROAD SCOPE CLASSIFIER for KnowledgeMesh.
 
 KnowledgeMesh is an enterprise technical knowledge assistant
@@ -332,10 +244,104 @@ or
 NON_TECHNICAL
 """
 
+
+@action(name="check_topic")
+async def check_topic(
+    context: dict | None = None,
+) -> str:
+    """
+    Determine whether a user request is within the broad
+    KnowledgeMesh technical knowledge domain.
+
+    Normal scope outcomes are TECHNICAL and NON_TECHNICAL.
+    UNAVAILABLE indicates that a trustworthy decision could
+    not be made; the synchronous PRE-RAG gate must block it.
+
+    It does NOT determine whether the exact answer exists.
+
+    Exact answerability is determined later by:
+
+        Planner
+          ↓
+        Qdrant
+          ↓
+        FlashRank
+          ↓
+        Grader
+          ↓
+        Context Evaluator
+          ↓
+        Grounding
+          ↓
+        Citation Validation
+    """
+
+    # --------------------------------------------------------
+    # Classifier unavailable: do not guess the scope.
+    # The PRE-RAG gate will fail closed on this state.
+    # --------------------------------------------------------
+
+    if _check_topic_llm is None:
+        logger.warning(
+            "TOPIC_DIAG: classifier_state=UNINITIALIZED result=UNAVAILABLE"
+        )
+        return "UNAVAILABLE"
+
+    ctx = context or {}
+
+    user_message = (
+        ctx.get("user_message")
+        or ctx.get("last_user_message")
+        or ctx.get("user_input")
+        or ""
+    )
+
+    user_message = str(user_message).strip()
+
+    logger.info(
+        "TOPIC_DIAG: classifier_state=INITIALIZED message_present=%s message_length=%s",
+        bool(user_message),
+        len(user_message),
+    )
+
+    # --------------------------------------------------------
+    # Empty request
+    #
+    # Keep this non-blocking. main.py already handles an empty
+    # request separately.
+    # --------------------------------------------------------
+
+    if not user_message:
+        logger.warning(
+            "TOPIC_DIAG: empty_user_message result=TECHNICAL keys=%s",
+            list(ctx.keys()),
+        )
+        return "TECHNICAL"
+
+    # --------------------------------------------------------
+    # Deterministic jailbreak protection
+    # --------------------------------------------------------
+
+    if _is_jailbreak_attempt(user_message):
+        logger.warning(
+            "TOPIC_DIAG: jailbreak_detected result=NON_TECHNICAL query=%r",
+            user_message[:120],
+        )
+        return "NON_TECHNICAL"
+
+    # --------------------------------------------------------
+    # Scope classifier
+    # --------------------------------------------------------
+
+    prompt = _build_topic_classifier_prompt(user_message)
+
     try:
         logger.info("TOPIC_DIAG: invoking_classifier")
 
-        response = await _check_topic_llm.ainvoke(prompt)
+        response = await asyncio.wait_for(
+            _check_topic_llm.ainvoke(prompt),
+            timeout=_TOPIC_CLASSIFIER_DEADLINE_SECONDS,
+        )
 
         answer = str(response.content).strip().upper()
 
@@ -345,20 +351,14 @@ NON_TECHNICAL
         )
 
     except Exception as exc:
-        # ----------------------------------------------------
-        # Classifier failure -> fail OPEN.
-        #
-        # Do not block a technical request because the scope
-        # classifier itself failed.
-        # ----------------------------------------------------
-
+        # An uncertain scope decision must not enter retrieval.
         logger.warning(
-            "TOPIC_DIAG: classifier_failed error_type=%s error=%s result=TECHNICAL",
+            "TOPIC_DIAG: classifier_failed error_type=%s error=%s result=UNAVAILABLE",
             type(exc).__name__,
             exc,
         )
 
-        return "TECHNICAL"
+        return "UNAVAILABLE"
 
     # --------------------------------------------------------
     # Explicit TECHNICAL
@@ -400,18 +400,13 @@ NON_TECHNICAL
         )
         return "NON_TECHNICAL"
 
-    # --------------------------------------------------------
-    # Unknown model output -> fail OPEN to TECHNICAL.
-    #
-    # There is deliberately no third state.
-    # --------------------------------------------------------
-
+    # Unknown output is not evidence that the request is in scope.
     logger.warning(
-        "TOPIC_DIAG: classifier_unexpected_output=%r result=TECHNICAL",
+        "TOPIC_DIAG: classifier_unexpected_output=%r result=UNAVAILABLE",
         answer[:120],
     )
 
-    return "TECHNICAL"
+    return "UNAVAILABLE"
 
 
 # ============================================================
@@ -448,6 +443,8 @@ def initialize_rails() -> None:
         api_key=settings.GROQ_API_KEY,
         model="openai/gpt-oss-20b",
         temperature=0,
+        timeout=10.0,
+        max_retries=0,
     )
 
     _check_topic_llm = guard_llm
@@ -489,58 +486,67 @@ def _run_topic_classifier(
     message: str,
 ) -> str:
     """
-    Execute the async scope classifier from the synchronous
-    FastAPI request path.
+    Classify a request synchronously for the FastAPI pre-RAG gate.
 
-    main.py currently exposes a synchronous /query endpoint,
-    so asyncio.run() is safe here because FastAPI executes
-    the synchronous endpoint outside the running event loop.
-
-    Runtime output is always normalized to:
-
-        TECHNICAL
-        NON_TECHNICAL
+    Do not bridge through asyncio.run(): the synchronous API path
+    should not reuse the shared async client across event loops.
+    Uncertain results fail closed as UNAVAILABLE.
     """
 
     if _check_topic_llm is None:
         logger.warning(
-            "TOPIC_DIAG: classifier_state=UNINITIALIZED bridge_result=TECHNICAL"
+            "TOPIC_DIAG: classifier_state=UNINITIALIZED bridge_result=UNAVAILABLE"
         )
+        return "UNAVAILABLE"
+
+    user_message = str(message or "").strip()
+
+    if not user_message:
         return "TECHNICAL"
+
+    if _is_jailbreak_attempt(user_message):
+        logger.warning(
+            "TOPIC_DIAG: jailbreak_detected result=NON_TECHNICAL query=%r",
+            user_message[:120],
+        )
+        return "NON_TECHNICAL"
 
     try:
-        result = (
-            str(
-                asyncio.run(
-                    check_topic(
-                        {
-                            "user_message": message,
-                        }
-                    )
-                )
-            )
-            .strip()
-            .upper()
+        logger.info("TOPIC_DIAG: invoking_classifier_sync")
+
+        response = _check_topic_llm.invoke(
+            _build_topic_classifier_prompt(user_message)
+        )
+        answer = str(response.content).strip().upper()
+
+        logger.info(
+            "TOPIC_DIAG: classifier_sync_returned=%s",
+            answer[:80],
         )
 
-        # ----------------------------------------------------
-        # Enforce the two-state contract at the bridge.
-        # ----------------------------------------------------
-
-        if result == "NON_TECHNICAL":
+        if answer.startswith("TECHNICAL"):
+            return "TECHNICAL"
+        if answer.startswith("NON_TECHNICAL"):
+            return "NON_TECHNICAL"
+        if answer.startswith("YES"):
+            return "TECHNICAL"
+        if answer.startswith("NO"):
             return "NON_TECHNICAL"
 
-        return "TECHNICAL"
+        logger.warning(
+            "TOPIC_DIAG: classifier_unexpected_output=%r result=UNAVAILABLE",
+            answer[:120],
+        )
+        return "UNAVAILABLE"
 
     except Exception as exc:
         logger.warning(
-            "TOPIC_DIAG: classifier_bridge_failed "
-            "error_type=%s error=%s result=TECHNICAL",
+            "TOPIC_DIAG: synchronous_classifier_failed "
+            "error_type=%s error=%s result=UNAVAILABLE",
             type(exc).__name__,
             exc,
         )
-
-        return "TECHNICAL"
+        return "UNAVAILABLE"
 
 
 # ============================================================
@@ -562,10 +568,8 @@ def guard(
         (False, None)
             Request is allowed to continue into LangGraph.
 
-    Scope decision has exactly two outcomes:
-
-        TECHNICAL
-        NON_TECHNICAL
+    A request is allowed only for an explicit TECHNICAL
+    result. NON_TECHNICAL and UNAVAILABLE are both blocked.
 
     CRITICAL:
     This function intentionally does NOT call:
@@ -606,7 +610,26 @@ def guard(
         scope = _run_topic_classifier(message)
 
         # ----------------------------------------------------
-        # ONLY explicit NON_TECHNICAL can block.
+        # Unavailable classification: fail closed.
+        # ----------------------------------------------------
+
+        if scope == "UNAVAILABLE":
+            response = (
+                "KnowledgeMesh temporarily couldn't verify whether "
+                "this request is within its supported technical scope. "
+                "No retrieval or answer generation was performed. "
+                "Please retry shortly."
+            )
+
+            logger.warning(
+                "TOPIC_DIAG: PRE_RAG_BLOCK scope=UNAVAILABLE query=%r",
+                message[:120],
+            )
+
+            return (True, response)
+
+        # ----------------------------------------------------
+        # Explicit out-of-scope request.
         # ----------------------------------------------------
 
         if scope == "NON_TECHNICAL":
