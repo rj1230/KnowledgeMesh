@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import logging
 import threading
+from contextvars import ContextVar
 from time import perf_counter
 from typing import Any
 
@@ -38,17 +39,36 @@ from transformers import AutoModelForSequenceClassification
 
 logger = logging.getLogger(__name__)
 
-# Per-process HHEMv2 profiling counters.
+# Process-wide HHEMv2 profiling counters. The lock protects snapshots and
+# updates; these cumulative counters are not request-scoped.
 _hhem_call_count = 0
 _hhem_total_ms = 0.0
+_hhem_profile_lock = threading.Lock()
+_active_hhem_profile: ContextVar[dict[str, float] | None] = ContextVar(
+    "active_hhem_profile",
+    default=None,
+)
 
 
 def get_hhem_profile() -> dict[str, float | int]:
-    """Return per-process HHEMv2 profiling counters."""
-    return {
-        "call_count": int(_hhem_call_count),
-        "total_ms": round(float(_hhem_total_ms), 2),
-    }
+    """Return a thread-safe snapshot of process-wide scorer metrics."""
+    with _hhem_profile_lock:
+        return {
+            "call_count": int(_hhem_call_count),
+            "total_ms": round(float(_hhem_total_ms), 2),
+        }
+
+
+def start_hhem_profile() -> tuple[object, dict[str, float]]:
+    """Start a context-local profile for one grounding pass."""
+    profile: dict[str, float] = {"call_count": 0, "total_ms": 0.0}
+    token = _active_hhem_profile.set(profile)
+    return token, profile
+
+
+def stop_hhem_profile(token: object) -> None:
+    """Restore the previous context-local profile."""
+    _active_hhem_profile.reset(token)
 
 MODEL_NAME = "vectara/hallucination_evaluation_model"
 
@@ -292,15 +312,20 @@ def score_entailment(
     """
 
     global _hhem_call_count, _hhem_total_ms
-    _hhem_call_count += 1
     call_started = perf_counter()
-    premise = str(premise or "").strip()
-    hypothesis = str(hypothesis or "").strip()
 
-    if not premise or not hypothesis:
-        return 0.0
+    with _hhem_profile_lock:
+        _hhem_call_count += 1
+        call_number = _hhem_call_count
 
+    score = 0.0
     try:
+        premise = str(premise or "").strip()
+        hypothesis = str(hypothesis or "").strip()
+
+        if not premise or not hypothesis:
+            return 0.0
+
         model = _get_model()
 
         with logfire.span(
@@ -324,16 +349,7 @@ def score_entailment(
                 max_input_tokens=HHEM_MAX_LENGTH,
             )
 
-            call_ms = round((perf_counter() - call_started) * 1000, 2)
-            _hhem_total_ms += call_ms
-            logger.info(
-                "HHEMv2 call profiling: call=%s call_ms=%s cumulative_ms=%s",
-                _hhem_call_count,
-                call_ms,
-                round(_hhem_total_ms, 2),
-            )
-
-            return score
+        return score
 
     except Exception as exc:
         logger.exception(
@@ -350,3 +366,24 @@ def score_entailment(
             pass
 
         return 0.0
+
+    finally:
+        call_ms = round((perf_counter() - call_started) * 1000, 2)
+
+        # Keep global diagnostics, while attributing this call to the
+        # active grounding-pass context when one is present.
+        profile = _active_hhem_profile.get()
+        if profile is not None:
+            profile["call_count"] += 1
+            profile["total_ms"] += call_ms
+
+        with _hhem_profile_lock:
+            _hhem_total_ms += call_ms
+            cumulative_ms = round(_hhem_total_ms, 2)
+
+        logger.info(
+            "HHEMv2 call profiling: call=%s call_ms=%s cumulative_ms=%s",
+            call_number,
+            call_ms,
+            cumulative_ms,
+        )

@@ -1599,7 +1599,7 @@ def _deterministic_exact_support(
 
 def _get_entailment_scorer():
     try:
-        from app.tools.entailment_tool import score_entailment, get_hhem_profile
+        from app.tools.entailment_tool import score_entailment
 
         return score_entailment
 
@@ -2258,7 +2258,9 @@ def _audit_citation_consistency(
             continue
 
         citations = _dedupe_preserve_order(
-            atomic_result.get("citations") or []
+            atomic_result.get("source_citations")
+            or atomic_result.get("citations")
+            or []
         )
 
         if not citations:
@@ -2406,8 +2408,9 @@ def _build_revision_prompt(
 # ---------------------------------------------------------------------------
 
 
-def grounding_critic_node(
+def _grounding_critic_node_with_profile(
     state: Dict[str, Any],
+    hhem_profile: Dict[str, float],
 ) -> Dict[str, Any]:
     """
     Strict post-generation grounding validator.
@@ -2415,9 +2418,6 @@ def grounding_critic_node(
 
     grounding_started = perf_counter()
 
-    # Per-pass HHEMv2 profiling baseline.
-    from app.tools.entailment_tool import get_hhem_profile
-    hhem_profile_start = get_hhem_profile()
 
     final_answer = _safe_text(
         state.get("final_answer")
@@ -2497,7 +2497,11 @@ def grounding_critic_node(
                     and math.isfinite(score)
                     and 0.0 <= score <= 1.0
                 ):
-                    entailment_cache[(claim, evidence)] = float(score)
+                    normalized_claim = _clean_claim_text(claim)
+                    if normalized_claim:
+                        entailment_cache[
+                            (normalized_claim, evidence)
+                        ] = float(score)
 
     cache_entries_received = len(entailment_cache)
 
@@ -2568,6 +2572,8 @@ def grounding_critic_node(
                 evidence_map,
                 entailment_cache,
             )
+
+            result["source_citations"] = list(citations)
 
             best_citation = _safe_text(
                 result.get("best_citation")
@@ -2727,7 +2733,11 @@ def grounding_critic_node(
 
     semantic_support_ok = bool(substantive_results and not unsupported_claims)
 
-    citation_support_ok = bool(not uncited_claims and not invalid_citations)
+    citation_support_ok = bool(
+        not uncited_claims
+        and not invalid_citations
+        and citation_consistency["passed"]
+    )
 
     answer_supported = bool(semantic_support_ok and citation_support_ok)
 
@@ -2796,16 +2806,8 @@ def grounding_critic_node(
     # Final state update
     # ------------------------------------------------------------------
 
-    hhem_profile_end = get_hhem_profile()
-    hhem_call_count = (
-        int(hhem_profile_end.get("call_count", 0))
-        - int(hhem_profile_start.get("call_count", 0))
-    )
-    hhem_total_ms = round(
-        float(hhem_profile_end.get("total_ms", 0.0))
-        - float(hhem_profile_start.get("total_ms", 0.0)),
-        2,
-    )
+    hhem_call_count = int(hhem_profile["call_count"])
+    hhem_total_ms = round(float(hhem_profile["total_ms"]), 2)
 
     grounding_ms = round(
         (perf_counter() - grounding_started) * 1000,
@@ -2900,3 +2902,19 @@ def grounding_critic_node(
             )
         ),
     }
+
+
+def grounding_critic_node(
+    state: Dict[str, Any],
+) -> Dict[str, Any]:
+    """Run grounding validation with exception-safe HHEM profiling."""
+    from app.tools.entailment_tool import (
+        start_hhem_profile,
+        stop_hhem_profile,
+    )
+
+    profile_token, profile = start_hhem_profile()
+    try:
+        return _grounding_critic_node_with_profile(state, profile)
+    finally:
+        stop_hhem_profile(profile_token)
