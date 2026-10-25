@@ -11,13 +11,19 @@ What changed vs. the one-pair-at-a-time version
 2. LRU cache keyed on (premise, hypothesis): a claim already scored
    against the same evidence is never re-scored (revisions, salvage
    re-validation, repeated queries).
-3. warmup_hhem(): load the model and run one dummy batch at startup so
-   the first real request does not pay the cold-start cost (the 7.3s
-   first call in the logs).
+3. warmup_hhem(): load the model and run one realistic batch at startup
+   so the first real request does not pay the cold-start cost.
 4. Truncation fix: the premise is truncated, never the hypothesis.
    Previously `truncation=True` on the whole prompt cut from the RIGHT,
    and the HHEM prompt ends with the hypothesis, so a long premise
    silently chopped the claim being checked.
+5. Tuning switches (environment variables, all optional):
+     HHEM_BATCH_SIZE       pairs per forward pass (default 8)
+     HHEM_PREMISE_TOKENS   max premise tokens per pair (default 512 = no
+                           extra cap). Over-long premises keep the
+                           sentences that best match the claim.
+     HHEM_QUANTIZE         "1" = int8 dynamic quantization (CPU only)
+     HHEM_NUM_THREADS      torch CPU threads (default: PyTorch's own)
 
 Input:
     premise    = retrieved evidence
@@ -42,6 +48,8 @@ from __future__ import annotations
 
 import hashlib
 import logging
+import os
+import re
 import threading
 from collections import OrderedDict
 from contextvars import ContextVar
@@ -66,7 +74,20 @@ HHEM_MAX_LENGTH = 512
 
 # Pairs per forward pass. On CPU 8 is a good default; on a GPU raise it
 # (16-32). Pairs are length-sorted first so padding waste stays small.
-HHEM_BATCH_SIZE = 8
+HHEM_BATCH_SIZE = int(os.getenv("HHEM_BATCH_SIZE", "8"))
+
+# Max tokens of premise per pair. 512 means "no extra cap": the premise
+# then only has to fit the model window, as before.
+HHEM_PREMISE_TOKENS = int(os.getenv("HHEM_PREMISE_TOKENS", "512"))
+
+# "1" = int8 dynamic quantization of the T5 component (CPU only).
+HHEM_QUANTIZE = os.getenv("HHEM_QUANTIZE", "0") == "1"
+
+# 0 = leave PyTorch's default thread count alone.
+_HHEM_THREADS = int(os.getenv("HHEM_NUM_THREADS", "0"))
+
+if _HHEM_THREADS > 0:
+    torch.set_num_threads(_HHEM_THREADS)
 
 # Cached (premise, hypothesis) scores kept in memory.
 HHEM_CACHE_SIZE = 4096
@@ -161,6 +182,17 @@ def _get_model() -> Any:
 
             _model.eval()
 
+            if HHEM_QUANTIZE:
+                try:
+                    _model.t5 = torch.quantization.quantize_dynamic(
+                        _model.t5,
+                        {torch.nn.Linear},
+                        dtype=torch.qint8,
+                    )
+                    logger.info("HHEMv2 int8 dynamic quantization enabled")
+                except Exception as exc:
+                    logger.warning("HHEMv2 quantization skipped: %s", exc)
+
             logfire.info(
                 "HHEMv2 grounding model ready",
                 model=MODEL_NAME,
@@ -172,10 +204,11 @@ def _get_model() -> Any:
 
 def warmup_hhem() -> None:
     """
-    Load the model and run one dummy batch.
+    Load the model and run one realistic batch.
 
-    Call once at application startup (e.g. FastAPI lifespan) so the first
-    real request does not pay model-load and first-inference cost.
+    Call once at application startup so the first real request does not
+    pay model-load and first-inference cost. The dummy batch uses
+    near-limit prompts so the first large real batch is not cold.
     Failures are logged and swallowed: scoring still works lazily.
     """
 
@@ -184,15 +217,13 @@ def warmup_hhem() -> None:
     try:
         model = _get_model()
 
+        long_premise = " ".join(
+            ["Paris is the capital of France and its largest city."] * 40
+        )
+
         dummy = [
-            (
-                "The cat sat on the mat while the dog slept nearby.",
-                "A cat sat on a mat.",
-            ),
-            (
-                "Paris is the capital of France.",
-                "Paris is the capital of Germany.",
-            ),
+            (f"{long_premise} Item {i}.", "Paris is a city in France.")
+            for i in range(HHEM_BATCH_SIZE)
         ]
 
         _score_uncached(model, dummy)
@@ -277,6 +308,57 @@ def _tokenizer(model: Any) -> Any:
     return tokenizer
 
 
+def _select_relevant_sentences(
+    premise: str,
+    hypothesis: str,
+    tokenizer: Any,
+    budget: int,
+) -> str:
+    """
+    Keep the premise sentences that overlap most with the claim, in
+    original order, until the token budget is used.
+
+    Used only when the premise is longer than the budget. Plain
+    head-truncation can drop the sentence that actually supports the
+    claim; this keeps the likeliest supporting sentences instead.
+    """
+
+    sentences = [
+        s.strip() for s in re.split(r"(?<=[.!?])\s+|\n+", premise) if s.strip()
+    ]
+
+    if len(sentences) <= 1:
+        return premise
+
+    hyp_terms = set(re.findall(r"\w+", hypothesis.lower()))
+
+    def overlap(sentence: str) -> int:
+        return len(hyp_terms & set(re.findall(r"\w+", sentence.lower())))
+
+    ranked = sorted(
+        range(len(sentences)),
+        key=lambda i: overlap(sentences[i]),
+        reverse=True,
+    )
+
+    kept: set[int] = set()
+    used = 0
+
+    for i in ranked:
+        n = len(tokenizer(sentences[i], add_special_tokens=False)["input_ids"])
+
+        if used + n > budget:
+            continue
+
+        kept.add(i)
+        used += n
+
+    if not kept:
+        return premise
+
+    return " ".join(sentences[i] for i in sorted(kept))
+
+
 def _build_prompt(model: Any, premise: str, hypothesis: str) -> str:
     """
     Build the HHEMv2 prompt, fitting the PREMISE into the context window.
@@ -285,6 +367,10 @@ def _build_prompt(model: Any, premise: str, hypothesis: str) -> str:
     from the right, so truncating the whole prompt would chop the claim
     being verified. Instead, measure everything except the premise and
     trim the premise to the remaining token budget.
+
+    When the premise exceeds the budget, keep its most claim-relevant
+    sentences (see _select_relevant_sentences); fall back to head
+    truncation only if that still does not fit.
     """
 
     template = _prompt_template(model)
@@ -316,10 +402,26 @@ def _build_prompt(model: Any, premise: str, hypothesis: str) -> str:
             HHEM_MAX_LENGTH - len(overhead_ids) - _TOKEN_MARGIN,
         )
 
+    # Optional extra cap for speed (HHEM_PREMISE_TOKENS).
+    budget = min(budget, HHEM_PREMISE_TOKENS)
+
     premise_ids = tokenizer(premise, add_special_tokens=False)["input_ids"]
 
     if len(premise_ids) > budget:
-        premise = tokenizer.decode(premise_ids[:budget], skip_special_tokens=True)
+        premise = _select_relevant_sentences(
+            premise,
+            hypothesis,
+            tokenizer,
+            budget,
+        )
+        premise_ids = tokenizer(premise, add_special_tokens=False)["input_ids"]
+
+        # Still too long (for example one giant sentence): head-truncate.
+        if len(premise_ids) > budget:
+            premise = tokenizer.decode(
+                premise_ids[:budget],
+                skip_special_tokens=True,
+            )
 
     return template.format(text1=premise, text2=hypothesis)
 
