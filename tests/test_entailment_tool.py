@@ -205,7 +205,7 @@ def test_request_profile_ignores_empty_input_and_model_failure(monkeypatch):
 
 
 def test_select_relevant_sentences_keeps_the_matching_sentence():
-    def fake_tokenizer(text, add_special_tokens=False):
+    def fake_tokenizer(text, add_special_tokens=False, **kwargs):
         return {"input_ids": text.split()}
 
     premise = "Cats purr loudly. The capital of France is Paris. Rain fell on Tuesday."

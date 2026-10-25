@@ -9,21 +9,15 @@ What changed vs. the one-pair-at-a-time version
 1. score_entailment_batch(): scores many (premise, hypothesis) pairs in a
    few forward passes instead of one forward pass per claim.
 2. LRU cache keyed on (premise, hypothesis): a claim already scored
-   against the same evidence is never re-scored (revisions, salvage
-   re-validation, repeated queries).
+   against the same evidence is never re-scored.
 3. warmup_hhem(): load the model and run one realistic batch at startup
    so the first real request does not pay the cold-start cost.
 4. Truncation fix: the premise is truncated, never the hypothesis.
-   Previously `truncation=True` on the whole prompt cut from the RIGHT,
-   and the HHEM prompt ends with the hypothesis, so a long premise
-   silently chopped the claim being checked.
 5. Tuning switches (environment variables, all optional):
-     HHEM_BATCH_SIZE       pairs per forward pass (default 8)
-     HHEM_PREMISE_TOKENS   max premise tokens per pair (default 512 = no
-                           extra cap). Over-long premises keep the
-                           sentences that best match the claim.
-     HHEM_QUANTIZE         "1" = int8 dynamic quantization (CPU only)
-     HHEM_NUM_THREADS      torch CPU threads (default: PyTorch's own)
+    HHEM_BATCH_SIZE       pairs per forward pass (default 8)
+    HHEM_PREMISE_TOKENS   max premise tokens per pair (default 512)
+    HHEM_QUANTIZE         "1" = int8 dynamic quantization (CPU only)
+    HHEM_NUM_THREADS      torch CPU threads (default: PyTorch's own)
 
 Input:
     premise    = retrieved evidence
@@ -37,14 +31,15 @@ Interpretation:
     ~0.5 -> uncertain
     ~0.0 -> unsupported / likely hallucinated
 
-Public API (unchanged unless noted):
+Public API:
     score_entailment(premise, hypothesis) -> float
-    score_entailment_batch(pairs)         -> list[float]   (new)
-    warmup_hhem()                         -> None          (new)
+    score_entailment_batch(pairs)         -> list[float]
+    warmup_hhem()                         -> None
     get_hhem_profile / start_hhem_profile / stop_hhem_profile
 """
 
 from __future__ import annotations
+
 
 import hashlib
 import logging
@@ -56,9 +51,11 @@ from contextvars import ContextVar
 from time import perf_counter
 from typing import Any, Sequence
 
+
 import logfire
 import torch
 from transformers import AutoModelForSequenceClassification
+
 
 logger = logging.getLogger(__name__)
 
@@ -67,33 +64,47 @@ logger = logging.getLogger(__name__)
 # Configuration
 # ============================================================
 
+
 MODEL_NAME = "vectara/hallucination_evaluation_model"
 
-# HHEMv2 uses a T5 tokenizer with a 512-token context window.
+
+# Deliberate latency/memory cap.
+#
+# HHEM-2.1-Open inherits the "> 512 tokens" tokenizer warning from its
+# Flan-T5-base foundation and supports longer inputs, but we keep prompts
+# within 512 tokens by default for predictable batching and latency.
 HHEM_MAX_LENGTH = 512
+
 
 # Pairs per forward pass. On CPU 8 is a good default; on a GPU raise it
 # (16-32). Pairs are length-sorted first so padding waste stays small.
 HHEM_BATCH_SIZE = int(os.getenv("HHEM_BATCH_SIZE", "8"))
 
+
 # Max tokens of premise per pair. 512 means "no extra cap": the premise
 # then only has to fit the model window, as before.
 HHEM_PREMISE_TOKENS = int(os.getenv("HHEM_PREMISE_TOKENS", "512"))
 
+
 # "1" = int8 dynamic quantization of the T5 component (CPU only).
 HHEM_QUANTIZE = os.getenv("HHEM_QUANTIZE", "0") == "1"
+
 
 # 0 = leave PyTorch's default thread count alone.
 _HHEM_THREADS = int(os.getenv("HHEM_NUM_THREADS", "0"))
 
+
 if _HHEM_THREADS > 0:
     torch.set_num_threads(_HHEM_THREADS)
+
 
 # Cached (premise, hypothesis) scores kept in memory.
 HHEM_CACHE_SIZE = 4096
 
+
 # Tokens kept free for special tokens when fitting the premise.
 _TOKEN_MARGIN = 4
+
 
 # Smallest premise budget worth scoring; below this the hypothesis itself
 # is too long and gets truncated as a last resort.
@@ -103,6 +114,7 @@ _MIN_PREMISE_TOKENS = 32
 # ============================================================
 # Profiling (process-wide + per grounding pass)
 # ============================================================
+
 
 # Process-wide counters. The lock protects snapshots and updates; these
 # cumulative counters are not request-scoped.
@@ -154,6 +166,7 @@ def _record_profile(pairs_scored: int, elapsed_ms: float) -> None:
 # ============================================================
 # Model loading / warmup
 # ============================================================
+
 
 _model: Any | None = None
 _model_lock = threading.Lock()
@@ -240,6 +253,7 @@ def warmup_hhem() -> None:
 # ============================================================
 # Cache
 # ============================================================
+
 
 _cache: "OrderedDict[str, float]" = OrderedDict()
 _cache_lock = threading.Lock()
@@ -341,17 +355,29 @@ def _select_relevant_sentences(
         reverse=True,
     )
 
+    # Tokenize each sentence once instead of once per selection attempt.
+    token_counts = [
+        len(
+            tokenizer(
+                sentence,
+                add_special_tokens=False,
+                verbose=False,
+            )["input_ids"]
+        )
+        for sentence in sentences
+    ]
+
     kept: set[int] = set()
     used = 0
 
     for i in ranked:
-        n = len(tokenizer(sentences[i], add_special_tokens=False)["input_ids"])
+        sentence_tokens = token_counts[i]
 
-        if used + n > budget:
+        if used + sentence_tokens > budget:
             continue
 
         kept.add(i)
-        used += n
+        used += sentence_tokens
 
     if not kept:
         return premise
@@ -369,8 +395,8 @@ def _build_prompt(model: Any, premise: str, hypothesis: str) -> str:
     trim the premise to the remaining token budget.
 
     When the premise exceeds the budget, keep its most claim-relevant
-    sentences (see _select_relevant_sentences); fall back to head
-    truncation only if that still does not fit.
+    sentences; fall back to head truncation only if that still does not
+    fit.
     """
 
     template = _prompt_template(model)
@@ -379,22 +405,33 @@ def _build_prompt(model: Any, premise: str, hypothesis: str) -> str:
     overhead_ids = tokenizer(
         template.format(text1="", text2=hypothesis),
         add_special_tokens=True,
+        verbose=False,
     )["input_ids"]
 
     budget = HHEM_MAX_LENGTH - len(overhead_ids) - _TOKEN_MARGIN
 
     if budget < _MIN_PREMISE_TOKENS:
         # Pathologically long hypothesis: trim it, keep a usable premise.
-        hyp_ids = tokenizer(hypothesis, add_special_tokens=False)["input_ids"]
+        hyp_ids = tokenizer(
+            hypothesis,
+            add_special_tokens=False,
+            verbose=False,
+        )["input_ids"]
+
         keep = max(
             _MIN_PREMISE_TOKENS,
             len(hyp_ids) - (_MIN_PREMISE_TOKENS - budget),
         )
-        hypothesis = tokenizer.decode(hyp_ids[:keep], skip_special_tokens=True)
+
+        hypothesis = tokenizer.decode(
+            hyp_ids[:keep],
+            skip_special_tokens=True,
+        )
 
         overhead_ids = tokenizer(
             template.format(text1="", text2=hypothesis),
             add_special_tokens=True,
+            verbose=False,
         )["input_ids"]
 
         budget = max(
@@ -402,10 +439,14 @@ def _build_prompt(model: Any, premise: str, hypothesis: str) -> str:
             HHEM_MAX_LENGTH - len(overhead_ids) - _TOKEN_MARGIN,
         )
 
-    # Optional extra cap for speed (HHEM_PREMISE_TOKENS).
+    # Optional extra cap for speed.
     budget = min(budget, HHEM_PREMISE_TOKENS)
 
-    premise_ids = tokenizer(premise, add_special_tokens=False)["input_ids"]
+    premise_ids = tokenizer(
+        premise,
+        add_special_tokens=False,
+        verbose=False,
+    )["input_ids"]
 
     if len(premise_ids) > budget:
         premise = _select_relevant_sentences(
@@ -414,9 +455,14 @@ def _build_prompt(model: Any, premise: str, hypothesis: str) -> str:
             tokenizer,
             budget,
         )
-        premise_ids = tokenizer(premise, add_special_tokens=False)["input_ids"]
 
-        # Still too long (for example one giant sentence): head-truncate.
+        premise_ids = tokenizer(
+            premise,
+            add_special_tokens=False,
+            verbose=False,
+        )["input_ids"]
+
+        # Still too long, for example one giant sentence: head-truncate.
         if len(premise_ids) > budget:
             premise = tokenizer.decode(
                 premise_ids[:budget],
@@ -443,8 +489,8 @@ def _infer_prompts(model: Any, prompts: Sequence[str]) -> list[float]:
 
     tokenize_started = perf_counter()
 
-    # truncation stays on as a safety net; _build_prompt already fits
-    # the premise, so in practice nothing is cut here.
+    # Truncation remains enabled as a safety net; _build_prompt already
+    # fits the premise, so in practice nothing should be cut here.
     inputs = tokenizer(
         list(prompts),
         return_tensors="pt",
@@ -455,11 +501,8 @@ def _infer_prompts(model: Any, prompts: Sequence[str]) -> list[float]:
 
     tokenize_ms = round((perf_counter() - tokenize_started) * 1000, 2)
 
-    try:
-        device = t5_model.device
-        inputs = {key: value.to(device) for key, value in inputs.items()}
-    except Exception:
-        pass
+    device = t5_model.device
+    inputs = {key: value.to(device) for key, value in inputs.items()}
 
     t5_model.eval()
 
@@ -488,19 +531,21 @@ def _infer_prompts(model: Any, prompts: Sequence[str]) -> list[float]:
 def _score_uncached(
     model: Any,
     pairs: Sequence[tuple[str, str]],
-) -> list[float]:
+) -> list[float | None]:
     """
     Score pairs in length-sorted chunks of HHEM_BATCH_SIZE.
 
-    Order of the returned scores matches `pairs`. If a chunk fails, it is
-    retried pair-by-pair so one bad input cannot zero the whole batch;
-    a pair that still fails scores 0.0 (treated as unsupported).
+    Order of returned scores matches `pairs`.
+
+    A successful model score is a float, including a genuine 0.0.
+    A failed pair is None, so callers can distinguish failure from an
+    actual unsupported score.
     """
 
     prompts = [_build_prompt(model, p, h) for p, h in pairs]
 
     order = sorted(range(len(prompts)), key=lambda i: len(prompts[i]))
-    scores: list[float] = [0.0] * len(prompts)
+    scores: list[float | None] = [None] * len(prompts)
 
     for start in range(0, len(order), HHEM_BATCH_SIZE):
         chunk_idx = order[start : start + HHEM_BATCH_SIZE]
@@ -508,7 +553,6 @@ def _score_uncached(
 
         try:
             chunk_scores = _infer_prompts(model, chunk_prompts)
-
         except Exception as exc:
             logger.warning(
                 "HHEMv2 batch of %s failed (%s); retrying pair-by-pair.",
@@ -523,7 +567,10 @@ def _score_uncached(
                     chunk_scores.append(_infer_prompts(model, [prompt])[0])
                 except Exception:
                     logger.exception("HHEMv2 single-pair scoring failed.")
-                    chunk_scores.append(0.0)
+                    chunk_scores.append(None)
+
+        if len(chunk_scores) != len(chunk_idx):
+            raise RuntimeError("HHEM inference returned an unexpected number of scores")
 
         for i, score in zip(chunk_idx, chunk_scores):
             scores[i] = score
@@ -544,7 +591,7 @@ def score_entailment_batch(
 
     Returns one float in [0.0, 1.0] per input pair, in input order.
 
-    - Empty premise/hypothesis → 0.0 (not sent to the model).
+    - Empty premise/hypothesis -> 0.0 (not sent to the model).
     - Cached pairs are returned without inference.
     - Duplicate pairs inside the batch are scored once.
     - Any model failure scores the affected pair 0.0, so the RAG graph
@@ -607,14 +654,22 @@ def score_entailment_batch(
             ):
                 scores = _score_uncached(model, batch)
 
+            if len(scores) != len(keys):
+                raise RuntimeError(
+                    "HHEM scorer returned an unexpected number of scores"
+                )
+
             for key, score in zip(keys, scores):
                 for i in pending[key][2]:
-                    results[i] = score
+                    if score is None:
+                        results[i] = 0.0
+                    else:
+                        results[i] = _normalize_score(score)
 
-                # A genuine 0.0 and a failed 0.0 look the same here, so
-                # only cache scores that are clearly model outputs.
-                if score > 0.0:
-                    _cache_put(key, score)
+                # Cache every successful model output, including a
+                # genuine 0.0. Failed pairs remain None and are not cached.
+                if score is not None:
+                    _cache_put(key, _normalize_score(score))
 
         except Exception as exc:
             logger.exception("HHEMv2 grounding scoring failed: %s", exc)
