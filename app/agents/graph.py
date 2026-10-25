@@ -879,8 +879,8 @@ def trajectory_evaluation_node(state: AgentState):
         "hop_count": evaluation["hop_count"],
         "required_hops": evaluation["required_hops"],
         "failure_taxonomy": evaluation["failure_taxonomy"],
-        "recovered_failures": evaluation["recovered_failures"],
-        "terminal_failures": evaluation["terminal_failures"],
+        "recovered_failures": evaluation.get("recovered_failures", []),
+        "terminal_failures": evaluation.get("terminal_failures", []),
         "trajectory_metrics": evaluation["metrics"],
         "evaluation_trace": evaluation["evaluation_trace"],
     }

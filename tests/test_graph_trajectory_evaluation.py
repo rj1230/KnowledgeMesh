@@ -290,6 +290,10 @@ def test_compiled_graph_fails_trajectory_when_revision_generation_fails(monkeypa
         graph_module, "evaluate_trajectory", fake_evaluate_trajectory
     )
 
+    monkeypatch.setattr(
+        graph_module, "answer_relevance_node", lambda state: {"answer_useful": True}
+    )
+
     compiled_graph = graph_module.build_graph()
     result = compiled_graph.invoke(
         {

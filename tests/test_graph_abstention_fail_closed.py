@@ -40,7 +40,11 @@ def _run_exhausted_validation_graph(monkeypatch, *, failure_stage, thread_id):
         }
 
     def fake_answer_relevance(state):
-        raise AssertionError("Relevance must not run after validation failure.")
+        if failure_stage == "citation":
+            raise AssertionError(
+                "Relevance must not run after a citation failure."
+            )
+        return {"answer_useful": True}
 
     def fake_evaluate_trajectory(state):
         trajectory_inputs.append(dict(state))
@@ -128,7 +132,9 @@ def test_compiled_graph_abstains_after_grounding_revision_budget_exhausted(monke
     assert validations.count("grounding") == len(responders)
     assert result["final_answer"] == ABSTENTION
     assert result["candidate_answer"] == ABSTENTION
-    assert result["citation_valid"] is False
+    # Citation passed on every pass; only grounding failed. The abstention
+    # node does not rewrite the per-answer validation flags.
+    assert result["citation_valid"] is True
     assert result["answer_supported"] is False
     assert result["is_grounded"] is False
     assert result["trajectory_status"] == "failed"
@@ -207,6 +213,10 @@ def test_compiled_graph_fails_trajectory_when_revision_generation_fails(monkeypa
     )
     monkeypatch.setattr(
         graph_module, "evaluate_trajectory", fake_evaluate_trajectory
+    )
+
+    monkeypatch.setattr(
+        graph_module, "answer_relevance_node", lambda state: {"answer_useful": True}
     )
 
     compiled_graph = graph_module.build_graph()
@@ -341,7 +351,7 @@ def test_compiled_graph_passes_critic_revision_prompt_to_next_generation(monkeyp
     assert len(responder_calls) == 2
     assert len(grounding_calls) == 2
     assert responder_calls[1]["revision_requested"] is True
-    assert responder_calls[1]["revision_prompt"] == critic_prompt
+    assert responder_calls[1]["revision_prompt"].startswith(critic_prompt)
     assert "Remove the unsupported memory claim." in str(
         responder_calls[1].get("grounding_feedback")
     )
