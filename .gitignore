@@ -18,3 +18,4 @@ qdrant_storage/
 DATA/audit.db
 run.log
 *.bak_*
+scores_*.json
