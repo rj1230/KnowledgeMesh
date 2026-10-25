@@ -1,0 +1,262 @@
+{
+  "artifact_type": "semantic_review_batch",
+  "created_date": "2026-10-20",
+  "source_dataset": "evals/datasets/inventory_retrieval_probes_70.json",
+  "source_dataset_sha256": "21ee63518d16f2b08d8e5c1e452a4cfa8f5675b5f0322727f623c1aa2ac3e101",
+  "collection_name": "enterprise_rag_bge_base",
+  "candidate_count": 9,
+  "unique_probe_count": 9,
+  "reference_issue_count": 0,
+  "reference_issue_probe_ids": [],
+  "semantic_approvals": 8,
+  "benchmark_ready": false,
+  "decisions": [
+    {
+      "probe_id": "inv_llm_002",
+      "question": "What does the GPT-3 evaluation report about the largest model's accuracy in few-shot learning?",
+      "source_filename": "LLM.pdf",
+      "proposed_document_id": "68424e3d1aa5e84e426da70c",
+      "proposed_chunk_ids": [
+        10,
+        11,
+        12
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "68424e3d1aa5e84e426da70c",
+          "chunk_id": 10,
+          "point_id": "f3853fb7-03ff-58d1-af1e-fdf9d9b3c6ee",
+          "source": "LLM.pdf"
+        },
+        {
+          "document_id": "68424e3d1aa5e84e426da70c",
+          "chunk_id": 11,
+          "point_id": "22100c8c-2cde-5e7d-b168-0503941876ce",
+          "source": "LLM.pdf"
+        },
+        {
+          "document_id": "68424e3d1aa5e84e426da70c",
+          "chunk_id": 12,
+          "point_id": "363d8900-fb49-542e-a6df-fbaa1062e376",
+          "source": "LLM.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "NEEDS_CLARIFICATION",
+      "semantic_approval": false,
+      "semantic_rationale": "The passages describe broad evaluation trends and examples, but do not establish one unambiguous aggregate few-shot accuracy. The question specifies neither benchmark nor metric; clarification is needed."
+    },
+    {
+      "probe_id": "inv_llm_005",
+      "question": "How does GPT-3 define the few-shot setting, and how does it differ from fine-tuning?",
+      "source_filename": "LLM.pdf",
+      "proposed_document_id": "68424e3d1aa5e84e426da70c",
+      "proposed_chunk_ids": [
+        10,
+        14,
+        15
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "68424e3d1aa5e84e426da70c",
+          "chunk_id": 10,
+          "point_id": "f3853fb7-03ff-58d1-af1e-fdf9d9b3c6ee",
+          "source": "LLM.pdf"
+        },
+        {
+          "document_id": "68424e3d1aa5e84e426da70c",
+          "chunk_id": 14,
+          "point_id": "d9d113a2-6e01-5513-84de-bafcba1558f9",
+          "source": "LLM.pdf"
+        },
+        {
+          "document_id": "68424e3d1aa5e84e426da70c",
+          "chunk_id": 15,
+          "point_id": "430afa49-f496-5baf-b489-7594cdd3dd34",
+          "source": "LLM.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "Defines few-shot as inference-time conditioning with demonstrations and no weight updates, contrasting it with fine-tuning on task-specific supervised data."
+    },
+    {
+      "probe_id": "inv_llm_006",
+      "question": "What zero-shot and few-shot results did GPT-3 achieve on LAMBADA?",
+      "source_filename": "LLM.pdf",
+      "proposed_document_id": "68424e3d1aa5e84e426da70c",
+      "proposed_chunk_ids": [
+        31
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "68424e3d1aa5e84e426da70c",
+          "chunk_id": 31,
+          "point_id": "bebbd641-2ed9-5765-b8f8-3832f2050f23",
+          "source": "LLM.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "The LAMBADA results table directly reports GPT-3 175B zero-shot accuracy of 76.2% and few-shot accuracy of 86.4%."
+    },
+    {
+      "probe_id": "inv_llm_007",
+      "question": "How did GPT-3 perform on the CoQA, QuAC, DROP, and SQuAD 2.0 question-answering benchmarks?",
+      "source_filename": "LLM.pdf",
+      "proposed_document_id": "68424e3d1aa5e84e426da70c",
+      "proposed_chunk_ids": [
+        45,
+        47
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "68424e3d1aa5e84e426da70c",
+          "chunk_id": 45,
+          "point_id": "a1ebb400-b98e-581e-8574-42bf6c290d02",
+          "source": "LLM.pdf"
+        },
+        {
+          "document_id": "68424e3d1aa5e84e426da70c",
+          "chunk_id": 47,
+          "point_id": "ae62c6f5-2d0e-5f81-97af-1bff9988cd62",
+          "source": "LLM.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "The passages provide results for CoQA, QuAC, DROP, and SQuAD 2.0, with accompanying interpretation."
+    },
+    {
+      "probe_id": "inv_llm_008",
+      "question": "What were GPT-3's few-shot, one-shot, and zero-shot accuracies on the SAT analogy problems?",
+      "source_filename": "LLM.pdf",
+      "proposed_document_id": "68424e3d1aa5e84e426da70c",
+      "proposed_chunk_ids": [
+        64
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "68424e3d1aa5e84e426da70c",
+          "chunk_id": 64,
+          "point_id": "2680e24c-d9a1-5c03-ab72-fb82d3ffa040",
+          "source": "LLM.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "Directly reports SAT analogy accuracy: 65.2% few-shot, 59.1% one-shot, and 53.7% zero-shot."
+    },
+    {
+      "probe_id": "inv_llm_009",
+      "question": "What does the GPT-3 grammar-correction experiment illustrate about using human demonstrations as conditioning examples?",
+      "source_filename": "LLM.pdf",
+      "proposed_document_id": "68424e3d1aa5e84e426da70c",
+      "proposed_chunk_ids": [
+        77,
+        80
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "68424e3d1aa5e84e426da70c",
+          "chunk_id": 77,
+          "point_id": "aecf1c00-9b11-5b02-9fc7-4b9765efb9a5",
+          "source": "LLM.pdf"
+        },
+        {
+          "document_id": "68424e3d1aa5e84e426da70c",
+          "chunk_id": 80,
+          "point_id": "26abe062-ddd1-53d4-b57f-19cebac888cb",
+          "source": "LLM.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "Describes human examples conditioning grammar correction and illustrates that a correction can change the intended meaning."
+    },
+    {
+      "probe_id": "inv_llm_010",
+      "question": "What kinds of socially harmful applications are identified as potential misuse cases for high-quality language models?",
+      "source_filename": "LLM.pdf",
+      "proposed_document_id": "68424e3d1aa5e84e426da70c",
+      "proposed_chunk_ids": [
+        95
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "68424e3d1aa5e84e426da70c",
+          "chunk_id": 95,
+          "point_id": "cf59cb20-9b9a-5fd5-b1db-d4239a90532c",
+          "source": "LLM.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "Identifies potential misuse including misinformation, spam, phishing, fraudulent academic writing, social-engineering pretexts, and abuse of legal or government processes."
+    },
+    {
+      "probe_id": "inv_llm_011",
+      "question": "What historical model-size progression is described in the discussion of scaling language models?",
+      "source_filename": "LLM.pdf",
+      "proposed_document_id": "68424e3d1aa5e84e426da70c",
+      "proposed_chunk_ids": [
+        110,
+        111
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "68424e3d1aa5e84e426da70c",
+          "chunk_id": 110,
+          "point_id": "059ac4b9-ae7b-517b-921a-4501ec90302b",
+          "source": "LLM.pdf"
+        },
+        {
+          "document_id": "68424e3d1aa5e84e426da70c",
+          "chunk_id": 111,
+          "point_id": "0776285d-f8ae-5944-b879-4c96212523bd",
+          "source": "LLM.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "Describes historical model-size progression and related scaling approaches, including Transformer and conditional-compute models."
+    },
+    {
+      "probe_id": "inv_llm_012",
+      "question": "Which algorithmic innovations in language modeling are identified as important developments preceding the large-scale model approach?",
+      "source_filename": "LLM.pdf",
+      "proposed_document_id": "68424e3d1aa5e84e426da70c",
+      "proposed_chunk_ids": [
+        115
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "68424e3d1aa5e84e426da70c",
+          "chunk_id": 115,
+          "point_id": "1598e14d-bb92-517c-aa4b-e89bd5167670",
+          "source": "LLM.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "Lists prior innovations including denoising-based bidirectionality, prefixLM, encoder-decoder architectures, random permutations, sampling efficiency, training/data improvements, and embedding efficiency."
+    }
+  ]
+}

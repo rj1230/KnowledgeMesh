@@ -1,0 +1,2020 @@
+{
+  "artifact_type": "inventory70_semantic_review_decisions_consolidated",
+  "created_date": "2026-10-20T11:55:37.232188+00:00",
+  "source_dataset": "evals/datasets/inventory_retrieval_probes_70.json",
+  "source_dataset_sha256": "21ee63518d16f2b08d8e5c1e452a4cfa8f5675b5f0322727f623c1aa2ac3e101",
+  "collection_name": "enterprise_rag_bge_base",
+  "candidate_count": 70,
+  "unique_probe_count": 70,
+  "semantic_approvals": 70,
+  "reference_issue_count": 0,
+  "reference_issue_probe_ids": [],
+  "benchmark_ready": false,
+  "decisions": [
+    {
+      "probe_id": "inv_attention_001",
+      "question": "What is the main architectural idea introduced by the Transformer in Attention Is All You Need?",
+      "source_filename": "Attention.pdf",
+      "proposed_document_id": "9ff74efe2d339c2bb9a53c06",
+      "proposed_chunk_ids": [
+        0,
+        5
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 0,
+          "point_id": "8c1ae8b6-ec27-57fd-b89d-a0e6de83cff5",
+          "source": "Attention.pdf"
+        },
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 5,
+          "point_id": "4cf81aa6-f2f5-51da-a158-251cbebf6739",
+          "source": "Attention.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "Approved after inspecting the live source passages against the canonical probe question. Approval covers semantic relevance of the proposed gold evidence, not benchmark readiness or retrieval performance.",
+      "consolidation_selected_from": "inventory70_semantic_review_decisions_batch2_revision4_20261020.json"
+    },
+    {
+      "probe_id": "inv_attention_002",
+      "question": "How does self-attention differ between the encoder and decoder with respect to which positions can be attended to?",
+      "source_filename": "Attention.pdf",
+      "proposed_document_id": "9ff74efe2d339c2bb9a53c06",
+      "proposed_chunk_ids": [
+        7,
+        11
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 7,
+          "point_id": "15784da2-e388-5343-bc56-d9096a3f9855",
+          "source": "Attention.pdf"
+        },
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 11,
+          "point_id": "70a17c77-4992-5e53-bb85-65a76a061447",
+          "source": "Attention.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "Approved after inspecting the live source passages against the canonical probe question. Approval covers semantic relevance of the proposed gold evidence, not benchmark readiness or retrieval performance.",
+      "consolidation_selected_from": "inventory70_semantic_review_decisions_batch2_revision4_20261020.json"
+    },
+    {
+      "probe_id": "inv_attention_003",
+      "question": "What do the experiments indicate about the effect of changing the number of attention heads and the attention key size?",
+      "source_filename": "Attention.pdf",
+      "proposed_document_id": "9ff74efe2d339c2bb9a53c06",
+      "proposed_chunk_ids": [
+        22,
+        23
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 22,
+          "point_id": "616a7c69-d947-54bf-afbe-78691d21ad9e",
+          "source": "Attention.pdf"
+        },
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 23,
+          "point_id": "4405331c-76f4-559c-b7d9-3a1fded2ff11",
+          "source": "Attention.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "Approved after inspecting the live source passages against the canonical probe question. Approval covers semantic relevance of the proposed gold evidence, not benchmark readiness or retrieval performance.",
+      "consolidation_selected_from": "inventory70_semantic_review_decisions_batch2_revision4_20261020.json"
+    },
+    {
+      "probe_id": "inv_attention_004",
+      "question": "What do the visualized attention heads reveal about anaphora resolution in the Transformer?",
+      "source_filename": "Attention.pdf",
+      "proposed_document_id": "9ff74efe2d339c2bb9a53c06",
+      "proposed_chunk_ids": [
+        35,
+        36
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 35,
+          "point_id": "84b224d4-7a41-5f59-85b2-294add2bd165",
+          "source": "Attention.pdf"
+        },
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 36,
+          "point_id": "2034b5f8-d6d1-505b-b0c9-51ffebd4cb3c",
+          "source": "Attention.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "Approved after inspecting the live source passages against the canonical probe question. Approval covers semantic relevance of the proposed gold evidence, not benchmark readiness or retrieval performance. The answer must describe the visualized heads as apparently involved in anaphora resolution, not as definitive proof.",
+      "consolidation_selected_from": "inventory70_semantic_review_decisions_batch2_revision4_20261020.json"
+    },
+    {
+      "probe_id": "inv_harness_003",
+      "question": "What kinds of information does the paper suggest searching for when researching coding-agent techniques and implementations?",
+      "source_filename": "harness.pdf",
+      "proposed_document_id": "7b7add4488da35c33e99474d",
+      "proposed_chunk_ids": [
+        71,
+        72
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "7b7add4488da35c33e99474d",
+          "chunk_id": 71,
+          "point_id": "d922623d-4ab2-54d2-9f80-bd34110fc2ef",
+          "source": "harness.pdf"
+        },
+        {
+          "document_id": "7b7add4488da35c33e99474d",
+          "chunk_id": 72,
+          "point_id": "b0f27452-48ed-570d-8abe-655ea41c17d0",
+          "source": "harness.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "Chunks 71 and 72 specify concrete coding-agent research targets, including architecture and design patterns, exact measurements, real code/configuration, ablations, implementation details, and failure modes.",
+      "consolidation_selected_from": "inventory70_semantic_review_decisions_batch8_20261020.json"
+    },
+    {
+      "probe_id": "inv_harness_004",
+      "question": "How does the paper describe the effect of encoding recurring coordination patterns into tools, middleware, and memory?",
+      "source_filename": "harness.pdf",
+      "proposed_document_id": "7b7add4488da35c33e99474d",
+      "proposed_chunk_ids": [
+        21,
+        108
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "7b7add4488da35c33e99474d",
+          "chunk_id": 21,
+          "point_id": "48d5b7ec-8199-5c3b-9bbf-6d6e5a956699",
+          "source": "harness.pdf"
+        },
+        {
+          "document_id": "7b7add4488da35c33e99474d",
+          "chunk_id": 108,
+          "point_id": "b9559456-0ffa-5300-8bf3-df30cb186512",
+          "source": "harness.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "Chunk 21 reports reduced aggregate token use when coordination behavior is encoded in tools, middleware, and memory; chunk 108 explains the reduced per-call re-derivation cost and faster harness iteration.",
+      "consolidation_selected_from": "inventory70_semantic_review_decisions_batch8_20261020.json"
+    },
+    {
+      "probe_id": "inv_llm_agents_001",
+      "question": "How does the survey define an LLM-based agent, and what basic capabilities distinguish such an agent?",
+      "source_filename": "LLM Based-learning.pdf",
+      "proposed_document_id": "e65504ab611fa43ac5013829",
+      "proposed_chunk_ids": [
+        0,
+        8,
+        11
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "e65504ab611fa43ac5013829",
+          "chunk_id": 0,
+          "point_id": "6b179151-6cb4-5cc9-a295-87b402c1e4f5",
+          "source": "LLM Based-learning.pdf"
+        },
+        {
+          "document_id": "e65504ab611fa43ac5013829",
+          "chunk_id": 8,
+          "point_id": "5b2ea39e-7498-564b-96d7-7be7fa9ecfd1",
+          "source": "LLM Based-learning.pdf"
+        },
+        {
+          "document_id": "e65504ab611fa43ac5013829",
+          "chunk_id": 11,
+          "point_id": "538b9605-0d04-5458-bc7b-776bfaa0bd4d",
+          "source": "LLM Based-learning.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "Approved after direct inspection of the proposed live Qdrant source passages against the canonical probe question. Approval applies to semantic relevance of this proposed gold evidence, not to benchmark readiness or measured retrieval performance.",
+      "consolidation_selected_from": "inventory70_semantic_review_decisions_batch2_revision4_20261020.json"
+    },
+    {
+      "probe_id": "inv_llm_agents_003",
+      "question": "What role does AutoGPT play in the survey's discussion of autonomous or lifelong-learning agents?",
+      "source_filename": "LLM Based-learning.pdf",
+      "proposed_document_id": "e65504ab611fa43ac5013829",
+      "proposed_chunk_ids": [
+        26,
+        94
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "e65504ab611fa43ac5013829",
+          "chunk_id": 26,
+          "point_id": "c5f3757c-c083-5eb6-a9db-a55ecf5d41c9",
+          "source": "LLM Based-learning.pdf"
+        },
+        {
+          "document_id": "e65504ab611fa43ac5013829",
+          "chunk_id": 94,
+          "point_id": "7c8bf42c-e239-5f24-876c-5a4a0b745c65",
+          "source": "LLM Based-learning.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "Chunk 26 identifies Auto-GPT as an example of an autonomous agent that formulates plans and executes available tools toward a goal. Chunk 94 compares Voyager's embodied lifelong learning approach with concepts similar to AutoGPT.",
+      "consolidation_selected_from": "inventory70_semantic_review_decisions_batch10_20261020.json"
+    },
+    {
+      "probe_id": "inv_llm_001",
+      "question": "What motivation does the GPT-3 paper give for pretraining large language models before applying them to downstream tasks?",
+      "source_filename": "LLM.pdf",
+      "proposed_document_id": "68424e3d1aa5e84e426da70c",
+      "proposed_chunk_ids": [
+        5,
+        6,
+        8
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "68424e3d1aa5e84e426da70c",
+          "chunk_id": 5,
+          "point_id": "ac2ed1d3-a2be-50ae-b6cf-ff9458090e0b",
+          "source": "LLM.pdf"
+        },
+        {
+          "document_id": "68424e3d1aa5e84e426da70c",
+          "chunk_id": 6,
+          "point_id": "6856dd90-51af-5eff-8f9a-48cfb19b59ad",
+          "source": "LLM.pdf"
+        },
+        {
+          "document_id": "68424e3d1aa5e84e426da70c",
+          "chunk_id": 8,
+          "point_id": "8889ef62-3888-5b5b-8327-d45209a6b188",
+          "source": "LLM.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "Approved after direct inspection of the proposed live Qdrant source passages against the canonical probe question. Approval applies to semantic relevance of this proposed gold evidence, not to benchmark readiness or measured retrieval performance.",
+      "consolidation_selected_from": "inventory70_semantic_review_decisions_batch2_revision4_20261020.json"
+    },
+    {
+      "probe_id": "inv_llm_002",
+      "question": "What does the GPT-3 evaluation report about the largest model's accuracy in few-shot learning?",
+      "source_filename": "LLM.pdf",
+      "proposed_document_id": "68424e3d1aa5e84e426da70c",
+      "proposed_chunk_ids": [
+        32
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "68424e3d1aa5e84e426da70c",
+          "chunk_id": 32,
+          "point_id": "541a1138-0bbd-5803-8642-35c07a53f3a6",
+          "source": "LLM.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "Live chunk 32 explicitly states that GPT-3 achieves 86.4% accuracy in the few-shot setting, an increase of over 18% from the previous state of the art. The selected chunk directly supports the question; LAMBADA is not required to appear in the same chunk for this accuracy claim.",
+      "consolidation_selected_from": "inventory70_semantic_review_decisions_batch11_20261020.json"
+    },
+    {
+      "probe_id": "inv_rag_001",
+      "question": "What limitations of pretrained language models motivate Retrieval-Augmented Generation?",
+      "source_filename": "RAG.pdf",
+      "proposed_document_id": "8f25ec73a5dcfeca772c16ff",
+      "proposed_chunk_ids": [
+        0
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "8f25ec73a5dcfeca772c16ff",
+          "chunk_id": 0,
+          "point_id": "a37dd8c0-a2a8-51a7-91c7-77a633737ea3",
+          "source": "RAG.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "Approved after direct inspection of the proposed live Qdrant source passages against the canonical probe question. Approval applies to semantic relevance of this proposed gold evidence, not to benchmark readiness or measured retrieval performance.",
+      "consolidation_selected_from": "inventory70_semantic_review_decisions_batch2_revision4_20261020.json"
+    },
+    {
+      "probe_id": "inv_rag_002",
+      "question": "Why can the generator sometimes complete a title using its parametric knowledge even when the retrieval posterior becomes less informative?",
+      "source_filename": "RAG.pdf",
+      "proposed_document_id": "8f25ec73a5dcfeca772c16ff",
+      "proposed_chunk_ids": [
+        19
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "8f25ec73a5dcfeca772c16ff",
+          "chunk_id": 19,
+          "point_id": "a23ef620-be08-512f-9e1f-a2e9e4aafdbf",
+          "source": "RAG.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "Chunk 19 explains that the document posterior flattens after the first title token and that parametric knowledge can complete the title; the BART-only example supports this interpretation.",
+      "consolidation_selected_from": "inventory70_semantic_review_decisions_batch7_20261020.json"
+    },
+    {
+      "probe_id": "inv_rag_003",
+      "question": "What evidence does the RAG paper provide about the relationship between retrieval and generation when generating book titles?",
+      "source_filename": "RAG.pdf",
+      "proposed_document_id": "8f25ec73a5dcfeca772c16ff",
+      "proposed_chunk_ids": [
+        19
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "8f25ec73a5dcfeca772c16ff",
+          "chunk_id": 19,
+          "point_id": "a23ef620-be08-512f-9e1f-a2e9e4aafdbf",
+          "source": "RAG.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "Chunk 19 gives the book-title example and explains how retrieved documents guide generation by drawing out knowledge in the parametric memory.",
+      "consolidation_selected_from": "inventory70_semantic_review_decisions_batch7_20261020.json"
+    },
+    {
+      "probe_id": "inv_rag_004",
+      "question": "What happens when the retrieval component of a RAG system collapses and repeatedly retrieves the same documents?",
+      "source_filename": "RAG.pdf",
+      "proposed_document_id": "8f25ec73a5dcfeca772c16ff",
+      "proposed_chunk_ids": [
+        54
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "8f25ec73a5dcfeca772c16ff",
+          "chunk_id": 54,
+          "point_id": "1e0f0fcf-7051-5c04-a3b8-c4263c801155",
+          "source": "RAG.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "Chunk 54 directly states that after retrieval collapse the generator can learn to ignore documents and RAG can perform equivalently to BART; it also discusses possible causes.",
+      "consolidation_selected_from": "inventory70_semantic_review_decisions_batch7_20261020.json"
+    },
+    {
+      "probe_id": "inv_training_001",
+      "question": "Why does the InstructGPT paper argue that increasing language-model size alone does not guarantee better instruction following?",
+      "source_filename": "Training Llm.pdf",
+      "proposed_document_id": "c87e9c2e56842a8dfa14ef5e",
+      "proposed_chunk_ids": [
+        0,
+        1
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "c87e9c2e56842a8dfa14ef5e",
+          "chunk_id": 0,
+          "point_id": "b9844a05-c591-52be-8017-0d6c6fad1273",
+          "source": "Training Llm.pdf"
+        },
+        {
+          "document_id": "c87e9c2e56842a8dfa14ef5e",
+          "chunk_id": 1,
+          "point_id": "a7a4b7f4-b048-529b-a0a7-f576ae307e68",
+          "source": "Training Llm.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "The introduction explains that larger pretrained models do not necessarily follow user intent better; the comparison reports stronger human preference for a much smaller InstructGPT model than for GPT-3 175B.",
+      "consolidation_selected_from": "inventory70_semantic_review_decisions_batch5_20261020.json"
+    },
+    {
+      "probe_id": "inv_training_002",
+      "question": "What evidence does the paper provide that instruction-following alignment can generalize to tasks that were not directly supervised?",
+      "source_filename": "Training Llm.pdf",
+      "proposed_document_id": "c87e9c2e56842a8dfa14ef5e",
+      "proposed_chunk_ids": [
+        6,
+        7,
+        30,
+        114
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "c87e9c2e56842a8dfa14ef5e",
+          "chunk_id": 6,
+          "point_id": "fbca1f8d-7813-596d-9624-c0a4abaebf50",
+          "source": "Training Llm.pdf"
+        },
+        {
+          "document_id": "c87e9c2e56842a8dfa14ef5e",
+          "chunk_id": 7,
+          "point_id": "cfdfabfa-2331-58f3-80ed-ca242b274fa7",
+          "source": "Training Llm.pdf"
+        },
+        {
+          "document_id": "c87e9c2e56842a8dfa14ef5e",
+          "chunk_id": 30,
+          "point_id": "c6197d7c-f1f5-5800-b497-4305e93c60b1",
+          "source": "Training Llm.pdf"
+        },
+        {
+          "document_id": "c87e9c2e56842a8dfa14ef5e",
+          "chunk_id": 114,
+          "point_id": "27ceb999-9780-5157-a182-521b07e5e47b",
+          "source": "Training Llm.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "The paper evaluates on held-out API prompts and public NLP tasks, and reports generalization to held-out labelers. This supports transfer beyond the exact examples used for direct supervision, while not claiming universal generalization.",
+      "consolidation_selected_from": "inventory70_semantic_review_decisions_batch5_20261020.json"
+    },
+    {
+      "probe_id": "inv_training_003",
+      "question": "How does the paper evaluate whether model outputs are toxic, and what dimensions are considered in that evaluation?",
+      "source_filename": "Training Llm.pdf",
+      "proposed_document_id": "c87e9c2e56842a8dfa14ef5e",
+      "proposed_chunk_ids": [
+        39,
+        101,
+        102
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "c87e9c2e56842a8dfa14ef5e",
+          "chunk_id": 39,
+          "point_id": "b074e7da-6526-55a5-b650-95973a08967a",
+          "source": "Training Llm.pdf"
+        },
+        {
+          "document_id": "c87e9c2e56842a8dfa14ef5e",
+          "chunk_id": 101,
+          "point_id": "69e8aca3-a4e8-5c5a-8a5b-c9eb4546f044",
+          "source": "Training Llm.pdf"
+        },
+        {
+          "document_id": "c87e9c2e56842a8dfa14ef5e",
+          "chunk_id": 102,
+          "point_id": "2c545b9e-ebfe-5e7d-b484-d1f5b2e58cd2",
+          "source": "Training Llm.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "The paper combines automatic Perspective API toxicity scores with human ratings. The human evaluation includes absolute toxicity, toxicity relative to the prompt, continuity, and overall output preference; chunk 101 defines the toxicity scale.",
+      "consolidation_selected_from": "inventory70_semantic_review_decisions_batch5_20261020.json"
+    },
+    {
+      "probe_id": "inv_training_004",
+      "question": "What does the human evaluation example involving GPT-3 175B and InstructGPT 175B illustrate?",
+      "source_filename": "Training Llm.pdf",
+      "proposed_document_id": "c87e9c2e56842a8dfa14ef5e",
+      "proposed_chunk_ids": [
+        1,
+        2
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "c87e9c2e56842a8dfa14ef5e",
+          "chunk_id": 1,
+          "point_id": "a7a4b7f4-b048-529b-a0a7-f576ae307e68",
+          "source": "Training Llm.pdf"
+        },
+        {
+          "document_id": "c87e9c2e56842a8dfa14ef5e",
+          "chunk_id": 2,
+          "point_id": "ddabbe06-0a9d-58c3-808f-fe77746e76b1",
+          "source": "Training Llm.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "The example and accompanying results compare InstructGPT with GPT-3 and report that outputs from the 1.3B InstructGPT model can be preferred to those from GPT-3 175B.",
+      "consolidation_selected_from": "inventory70_semantic_review_decisions_batch5_20261020.json"
+    },
+    {
+      "probe_id": "inv_loop_001",
+      "question": "What five elements does the paper define as part of a loop specification for coding agents?",
+      "source_filename": "loop.pdf",
+      "proposed_document_id": "23b038dd8383e3d47638322b",
+      "proposed_chunk_ids": [
+        11,
+        12,
+        16
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "23b038dd8383e3d47638322b",
+          "chunk_id": 11,
+          "point_id": "a86dd799-c7e4-5097-b6c8-f398c57d4b6d",
+          "source": "loop.pdf"
+        },
+        {
+          "document_id": "23b038dd8383e3d47638322b",
+          "chunk_id": 12,
+          "point_id": "77523bd3-617e-516d-9599-db671097fced",
+          "source": "loop.pdf"
+        },
+        {
+          "document_id": "23b038dd8383e3d47638322b",
+          "chunk_id": 16,
+          "point_id": "f98e5965-c4de-5f9d-9769-914b5216b773",
+          "source": "loop.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "The passages describe the loop specification and its operational elements, including verification, named terminal states, budget ceilings, and stagnation detection.",
+      "consolidation_selected_from": "inventory70_semantic_review_decisions_batch9_20261020.json"
+    },
+    {
+      "probe_id": "inv_loop_002",
+      "question": "How does the Ralph loop use fresh context and external files to maintain state across iterations?",
+      "source_filename": "loop.pdf",
+      "proposed_document_id": "23b038dd8383e3d47638322b",
+      "proposed_chunk_ids": [
+        17,
+        18
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "23b038dd8383e3d47638322b",
+          "chunk_id": 17,
+          "point_id": "0534053a-f016-56f8-b02a-d48c685c706a",
+          "source": "loop.pdf"
+        },
+        {
+          "document_id": "23b038dd8383e3d47638322b",
+          "chunk_id": 18,
+          "point_id": "f47b14ba-e932-557b-8e20-e93a660a88aa",
+          "source": "loop.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "The passages explain that the Ralph loop replays a prompt with fresh context each turn while durable state remains in files and versioned artifacts.",
+      "consolidation_selected_from": "inventory70_semantic_review_decisions_batch9_20261020.json"
+    },
+    {
+      "probe_id": "inv_loop_003",
+      "question": "What does the paper mean by the claim that a loop automates typing rather than judgment?",
+      "source_filename": "loop.pdf",
+      "proposed_document_id": "23b038dd8383e3d47638322b",
+      "proposed_chunk_ids": [
+        35,
+        36
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "23b038dd8383e3d47638322b",
+          "chunk_id": 35,
+          "point_id": "9b6cf3e3-16c0-5e6e-bc9c-6998b130c8fd",
+          "source": "loop.pdf"
+        },
+        {
+          "document_id": "23b038dd8383e3d47638322b",
+          "chunk_id": 36,
+          "point_id": "f729edec-83d1-57d6-b551-a771af1aece0",
+          "source": "loop.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "The paper explicitly contrasts automating typing with automating judgment and discusses the continuing human verification burden.",
+      "consolidation_selected_from": "inventory70_semantic_review_decisions_batch9_20261020.json"
+    },
+    {
+      "probe_id": "inv_attention_005",
+      "question": "What BLEU score did the Transformer achieve on the WMT 2014 English-to-French translation task, and how long did training take on how many GPUs?",
+      "source_filename": "Attention.pdf",
+      "proposed_document_id": "9ff74efe2d339c2bb9a53c06",
+      "proposed_chunk_ids": [
+        1
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 1,
+          "point_id": "aaff3d78-48e2-5a6e-8fad-ca6fb05cbaec",
+          "source": "Attention.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "Approved after inspecting the live source passages against the canonical probe question. Approval covers semantic relevance of the proposed gold evidence, not benchmark readiness or retrieval performance.",
+      "consolidation_selected_from": "inventory70_semantic_review_decisions_batch2_revision4_20261020.json"
+    },
+    {
+      "probe_id": "inv_attention_006",
+      "question": "What is self-attention, and what does it compute for positions within a single sequence?",
+      "source_filename": "Attention.pdf",
+      "proposed_document_id": "9ff74efe2d339c2bb9a53c06",
+      "proposed_chunk_ids": [
+        5
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 5,
+          "point_id": "4cf81aa6-f2f5-51da-a158-251cbebf6739",
+          "source": "Attention.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "Approved after inspecting the live source passages against the canonical probe question. Approval covers semantic relevance of the proposed gold evidence, not benchmark readiness or retrieval performance.",
+      "consolidation_selected_from": "inventory70_semantic_review_decisions_batch2_revision4_20261020.json"
+    },
+    {
+      "probe_id": "inv_attention_007",
+      "question": "How does scaled dot-product attention differ from ordinary dot-product attention, and why is the scaling factor used?",
+      "source_filename": "Attention.pdf",
+      "proposed_document_id": "9ff74efe2d339c2bb9a53c06",
+      "proposed_chunk_ids": [
+        9
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 9,
+          "point_id": "962f5a8d-c31b-5d96-8cb7-f54284c6ec27",
+          "source": "Attention.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "Approved after inspecting the live source passages against the canonical probe question. Approval covers semantic relevance of the proposed gold evidence, not benchmark readiness or retrieval performance. Explain scaling by 1/sqrt(d_k) before softmax and preserve the paper's cautious explanation concerning small gradients.",
+      "consolidation_selected_from": "inventory70_semantic_review_decisions_batch2_revision4_20261020.json"
+    },
+    {
+      "probe_id": "inv_attention_008",
+      "question": "What advantage does multi-head attention provide over using a single attention head?",
+      "source_filename": "Attention.pdf",
+      "proposed_document_id": "9ff74efe2d339c2bb9a53c06",
+      "proposed_chunk_ids": [
+        10
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 10,
+          "point_id": "56963805-d5a7-530a-bf86-7e666d177053",
+          "source": "Attention.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "Approved after inspecting the live source passages against the canonical probe question. Approval covers semantic relevance of the proposed gold evidence, not benchmark readiness or retrieval performance.",
+      "consolidation_selected_from": "inventory70_semantic_review_decisions_batch2_revision4_20261020.json"
+    },
+    {
+      "probe_id": "inv_attention_009",
+      "question": "Why does the Transformer architecture make learning long-range dependencies easier?",
+      "source_filename": "Attention.pdf",
+      "proposed_document_id": "9ff74efe2d339c2bb9a53c06",
+      "proposed_chunk_ids": [
+        15,
+        16
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 15,
+          "point_id": "a49f49a0-4ef9-5f48-8939-dbaa990b8267",
+          "source": "Attention.pdf"
+        },
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 16,
+          "point_id": "11e96604-ca8c-5f54-ab83-d89c099aed45",
+          "source": "Attention.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "Approved after inspecting the live source passages against the canonical probe question. Approval covers semantic relevance of the proposed gold evidence, not benchmark readiness or retrieval performance.",
+      "consolidation_selected_from": "inventory70_semantic_review_decisions_batch2_revision4_20261020.json"
+    },
+    {
+      "probe_id": "inv_attention_010",
+      "question": "How did the Transformer big model perform on the WMT 2014 English-to-German translation task compared with previously reported models?",
+      "source_filename": "Attention.pdf",
+      "proposed_document_id": "9ff74efe2d339c2bb9a53c06",
+      "proposed_chunk_ids": [
+        19
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 19,
+          "point_id": "acda89fe-15d4-58d5-be06-926835e0a392",
+          "source": "Attention.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "Live chunk 19 reports Transformer (big) achieving 28.4 BLEU on WMT 2014 English-to-German and outperforming previously reported models, including ensembles, by more than 2.0 BLEU.",
+      "consolidation_selected_from": "inventory70_semantic_review_decisions_batch11_20261020.json"
+    },
+    {
+      "probe_id": "inv_harness_005",
+      "question": "What three observability pillars are used to drive the Agentic Harness Engineering closed loop?",
+      "source_filename": "harness.pdf",
+      "proposed_document_id": "7b7add4488da35c33e99474d",
+      "proposed_chunk_ids": [
+        0,
+        5
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "7b7add4488da35c33e99474d",
+          "chunk_id": 0,
+          "point_id": "11063e0b-a873-5194-aa43-c4f82d7cd37f",
+          "source": "harness.pdf"
+        },
+        {
+          "document_id": "7b7add4488da35c33e99474d",
+          "chunk_id": 5,
+          "point_id": "0419dae4-fc17-5c32-ac58-864b12480196",
+          "source": "harness.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "Both passages identify component, experience, and decision observability. They explain file-level editable components, a structured evidence corpus, and edit predictions checked against subsequent task outcomes.",
+      "consolidation_selected_from": "inventory70_semantic_review_decisions_batch8_20261020.json"
+    },
+    {
+      "probe_id": "inv_harness_006",
+      "question": "What framework is used to instantiate the editable harness substrate, and what does the substrate expose as explicit files?",
+      "source_filename": "harness.pdf",
+      "proposed_document_id": "7b7add4488da35c33e99474d",
+      "proposed_chunk_ids": [
+        10
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "7b7add4488da35c33e99474d",
+          "chunk_id": 10,
+          "point_id": "a9163479-a2be-560f-8237-dccc94dcc299",
+          "source": "harness.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "Chunk 10 explicitly identifies NexAU and the seven editable file-based component types: system prompt, tool description, tool implementation, middleware, skill, sub-agent configuration, and long-term memory.",
+      "consolidation_selected_from": "inventory70_semantic_review_decisions_batch8_20261020.json"
+    },
+    {
+      "probe_id": "inv_harness_007",
+      "question": "How are failures counted for pass@1 in the Terminal-Bench evaluation, and what runtime components are described as infrastructure?",
+      "source_filename": "harness.pdf",
+      "proposed_document_id": "7b7add4488da35c33e99474d",
+      "proposed_chunk_ids": [
+        16
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "7b7add4488da35c33e99474d",
+          "chunk_id": 16,
+          "point_id": "b4b537b4-c4ef-513c-9314-6a4ad1e18605",
+          "source": "harness.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "Chunk 16 states that infrastructure-aborted or timed-out trials count as pass@1 failures and lists the runtime infrastructure: framework, dispatcher, sandbox, tracer, and concurrency.",
+      "consolidation_selected_from": "inventory70_semantic_review_decisions_batch8_20261020.json"
+    },
+    {
+      "probe_id": "inv_harness_008",
+      "question": "What does the AHE evaluation report about the generality of its gains across different providers or reasoning depths?",
+      "source_filename": "harness.pdf",
+      "proposed_document_id": "7b7add4488da35c33e99474d",
+      "proposed_chunk_ids": [
+        22
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "7b7add4488da35c33e99474d",
+          "chunk_id": 22,
+          "point_id": "986a3756-2b7c-5ed9-8dce-8daa5e93db25",
+          "source": "harness.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "Chunk 22 reports positive AHE pass@1 gains across GPT-5.4 reasoning depths and alternate model families, supporting generality across providers and reasoning depths while noting operating-point limitations.",
+      "consolidation_selected_from": "inventory70_semantic_review_decisions_batch8_20261020.json"
+    },
+    {
+      "probe_id": "inv_harness_009",
+      "question": "What governance mechanisms does AHE use to bound self-modification and roll back ineffective edits?",
+      "source_filename": "harness.pdf",
+      "proposed_document_id": "7b7add4488da35c33e99474d",
+      "proposed_chunk_ids": [
+        14,
+        27
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "7b7add4488da35c33e99474d",
+          "chunk_id": 14,
+          "point_id": "480c9491-e5d7-534c-a87a-fba4188d5e64",
+          "source": "harness.pdf"
+        },
+        {
+          "document_id": "7b7add4488da35c33e99474d",
+          "chunk_id": 27,
+          "point_id": "40e42236-358a-5e75-9a4f-6e29385790ff",
+          "source": "harness.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "Chunk 14 explains workspace restrictions, evidence-linked change manifests, predicted outcomes, and verification in the next round. Chunk 27 explicitly describes workspace-bounded edits, versioned manifests, and file-level rollback of ineffective edits.",
+      "consolidation_selected_from": "inventory70_semantic_review_decisions_batch8_20261020.json"
+    },
+    {
+      "probe_id": "inv_harness_010",
+      "question": "What repeated guarding behaviors are codified into the AHE system prompt?",
+      "source_filename": "harness.pdf",
+      "proposed_document_id": "7b7add4488da35c33e99474d",
+      "proposed_chunk_ids": [
+        78
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "7b7add4488da35c33e99474d",
+          "chunk_id": 78,
+          "point_id": "fde22c32-2eaa-5a4f-a42f-12953a3afd90",
+          "source": "harness.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "Chunk 78 directly enumerates the seven recurring system-prompt rules: contract first, mirror the evaluator, preserve semantics, control candidate selection, generalize, manage time, and finish only when the end state is ready.",
+      "consolidation_selected_from": "inventory70_semantic_review_decisions_batch8_20261020.json"
+    },
+    {
+      "probe_id": "inv_harness_011",
+      "question": "What evidence shows that the AHE loop can recover previously observed failure modes across later iterations?",
+      "source_filename": "harness.pdf",
+      "proposed_document_id": "7b7add4488da35c33e99474d",
+      "proposed_chunk_ids": [
+        90,
+        93
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "7b7add4488da35c33e99474d",
+          "chunk_id": 90,
+          "point_id": "e9d730a0-3eed-5565-83be-201f82d51324",
+          "source": "harness.pdf"
+        },
+        {
+          "document_id": "7b7add4488da35c33e99474d",
+          "chunk_id": 93,
+          "point_id": "5ca49440-e29a-5232-bbf6-b7b5648595ed",
+          "source": "harness.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "Chunk 90 describes the evolving configure-git-webserver trajectory and the need to patch a guard loophole and middleware salience gap. Chunk 93 records the failure mechanism and reports recovery from 0/2 to 2/2 after the iteration-8 changes.",
+      "consolidation_selected_from": "inventory70_semantic_review_decisions_batch8_20261020.json"
+    },
+    {
+      "probe_id": "inv_harness_012",
+      "question": "What task does configure-git-webserver require the agent to complete, and what loophole or middleware issue was patched?",
+      "source_filename": "harness.pdf",
+      "proposed_document_id": "7b7add4488da35c33e99474d",
+      "proposed_chunk_ids": [
+        91,
+        93,
+        103
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "7b7add4488da35c33e99474d",
+          "chunk_id": 91,
+          "point_id": "80b8c76e-c1b0-59db-84f9-dc9dd92b9cbe",
+          "source": "harness.pdf"
+        },
+        {
+          "document_id": "7b7add4488da35c33e99474d",
+          "chunk_id": 93,
+          "point_id": "5ca49440-e29a-5232-bbf6-b7b5648595ed",
+          "source": "harness.pdf"
+        },
+        {
+          "document_id": "7b7add4488da35c33e99474d",
+          "chunk_id": 103,
+          "point_id": "ccd7a3a8-18a6-5e3a-ac95-7b268f847500",
+          "source": "harness.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "Chunk 91 defines configure-git-webserver and the failed cleanup after deployment. Chunk 93 describes the overrideable cleanup loophole and later 0/2-to-2/2 recovery; chunk 103 specifies hard blocks against deleting protected output or emptying protected roots, plus middleware reminders.",
+      "consolidation_selected_from": "inventory70_semantic_review_decisions_batch8_20261020.json"
+    },
+    {
+      "probe_id": "inv_llm_agents_005",
+      "question": "How do ChatDB and DB-GPT connect LLM-based agents with SQL databases, and what factors are used for memory retrieval?",
+      "source_filename": "LLM Based-learning.pdf",
+      "proposed_document_id": "e65504ab611fa43ac5013829",
+      "proposed_chunk_ids": [
+        45,
+        46
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "e65504ab611fa43ac5013829",
+          "chunk_id": 45,
+          "point_id": "b61f5ea1-a7cf-55d8-87bc-0fc68ac1417a",
+          "source": "LLM Based-learning.pdf"
+        },
+        {
+          "document_id": "e65504ab611fa43ac5013829",
+          "chunk_id": 46,
+          "point_id": "53d10ef9-0402-58e0-ba06-24539692362f",
+          "source": "LLM Based-learning.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "Chunk 45 states that ChatDB and DB-GPT integrate LLM-based agents with SQL databases. Chunk 46 specifies memory retrieval by a weighted combination of recency, relevance, and importance.",
+      "consolidation_selected_from": "inventory70_semantic_review_decisions_batch10_20261020.json"
+    },
+    {
+      "probe_id": "inv_llm_agents_006",
+      "question": "How can LLM-based agents acquire knowledge about the tools available to them through zero-shot or few-shot prompting?",
+      "source_filename": "LLM Based-learning.pdf",
+      "proposed_document_id": "e65504ab611fa43ac5013829",
+      "proposed_chunk_ids": [
+        67
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "e65504ab611fa43ac5013829",
+          "chunk_id": 67,
+          "point_id": "657f49e2-a34f-57b0-9634-9306a15b5617",
+          "source": "LLM Based-learning.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "Chunk 67 explains that zero-shot prompts can describe tool functionality and parameters, while few-shot prompts demonstrate tool-use scenarios and corresponding methods.",
+      "consolidation_selected_from": "inventory70_semantic_review_decisions_batch10_20261020.json"
+    },
+    {
+      "probe_id": "inv_llm_agents_007",
+      "question": "What limitation of static planning is identified for embodied agents, and what information can help correct errors earlier?",
+      "source_filename": "LLM Based-learning.pdf",
+      "proposed_document_id": "e65504ab611fa43ac5013829",
+      "proposed_chunk_ids": [
+        90
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "e65504ab611fa43ac5013829",
+          "chunk_id": 90,
+          "point_id": "ed4f4cbb-a041-5de6-8cac-7b68c59c1094",
+          "source": "LLM Based-learning.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "Chunk 90 explains that static reasoning and planning can ignore dynamic surroundings. Spatial data and item-location relationships provide context, and PET is described as using early error correction.",
+      "consolidation_selected_from": "inventory70_semantic_review_decisions_batch10_20261020.json"
+    },
+    {
+      "probe_id": "inv_llm_agents_008",
+      "question": "What two major challenges are identified as limiting the realization of LLM-based agents in cutting-edge scientific work?",
+      "source_filename": "LLM Based-learning.pdf",
+      "proposed_document_id": "e65504ab611fa43ac5013829",
+      "proposed_chunk_ids": [
+        91
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "e65504ab611fa43ac5013829",
+          "chunk_id": 91,
+          "point_id": "c7d5dcde-d728-5ceb-bf1b-e7531d1fb042",
+          "source": "LLM Based-learning.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "Chunk 91 explicitly identifies two barriers to cutting-edge scientific-agent applications: scientific complexity that is hard to represent in text and a severe lack of suitable scientific-domain training data.",
+      "consolidation_selected_from": "inventory70_semantic_review_decisions_batch10_20261020.json"
+    },
+    {
+      "probe_id": "inv_llm_agents_009",
+      "question": "What role can a high-level policy play in embodied action planning according to the discussion of hierarchical reinforcement learning?",
+      "source_filename": "LLM Based-learning.pdf",
+      "proposed_document_id": "e65504ab611fa43ac5013829",
+      "proposed_chunk_ids": [
+        75
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "e65504ab611fa43ac5013829",
+          "chunk_id": 75,
+          "point_id": "8afd655b-1e74-5f31-8db1-d62a7c0bd5df",
+          "source": "LLM Based-learning.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "Chunk 75 describes hierarchical reinforcement learning: the high-level policy constrains subgoals for the low-level policy, which produces appropriate action signals.",
+      "consolidation_selected_from": "inventory70_semantic_review_decisions_batch10_20261020.json"
+    },
+    {
+      "probe_id": "inv_llm_agents_010",
+      "question": "How are humans and agents characterized in the instructor-executor and equal-partnership paradigms?",
+      "source_filename": "LLM Based-learning.pdf",
+      "proposed_document_id": "e65504ab611fa43ac5013829",
+      "proposed_chunk_ids": [
+        105,
+        106
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "e65504ab611fa43ac5013829",
+          "chunk_id": 105,
+          "point_id": "8a0baf52-617e-54e9-806b-6357bb00f3fb",
+          "source": "LLM Based-learning.pdf"
+        },
+        {
+          "document_id": "e65504ab611fa43ac5013829",
+          "chunk_id": 106,
+          "point_id": "7580d2aa-b780-5527-a8ae-2322350dd78d",
+          "source": "LLM Based-learning.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "Chunks 105 and 106 describe the instructor-executor paradigm, where humans instruct and agents execute, and the equal-partnership paradigm, where agents interact with humans on an equal footing.",
+      "consolidation_selected_from": "inventory70_semantic_review_decisions_batch10_20261020.json"
+    },
+    {
+      "probe_id": "inv_llm_agents_011",
+      "question": "What is the calibration problem for LLMs, and why can it create difficulties for interactive agents?",
+      "source_filename": "LLM Based-learning.pdf",
+      "proposed_document_id": "e65504ab611fa43ac5013829",
+      "proposed_chunk_ids": [
+        156
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "e65504ab611fa43ac5013829",
+          "chunk_id": 156,
+          "point_id": "9e61bb48-c5cc-5f63-9c54-f24d3c49442c",
+          "source": "LLM Based-learning.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "Chunk 156 defines calibration as LLMs' difficulty expressing prediction certainty precisely and explains that this can cause agent outputs to misalign with human intentions in interactive settings.",
+      "consolidation_selected_from": "inventory70_semantic_review_decisions_batch10_20261020.json"
+    },
+    {
+      "probe_id": "inv_llm_agents_012",
+      "question": "How can sufficiently large LLMs use prompting to decompose high-level tasks into subtasks without additional training?",
+      "source_filename": "LLM Based-learning.pdf",
+      "proposed_document_id": "e65504ab611fa43ac5013829",
+      "proposed_chunk_ids": [
+        90
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "e65504ab611fa43ac5013829",
+          "chunk_id": 90,
+          "point_id": "ed4f4cbb-a041-5de6-8cac-7b68c59c1094",
+          "source": "LLM Based-learning.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "Chunk 90 states that sufficiently large LLMs with appropriate prompts can decompose high-level tasks into suitable subtasks without additional training.",
+      "consolidation_selected_from": "inventory70_semantic_review_decisions_batch10_20261020.json"
+    },
+    {
+      "probe_id": "inv_llm_005",
+      "question": "How does GPT-3 define the few-shot setting, and how does it differ from fine-tuning?",
+      "source_filename": "LLM.pdf",
+      "proposed_document_id": "68424e3d1aa5e84e426da70c",
+      "proposed_chunk_ids": [
+        10,
+        14,
+        15
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "68424e3d1aa5e84e426da70c",
+          "chunk_id": 10,
+          "point_id": "f3853fb7-03ff-58d1-af1e-fdf9d9b3c6ee",
+          "source": "LLM.pdf"
+        },
+        {
+          "document_id": "68424e3d1aa5e84e426da70c",
+          "chunk_id": 14,
+          "point_id": "d9d113a2-6e01-5513-84de-bafcba1558f9",
+          "source": "LLM.pdf"
+        },
+        {
+          "document_id": "68424e3d1aa5e84e426da70c",
+          "chunk_id": 15,
+          "point_id": "430afa49-f496-5baf-b489-7594cdd3dd34",
+          "source": "LLM.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "Defines few-shot as inference-time conditioning with demonstrations and no weight updates, contrasting it with fine-tuning on task-specific supervised data.",
+      "consolidation_selected_from": "inventory70_semantic_review_decisions_batch4_20261020.json"
+    },
+    {
+      "probe_id": "inv_llm_006",
+      "question": "What zero-shot and few-shot results did GPT-3 achieve on LAMBADA?",
+      "source_filename": "LLM.pdf",
+      "proposed_document_id": "68424e3d1aa5e84e426da70c",
+      "proposed_chunk_ids": [
+        31
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "68424e3d1aa5e84e426da70c",
+          "chunk_id": 31,
+          "point_id": "bebbd641-2ed9-5765-b8f8-3832f2050f23",
+          "source": "LLM.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "The LAMBADA results table directly reports GPT-3 175B zero-shot accuracy of 76.2% and few-shot accuracy of 86.4%.",
+      "consolidation_selected_from": "inventory70_semantic_review_decisions_batch4_20261020.json"
+    },
+    {
+      "probe_id": "inv_llm_007",
+      "question": "How did GPT-3 perform on the CoQA, QuAC, DROP, and SQuAD 2.0 question-answering benchmarks?",
+      "source_filename": "LLM.pdf",
+      "proposed_document_id": "68424e3d1aa5e84e426da70c",
+      "proposed_chunk_ids": [
+        45,
+        47
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "68424e3d1aa5e84e426da70c",
+          "chunk_id": 45,
+          "point_id": "a1ebb400-b98e-581e-8574-42bf6c290d02",
+          "source": "LLM.pdf"
+        },
+        {
+          "document_id": "68424e3d1aa5e84e426da70c",
+          "chunk_id": 47,
+          "point_id": "ae62c6f5-2d0e-5f81-97af-1bff9988cd62",
+          "source": "LLM.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "The passages provide results for CoQA, QuAC, DROP, and SQuAD 2.0, with accompanying interpretation.",
+      "consolidation_selected_from": "inventory70_semantic_review_decisions_batch4_20261020.json"
+    },
+    {
+      "probe_id": "inv_llm_008",
+      "question": "What were GPT-3's few-shot, one-shot, and zero-shot accuracies on the SAT analogy problems?",
+      "source_filename": "LLM.pdf",
+      "proposed_document_id": "68424e3d1aa5e84e426da70c",
+      "proposed_chunk_ids": [
+        64
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "68424e3d1aa5e84e426da70c",
+          "chunk_id": 64,
+          "point_id": "2680e24c-d9a1-5c03-ab72-fb82d3ffa040",
+          "source": "LLM.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "Directly reports SAT analogy accuracy: 65.2% few-shot, 59.1% one-shot, and 53.7% zero-shot.",
+      "consolidation_selected_from": "inventory70_semantic_review_decisions_batch4_20261020.json"
+    },
+    {
+      "probe_id": "inv_llm_009",
+      "question": "What does the GPT-3 grammar-correction experiment illustrate about using human demonstrations as conditioning examples?",
+      "source_filename": "LLM.pdf",
+      "proposed_document_id": "68424e3d1aa5e84e426da70c",
+      "proposed_chunk_ids": [
+        77,
+        80
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "68424e3d1aa5e84e426da70c",
+          "chunk_id": 77,
+          "point_id": "aecf1c00-9b11-5b02-9fc7-4b9765efb9a5",
+          "source": "LLM.pdf"
+        },
+        {
+          "document_id": "68424e3d1aa5e84e426da70c",
+          "chunk_id": 80,
+          "point_id": "26abe062-ddd1-53d4-b57f-19cebac888cb",
+          "source": "LLM.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "Describes human examples conditioning grammar correction and illustrates that a correction can change the intended meaning.",
+      "consolidation_selected_from": "inventory70_semantic_review_decisions_batch4_20261020.json"
+    },
+    {
+      "probe_id": "inv_llm_010",
+      "question": "What kinds of socially harmful applications are identified as potential misuse cases for high-quality language models?",
+      "source_filename": "LLM.pdf",
+      "proposed_document_id": "68424e3d1aa5e84e426da70c",
+      "proposed_chunk_ids": [
+        95
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "68424e3d1aa5e84e426da70c",
+          "chunk_id": 95,
+          "point_id": "cf59cb20-9b9a-5fd5-b1db-d4239a90532c",
+          "source": "LLM.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "Identifies potential misuse including misinformation, spam, phishing, fraudulent academic writing, social-engineering pretexts, and abuse of legal or government processes.",
+      "consolidation_selected_from": "inventory70_semantic_review_decisions_batch4_20261020.json"
+    },
+    {
+      "probe_id": "inv_llm_011",
+      "question": "What historical model-size progression is described in the discussion of scaling language models?",
+      "source_filename": "LLM.pdf",
+      "proposed_document_id": "68424e3d1aa5e84e426da70c",
+      "proposed_chunk_ids": [
+        110,
+        111
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "68424e3d1aa5e84e426da70c",
+          "chunk_id": 110,
+          "point_id": "059ac4b9-ae7b-517b-921a-4501ec90302b",
+          "source": "LLM.pdf"
+        },
+        {
+          "document_id": "68424e3d1aa5e84e426da70c",
+          "chunk_id": 111,
+          "point_id": "0776285d-f8ae-5944-b879-4c96212523bd",
+          "source": "LLM.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "Describes historical model-size progression and related scaling approaches, including Transformer and conditional-compute models.",
+      "consolidation_selected_from": "inventory70_semantic_review_decisions_batch4_20261020.json"
+    },
+    {
+      "probe_id": "inv_llm_012",
+      "question": "Which algorithmic innovations in language modeling are identified as important developments preceding the large-scale model approach?",
+      "source_filename": "LLM.pdf",
+      "proposed_document_id": "68424e3d1aa5e84e426da70c",
+      "proposed_chunk_ids": [
+        115
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "68424e3d1aa5e84e426da70c",
+          "chunk_id": 115,
+          "point_id": "1598e14d-bb92-517c-aa4b-e89bd5167670",
+          "source": "LLM.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "Lists prior innovations including denoising-based bidirectionality, prefixLM, encoder-decoder architectures, random permutations, sampling efficiency, training/data improvements, and embedding efficiency.",
+      "consolidation_selected_from": "inventory70_semantic_review_decisions_batch4_20261020.json"
+    },
+    {
+      "probe_id": "inv_rag_005",
+      "question": "What are the two RAG formulations described in the paper, and how do they differ in the passages used during generation?",
+      "source_filename": "RAG.pdf",
+      "proposed_document_id": "8f25ec73a5dcfeca772c16ff",
+      "proposed_chunk_ids": [
+        1
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "8f25ec73a5dcfeca772c16ff",
+          "chunk_id": 1,
+          "point_id": "89cb4947-3523-5afc-86e1-05dcdaf117e3",
+          "source": "RAG.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "Chunk 1 directly distinguishes conditioning on the same retrieved passages for the whole sequence from using different passages per token.",
+      "consolidation_selected_from": "inventory70_semantic_review_decisions_batch7_20261020.json"
+    },
+    {
+      "probe_id": "inv_rag_006",
+      "question": "What benefits does combining parametric and non-parametric memory provide in the RAG approach?",
+      "source_filename": "RAG.pdf",
+      "proposed_document_id": "8f25ec73a5dcfeca772c16ff",
+      "proposed_chunk_ids": [
+        4,
+        5
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "8f25ec73a5dcfeca772c16ff",
+          "chunk_id": 4,
+          "point_id": "520eb83d-1f91-5c7e-87a5-b14fe812de98",
+          "source": "RAG.pdf"
+        },
+        {
+          "document_id": "8f25ec73a5dcfeca772c16ff",
+          "chunk_id": 5,
+          "point_id": "0a3675cb-5aeb-5ca1-8f91-c96f1f5d2fc7",
+          "source": "RAG.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "Chunks 4 and 5 explain the parametric seq2seq generator, non-parametric Wikipedia index, their combination, and benefits for knowledge-intensive tasks and updating external knowledge.",
+      "consolidation_selected_from": "inventory70_semantic_review_decisions_batch7_20261020.json"
+    },
+    {
+      "probe_id": "inv_rag_007",
+      "question": "How does RAG-Sequence marginalize retrieved documents, and how does this differ from RAG-Token?",
+      "source_filename": "RAG.pdf",
+      "proposed_document_id": "8f25ec73a5dcfeca772c16ff",
+      "proposed_chunk_ids": [
+        7
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "8f25ec73a5dcfeca772c16ff",
+          "chunk_id": 7,
+          "point_id": "4912b423-e419-5790-bfb1-fd3ac4335021",
+          "source": "RAG.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "Chunk 7 explains that RAG-Sequence marginalizes document-level sequence probabilities using a top-K approximation, while RAG-Token can use a different latent document for each token.",
+      "consolidation_selected_from": "inventory70_semantic_review_decisions_batch7_20261020.json"
+    },
+    {
+      "probe_id": "inv_rag_008",
+      "question": "How is the Wikipedia knowledge source organized for RAG retrieval, and what retrieval method and passage sizes are used?",
+      "source_filename": "RAG.pdf",
+      "proposed_document_id": "8f25ec73a5dcfeca772c16ff",
+      "proposed_chunk_ids": [
+        11
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "8f25ec73a5dcfeca772c16ff",
+          "chunk_id": 11,
+          "point_id": "3d24404a-0c11-5a22-a987-9250decf5d45",
+          "source": "RAG.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "Chunk 11 specifies the December 2018 Wikipedia dump, disjoint 100-word chunks, 21 million documents, document embeddings, a FAISS HNSW/MIPS index, and top-k retrieval.",
+      "consolidation_selected_from": "inventory70_semantic_review_decisions_batch7_20261020.json"
+    },
+    {
+      "probe_id": "inv_rag_009",
+      "question": "What two dimensions of generation quality were evaluated by humans in the RAG experiments?",
+      "source_filename": "RAG.pdf",
+      "proposed_document_id": "8f25ec73a5dcfeca772c16ff",
+      "proposed_chunk_ids": [
+        14
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "8f25ec73a5dcfeca772c16ff",
+          "chunk_id": 14,
+          "point_id": "f6ae29e4-fdda-53d8-8536-277efab79b31",
+          "source": "RAG.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "Chunk 14 explicitly identifies the two human-evaluation dimensions as factuality and specificity and defines both.",
+      "consolidation_selected_from": "inventory70_semantic_review_decisions_batch7_20261020.json"
+    },
+    {
+      "probe_id": "inv_rag_010",
+      "question": "What does the RAG evaluation report about documents that contain clues but do not state the answer verbatim?",
+      "source_filename": "RAG.pdf",
+      "proposed_document_id": "8f25ec73a5dcfeca772c16ff",
+      "proposed_chunk_ids": [
+        16
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "8f25ec73a5dcfeca772c16ff",
+          "chunk_id": 16,
+          "point_id": "02ae084f-3e4b-5e9a-bb58-5af100233667",
+          "source": "RAG.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "Chunk 16 states that documents containing clues without stating the answer verbatim can still contribute to a correct generated answer, unlike standard extractive approaches.",
+      "consolidation_selected_from": "inventory70_semantic_review_decisions_batch7_20261020.json"
+    },
+    {
+      "probe_id": "inv_training_005",
+      "question": "What criteria and rating scale were used when human labelers evaluated model responses?",
+      "source_filename": "Training Llm.pdf",
+      "proposed_document_id": "c87e9c2e56842a8dfa14ef5e",
+      "proposed_chunk_ids": [
+        30,
+        97,
+        98,
+        99,
+        100
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "c87e9c2e56842a8dfa14ef5e",
+          "chunk_id": 30,
+          "point_id": "c6197d7c-f1f5-5800-b497-4305e93c60b1",
+          "source": "Training Llm.pdf"
+        },
+        {
+          "document_id": "c87e9c2e56842a8dfa14ef5e",
+          "chunk_id": 97,
+          "point_id": "43b830ca-60c0-5591-bcf6-f6d3ac8a5700",
+          "source": "Training Llm.pdf"
+        },
+        {
+          "document_id": "c87e9c2e56842a8dfa14ef5e",
+          "chunk_id": 98,
+          "point_id": "e061a5d6-75d1-5a5a-84f3-2bec7df72708",
+          "source": "Training Llm.pdf"
+        },
+        {
+          "document_id": "c87e9c2e56842a8dfa14ef5e",
+          "chunk_id": 99,
+          "point_id": "34a77e1b-57fe-5eb9-8e51-8f04ee3606d8",
+          "source": "Training Llm.pdf"
+        },
+        {
+          "document_id": "c87e9c2e56842a8dfa14ef5e",
+          "chunk_id": 100,
+          "point_id": "ea74dccf-95c8-5ccd-a40b-39815eeaecee",
+          "source": "Training Llm.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "Overall response quality is rated on a 1–7 Likert scale. Evaluation guidance assesses helpfulness, truthfulness, and harmlessness, with truthfulness and harmlessness generally prioritized except under specified trade-offs.",
+      "consolidation_selected_from": "inventory70_semantic_review_decisions_batch5_20261020.json"
+    },
+    {
+      "probe_id": "inv_training_006",
+      "question": "How were InstructGPT models evaluated on public datasets, particularly with respect to language-model safety?",
+      "source_filename": "Training Llm.pdf",
+      "proposed_document_id": "c87e9c2e56842a8dfa14ef5e",
+      "proposed_chunk_ids": [
+        6,
+        30,
+        114
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "c87e9c2e56842a8dfa14ef5e",
+          "chunk_id": 6,
+          "point_id": "fbca1f8d-7813-596d-9624-c0a4abaebf50",
+          "source": "Training Llm.pdf"
+        },
+        {
+          "document_id": "c87e9c2e56842a8dfa14ef5e",
+          "chunk_id": 30,
+          "point_id": "c6197d7c-f1f5-5800-b497-4305e93c60b1",
+          "source": "Training Llm.pdf"
+        },
+        {
+          "document_id": "c87e9c2e56842a8dfa14ef5e",
+          "chunk_id": 114,
+          "point_id": "27ceb999-9780-5157-a182-521b07e5e47b",
+          "source": "Training Llm.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "The paper evaluates public NLP datasets covering truthfulness, toxicity, and bias as well as traditional zero-shot tasks. Examples include TruthfulQA, RealToxicityPrompts, Winogender, CrowS-Pairs, DROP, QuAC, SQuADv2, and HellaSwag.",
+      "consolidation_selected_from": "inventory70_semantic_review_decisions_batch5_20261020.json"
+    },
+    {
+      "probe_id": "inv_training_007",
+      "question": "What evidence does the PPO evaluation provide about truthfulness and hallucination compared with the GPT-3 baseline?",
+      "source_filename": "Training Llm.pdf",
+      "proposed_document_id": "c87e9c2e56842a8dfa14ef5e",
+      "proposed_chunk_ids": [
+        6,
+        37
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "c87e9c2e56842a8dfa14ef5e",
+          "chunk_id": 6,
+          "point_id": "fbca1f8d-7813-596d-9624-c0a4abaebf50",
+          "source": "Training Llm.pdf"
+        },
+        {
+          "document_id": "c87e9c2e56842a8dfa14ef5e",
+          "chunk_id": 37,
+          "point_id": "deda677a-d148-5f7e-9057-c822b5ee7db6",
+          "source": "Training Llm.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "The paper reports InstructGPT answers are truthful and informative about twice as often on TruthfulQA and reports a 21% hallucination rate on closed-domain API tasks versus 41% for GPT-3.",
+      "consolidation_selected_from": "inventory70_semantic_review_decisions_batch5_20261020.json"
+    },
+    {
+      "probe_id": "inv_training_008",
+      "question": "How much computational effort is reported for the 175B supervised fine-tuning and PPO-ptx stages, compared with GPT-3 training?",
+      "source_filename": "Training Llm.pdf",
+      "proposed_document_id": "c87e9c2e56842a8dfa14ef5e",
+      "proposed_chunk_ids": [
+        50
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "c87e9c2e56842a8dfa14ef5e",
+          "chunk_id": 50,
+          "point_id": "d0cac048-9aff-5660-887e-a1a8ba00783b",
+          "source": "Training Llm.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "The paper reports 4.9 petaFLOP/s-days for 175B supervised fine-tuning and 60 petaFLOP/s-days for 175B PPO-ptx, compared with 3,640 petaFLOP/s-days for GPT-3 pretraining.",
+      "consolidation_selected_from": "inventory70_semantic_review_decisions_batch5_20261020.json"
+    },
+    {
+      "probe_id": "inv_training_009",
+      "question": "What concern about inter-labeler agreement is reported in the human evaluation?",
+      "source_filename": "Training Llm.pdf",
+      "proposed_document_id": "c87e9c2e56842a8dfa14ef5e",
+      "proposed_chunk_ids": [
+        22,
+        53,
+        57
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "c87e9c2e56842a8dfa14ef5e",
+          "chunk_id": 22,
+          "point_id": "86e29b69-b83e-56d0-8bec-ecdd18d8de95",
+          "source": "Training Llm.pdf"
+        },
+        {
+          "document_id": "c87e9c2e56842a8dfa14ef5e",
+          "chunk_id": 53,
+          "point_id": "f14dfa84-e43e-5377-907c-7cb8cd368d0b",
+          "source": "Training Llm.pdf"
+        },
+        {
+          "document_id": "c87e9c2e56842a8dfa14ef5e",
+          "chunk_id": 57,
+          "point_id": "c16d6e90-2969-5a98-a6c6-66ca5f116ea0",
+          "source": "Training Llm.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "The paper reports inter-annotator agreement of 72.6 ± 1.5% for training labelers and 77.3 ± 1.3% for held-out labelers, while noting that labelers disagree on some examples and may not represent all users.",
+      "consolidation_selected_from": "inventory70_semantic_review_decisions_batch5_20261020.json"
+    },
+    {
+      "probe_id": "inv_training_010",
+      "question": "What trade-offs are discussed between open-sourcing large language models and providing controlled API access?",
+      "source_filename": "Training Llm.pdf",
+      "proposed_document_id": "c87e9c2e56842a8dfa14ef5e",
+      "proposed_chunk_ids": [
+        62,
+        63
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "c87e9c2e56842a8dfa14ef5e",
+          "chunk_id": 62,
+          "point_id": "6462d87d-f258-5831-8047-997550c5ae1d",
+          "source": "Training Llm.pdf"
+        },
+        {
+          "document_id": "c87e9c2e56842a8dfa14ef5e",
+          "chunk_id": 63,
+          "point_id": "ab69b51c-fc9b-5fe3-bbca-5a024360e57c",
+          "source": "Training Llm.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "The paper contrasts open-sourcing, which makes restricting harmful uses difficult, with controlled API access, which can support use restrictions, misuse monitoring, revocation, and rate limits but reduces transparency and concentrates decision-making.",
+      "consolidation_selected_from": "inventory70_semantic_review_decisions_batch5_20261020.json"
+    },
+    {
+      "probe_id": "inv_loop_005",
+      "question": "How does the paper define loop engineering, and what does its corpus analysis report about autonomous verification and terminal states?",
+      "source_filename": "loop.pdf",
+      "proposed_document_id": "23b038dd8383e3d47638322b",
+      "proposed_chunk_ids": [
+        1,
+        16,
+        19
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "23b038dd8383e3d47638322b",
+          "chunk_id": 1,
+          "point_id": "d9559f0b-82d2-5fa6-8bdd-36af00930ee1",
+          "source": "loop.pdf"
+        },
+        {
+          "document_id": "23b038dd8383e3d47638322b",
+          "chunk_id": 16,
+          "point_id": "f98e5965-c4de-5f9d-9769-914b5216b773",
+          "source": "loop.pdf"
+        },
+        {
+          "document_id": "23b038dd8383e3d47638322b",
+          "chunk_id": 19,
+          "point_id": "714f67c2-635f-5b5d-88bc-fcd434b04243",
+          "source": "loop.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "The selected passages cover the loop-engineering definition, named terminal states, and corpus findings on autonomous verification. Verify the definition passage before treating this label as final.",
+      "consolidation_selected_from": "inventory70_semantic_review_decisions_batch9_20261020.json"
+    },
+    {
+      "probe_id": "inv_loop_006",
+      "question": "What five components make up a loop specification?",
+      "source_filename": "loop.pdf",
+      "proposed_document_id": "23b038dd8383e3d47638322b",
+      "proposed_chunk_ids": [
+        12,
+        13
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "23b038dd8383e3d47638322b",
+          "chunk_id": 12,
+          "point_id": "77523bd3-617e-516d-9599-db671097fced",
+          "source": "loop.pdf"
+        },
+        {
+          "document_id": "23b038dd8383e3d47638322b",
+          "chunk_id": 13,
+          "point_id": "f7e87c86-152c-54cb-b573-60c393f21684",
+          "source": "loop.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "The passages enumerate the operational anatomy: scheduled automations, isolated worktrees, reusable skills, plugins/connectors, and sub-agents, alongside external memory.",
+      "consolidation_selected_from": "inventory70_semantic_review_decisions_batch9_20261020.json"
+    },
+    {
+      "probe_id": "inv_loop_007",
+      "question": "What dimensions are used to classify loop specifications in the proposed taxonomy?",
+      "source_filename": "loop.pdf",
+      "proposed_document_id": "23b038dd8383e3d47638322b",
+      "proposed_chunk_ids": [
+        14,
+        16
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "23b038dd8383e3d47638322b",
+          "chunk_id": 14,
+          "point_id": "f988b88d-9c67-5990-b38d-69c09c7eb2cd",
+          "source": "loop.pdf"
+        },
+        {
+          "document_id": "23b038dd8383e3d47638322b",
+          "chunk_id": 16,
+          "point_id": "f98e5965-c4de-5f9d-9769-914b5216b773",
+          "source": "loop.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "The taxonomy identifies trigger, goal type, verification rigor, architecture, and terminal states as the five design dimensions.",
+      "consolidation_selected_from": "inventory70_semantic_review_decisions_batch9_20261020.json"
+    },
+    {
+      "probe_id": "inv_loop_008",
+      "question": "What proportion of the analyzed loops rely on autonomous verification at levels 1 and 2, and what proportion rely on a level-4 model judge?",
+      "source_filename": "loop.pdf",
+      "proposed_document_id": "23b038dd8383e3d47638322b",
+      "proposed_chunk_ids": [
+        18,
+        19
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "23b038dd8383e3d47638322b",
+          "chunk_id": 18,
+          "point_id": "f47b14ba-e932-557b-8e20-e93a660a88aa",
+          "source": "loop.pdf"
+        },
+        {
+          "document_id": "23b038dd8383e3d47638322b",
+          "chunk_id": 19,
+          "point_id": "714f67c2-635f-5b5d-88bc-fcd434b04243",
+          "source": "loop.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "The corpus reports that 70% of loops use verification levels 1 or 2 and 22% rely on a level-4 model judge.",
+      "consolidation_selected_from": "inventory70_semantic_review_decisions_batch9_20261020.json"
+    },
+    {
+      "probe_id": "inv_loop_009",
+      "question": "What maturity mismatch does the corpus reveal between terminal states, autonomous verification, verifiable goals, automated triggers, reusable skills, and persistent memory?",
+      "source_filename": "loop.pdf",
+      "proposed_document_id": "23b038dd8383e3d47638322b",
+      "proposed_chunk_ids": [
+        21,
+        22
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "23b038dd8383e3d47638322b",
+          "chunk_id": 21,
+          "point_id": "d215abaa-e36e-51d4-b6ba-fc92abb335f0",
+          "source": "loop.pdf"
+        },
+        {
+          "document_id": "23b038dd8383e3d47638322b",
+          "chunk_id": 22,
+          "point_id": "00fbcd29-03f2-510e-88a7-a338ecddae15",
+          "source": "loop.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "The corpus comparison reports maturity across named terminal states, autonomous verification, verifiable goals, automated triggers, reusable skills, and persistent memory.",
+      "consolidation_selected_from": "inventory70_semantic_review_decisions_batch9_20261020.json"
+    },
+    {
+      "probe_id": "inv_loop_010",
+      "question": "How is the proposed metric cost per accepted change defined, and why is raw token spending considered insufficient?",
+      "source_filename": "loop.pdf",
+      "proposed_document_id": "23b038dd8383e3d47638322b",
+      "proposed_chunk_ids": [
+        29
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "23b038dd8383e3d47638322b",
+          "chunk_id": 29,
+          "point_id": "bec6db1f-805c-5ae1-a096-017bb8450682",
+          "source": "loop.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "The paper defines cost per accepted change as tokens or money spent divided by the number of changes that survive verification, explaining why raw spend alone is insufficient.",
+      "consolidation_selected_from": "inventory70_semantic_review_decisions_batch9_20261020.json"
+    },
+    {
+      "probe_id": "inv_loop_011",
+      "question": "What open empirical question does the paper identify about whether loop specifications improve outcomes in real-world use?",
+      "source_filename": "loop.pdf",
+      "proposed_document_id": "23b038dd8383e3d47638322b",
+      "proposed_chunk_ids": [
+        34,
+        38,
+        40
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "23b038dd8383e3d47638322b",
+          "chunk_id": 34,
+          "point_id": "196e3359-79f1-535b-878c-693e29d337f4",
+          "source": "loop.pdf"
+        },
+        {
+          "document_id": "23b038dd8383e3d47638322b",
+          "chunk_id": 38,
+          "point_id": "6ed029d9-0c41-5efd-a6e8-1f0c3618d265",
+          "source": "loop.pdf"
+        },
+        {
+          "document_id": "23b038dd8383e3d47638322b",
+          "chunk_id": 40,
+          "point_id": "77486f99-b4f7-5697-93e5-f13998452e5d",
+          "source": "loop.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "The paper explicitly leaves real-world outcome improvement as an open empirical question and proposes future controlled evaluation rather than claiming measured effectiveness.",
+      "consolidation_selected_from": "inventory70_semantic_review_decisions_batch9_20261020.json"
+    }
+  ],
+  "dataset_sha256": "21ee63518d16f2b08d8e5c1e452a4cfa8f5675b5f0322727f623c1aa2ac3e101",
+  "consolidation_metadata": {
+    "source_review_files_scanned": 14,
+    "selected_unique_probes": 70,
+    "duplicate_approved_decisions_deduplicated": 3,
+    "unique_live_points_validated": 109,
+    "live_qdrant_reference_errors": 0,
+    "excluded_files": [
+      {
+        "filename": "inventory70_semantic_review_decisions_batch3_20261020.json",
+        "reason": "missing or mismatched dataset SHA"
+      }
+    ],
+    "canonical_dataset_sha256": "21ee63518d16f2b08d8e5c1e452a4cfa8f5675b5f0322727f623c1aa2ac3e101",
+    "benchmark_ready": false,
+    "note": "Semantic reference consolidation only. This artifact does not certify benchmark readiness or retrieval performance."
+  }
+}

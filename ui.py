@@ -55,6 +55,7 @@ if not os.path.exists(ENV_PATH):
 
 load_dotenv(dotenv_path=ENV_PATH, override=False)
 
+
 def _secret_or_env(name, default=None):
     """Read a Streamlit secret first, then fall back to the environment."""
     try:
@@ -1163,6 +1164,26 @@ def render_latency_panel(trace: dict) -> str:
         max(latency * 1000 - total, 0) if isinstance(latency, (int, float)) else None
     )
 
+    # Grounding and HHEM overlap: display them as diagnostics, not extra
+    # latency-bar segments, so backend time is never double-counted.
+    grounding_ms = trace.get("grounding_ms")
+    hhem_ms = trace.get("request_hhem_total_ms")
+    hhem_calls = trace.get("request_hhem_call_count")
+
+    grounding_detail = ""
+    if isinstance(grounding_ms, (int, float)) and grounding_ms >= 0:
+        grounding_detail = (
+            f'<div class="km-lat-note">Grounding critic pass: '
+            f"{esc(format_ms(float(grounding_ms)))}"
+        )
+        if isinstance(hhem_ms, (int, float)) and hhem_ms >= 0:
+            grounding_detail += (
+                f" &middot; HHEM across request: {esc(format_ms(float(hhem_ms)))}"
+            )
+        if isinstance(hhem_calls, int) and hhem_calls >= 0:
+            grounding_detail += f" ({hhem_calls} HHEM calls)"
+        grounding_detail += "</div>"
+
     note = ""
 
     if slow:
@@ -1182,6 +1203,7 @@ def render_latency_panel(trace: dict) -> str:
             <div class="km-lat-bar">{"".join(segments)}</div>
             <div class="km-lat-legend">{"".join(legend)}</div>
             {note}
+            {grounding_detail}
         </div>
     """
 
@@ -1269,6 +1291,31 @@ def render_recovery_notice(trace: dict) -> str:
     """
 
 
+def render_partial_answer_notice(trace: dict) -> str:
+    removed = [
+        str(c).strip()
+        for c in (trace or {}).get("pruned_claims") or []
+        if str(c).strip()
+    ]
+
+    if not removed:
+        return ""
+
+    items = "".join(f"<li>{esc(c)}</li>" for c in removed[:8])
+    more = f"<li>+ {len(removed) - 8} more</li>" if len(removed) > 8 else ""
+
+    return f"""
+        <div class="km-recovery-card">
+            <div class="km-recovery-title">{icon("warning", 14, "#e8b25c")} Partial answer</div>
+            <div class="km-recovery-body">
+                {len(removed)} point(s) could not be verified against the sources
+                and were removed. What you see below is fully grounded.
+                <ul class="km-trace-list">{items}{more}</ul>
+            </div>
+        </div>
+    """
+
+
 def _score_chip(label, value, danger=False):
     css = " danger" if danger else ""
 
@@ -1310,7 +1357,7 @@ def render_quality_summary(trace: dict) -> str:
         )
 
     if trace.get("support_score") is not None:
-        chips.append(_score_chip("Support", format_2dp(trace["support_score"])))
+        chips.append(_score_chip("Min entailment", format_2dp(trace["support_score"])))
 
     if trace.get("usefulness_score") is not None:
         chips.append(_score_chip("Usefulness", format_2dp(trace["usefulness_score"])))
@@ -1774,7 +1821,7 @@ def render_answer_health(trace: dict) -> str:
 
     tiles = [
         (
-            "Grounding",
+            "Minimum entailment",
             _pct(trace.get("support_score")),
             _tone(trace.get("support_score")),
             _meter(trace.get("support_score")),
@@ -1912,7 +1959,7 @@ def render_evidence_body(source, trace):
 
     col_a, col_b, col_c = st.columns(3)
     col_a.metric("Retrieval score", format_2dp(retrieval))
-    col_b.metric("Grounding score", format_2dp(grounding))
+    col_b.metric("Entailment score", format_2dp(grounding))
     col_c.metric("Citation match", _citation_match(trace, grounding))
 
     if source.get("grader_reason"):
@@ -1947,6 +1994,9 @@ def render_citation_row(index, answer, trace):
     trace = trace or {}
     by_id = _sources_by_citation(trace)
     ids = cited_ids(answer, by_id)
+    partial_html = render_partial_answer_notice(trace)
+    if partial_html:
+        display_html(partial_html)
 
     if not ids:
         return
@@ -2004,7 +2054,7 @@ def transcript_markdown(messages):
             ("Context reason", "context_reason"),
             ("Citation valid", "citation_valid"),
             ("Grounded", "is_grounded"),
-            ("Support score", "support_score"),
+            ("Minimum entailment", "support_score"),
             ("Usefulness score", "usefulness_score"),
             ("Query rewrites", "retrieval_rewrite_count"),
             ("Answer revisions", "revision_count"),
@@ -2325,6 +2375,14 @@ def parse_response(data: dict, elapsed: float, http_status: int):
         "rerank_latency_ms",
         "grader_latency_ms",
         "generation_latency_ms",
+        "grounding_ms",
+        "hhem_call_count",
+        "hhem_total_ms",
+        "request_hhem_call_count",
+        "request_hhem_total_ms",
+        "grounding_pass_count",
+        "pruned_claims",
+        "answer_pruned",
     )
 
     trace = {key: data.get(key) for key in passthrough}
@@ -3017,4 +3075,3 @@ display_html(
     "KnowledgeMesh · self-correcting agentic RAG over your local FastAPI backend."
     "</div>"
 )
-

@@ -195,13 +195,18 @@ class PipelineEvaluationResult:
         default_factory=list,
     )
 
-    total_claims: int = 0
+    total_claims: int | None = None
 
-    unsupported_claims: int = 0
+    unsupported_claims: int | None = None
 
     revision_count: int = 0
 
     final_gate_passed: bool = False
+
+    # Optional runtime answer-relevance judge telemetry.
+    # None means the runtime judge did not return a valid value.
+    runtime_answer_useful: bool | None = None
+    runtime_answer_usefulness_score: float | None = None
 
     latency_ms: float = 0.0
 
@@ -542,7 +547,11 @@ class DatasetAudit:
 
     @property
     def ok(self) -> bool:
-        return not self.unknown_gold
+        return (
+            not self.unknown_gold
+            and not self.unrecognized_routes
+            and not self.cases_without_gold
+        )
 
     def to_dict(self) -> dict[str, Any]:
         return {**asdict(self), "ok": self.ok}
@@ -635,6 +644,8 @@ WEB_RETRIEVAL_METRICS = (
 
 ANSWER_METRICS = (
     "answer_relevancy",
+    "runtime_answer_usefulness_rate",
+    "runtime_answer_usefulness_score",
     "answer_point_coverage",
     "citation_precision",
     "citation_recall",
@@ -733,6 +744,24 @@ class KnowledgeMeshEvaluator:
                 else False
             )
 
+        runtime_answer_useful = self._get_value(
+            result, "runtime_answer_useful", None
+        )
+        if not isinstance(runtime_answer_useful, bool):
+            runtime_answer_useful = None
+
+        runtime_score = self._get_value(
+            result, "runtime_answer_usefulness_score", None
+        )
+        if (
+            isinstance(runtime_score, bool)
+            or not isinstance(runtime_score, (int, float))
+            or not 0.0 <= runtime_score <= 1.0
+        ):
+            runtime_score = None
+        else:
+            runtime_score = float(runtime_score)
+
         return PipelineEvaluationResult(
             case_id=case.id,
             answer=answer,
@@ -746,12 +775,18 @@ class KnowledgeMeshEvaluator:
             supported_citation_ids=self._string_list(
                 self._get_value(result, "supported_citation_ids", [])
             ),
-            total_claims=int(self._get_value(result, "total_claims", 0) or 0),
-            unsupported_claims=int(
-                self._get_value(result, "unsupported_claims", 0) or 0
+            total_claims=(
+                None if self._get_value(result, "total_claims", None) is None
+                else int(self._get_value(result, "total_claims"))
+            ),
+            unsupported_claims=(
+                None if self._get_value(result, "unsupported_claims", None) is None
+                else int(self._get_value(result, "unsupported_claims"))
             ),
             revision_count=int(self._get_value(result, "revision_count", 0) or 0),
             final_gate_passed=bool(self._get_value(result, "final_gate_passed", False)),
+            runtime_answer_useful=runtime_answer_useful,
+            runtime_answer_usefulness_score=runtime_score,
             latency_ms=latency_ms,
             raw=result if isinstance(result, dict) else {},
         )
@@ -853,6 +888,14 @@ class KnowledgeMeshEvaluator:
         # ----------------------------------------------------
 
         metrics["answer_relevancy"] = answer_relevancy(case.question, result.answer)
+        metrics["runtime_answer_usefulness_rate"] = (
+            None
+            if result.runtime_answer_useful is None
+            else float(result.runtime_answer_useful)
+        )
+        metrics["runtime_answer_usefulness_score"] = (
+            result.runtime_answer_usefulness_score
+        )
         metrics["answer_point_coverage"] = keyword_coverage(
             result.answer, case.expected_answer_points
         )
@@ -862,12 +905,19 @@ class KnowledgeMeshEvaluator:
         metrics["citation_recall"] = citation_recall(
             result.cited_ids, case.required_citation_ids
         )
-        metrics["grounding_score"] = grounding_score(
-            result.total_claims, result.unsupported_claims
-        )
-        metrics["unsupported_claim_rate"] = unsupported_claim_rate(
-            result.total_claims, result.unsupported_claims
-        )
+        if (
+            result.total_claims is not None
+            and result.unsupported_claims is not None
+        ):
+            metrics["grounding_score"] = grounding_score(
+                result.total_claims, result.unsupported_claims
+            )
+            metrics["unsupported_claim_rate"] = unsupported_claim_rate(
+                result.total_claims, result.unsupported_claims
+            )
+        else:
+            metrics["grounding_score"] = None
+            metrics["unsupported_claim_rate"] = None
 
         retrieval: dict[str, Any] = {
             "retrieved_ids": result.retrieved_ids,
@@ -1098,7 +1148,14 @@ class KnowledgeMeshEvaluator:
             "max_ms": max(latencies) if latencies else 0.0,
         }
 
-        quality_gate = evaluate_quality_gate(aggregated, self.thresholds)
+        gate_metrics = dict(aggregated)
+        # Required grounding telemetry must not silently pass when missing.
+        if gate_metrics.get("grounding_score") is None:
+            gate_metrics["grounding_score"] = 0.0
+        if gate_metrics.get("unsupported_claim_rate") is None:
+            gate_metrics["unsupported_claim_rate"] = 1.0
+
+        quality_gate = evaluate_quality_gate(gate_metrics, self.thresholds)
 
         errors = [
             {"case_id": r["case_id"], "error": r["error"]}

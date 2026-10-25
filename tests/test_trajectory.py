@@ -371,7 +371,7 @@ def test_unrecovered_citation_failure():
     assert result["trajectory_status"] == "failed"
     assert "CITATION_FAILURE" in result["failure_taxonomy"]
     assert result["metrics"]["recovery_after_citation_failure"] == 0.0
- 
+
 
 def test_grounded_but_irrelevant_answer_is_not_success():
     state = {
@@ -424,6 +424,7 @@ def test_grounded_but_irrelevant_answer_is_not_success():
 
     assert result["trajectory_status"] == "failed"
     assert "ANSWER_RELEVANCE_FAILURE" in result["failure_taxonomy"]
+
 
 def test_web_search_failure_blocks_generation():
     state = {
@@ -492,8 +493,6 @@ def test_web_search_failure_blocks_generation():
     assert result["metrics"]["web_fallback_rate"] == 0.0
 
 
-
-
 def test_prepare_revision_preserves_grounding_feedback_on_grounding_failure():
     from app.agents.graph import prepare_revision_node
 
@@ -501,19 +500,27 @@ def test_prepare_revision_preserves_grounding_feedback_on_grounding_failure():
         "answer_useful": False,
         "is_grounded": False,
         "answer_supported": False,
-        "grounding_feedback": [
-            "Claim 1 is not supported by the supplied evidence."
-        ],
+        "grounding_feedback": ["Claim 1 is not supported by the supplied evidence."],
         "citation_feedback": "",
         "revision_prompt": "",
         "answer_revision_count": 0,
         "revision_count": 0,
         "max_revisions": 2,
         "evaluation_trace": [],
+        "entailment_cache": [
+            {
+                "claim": "Retrieved passages are ranked before answering.",
+                "evidence": "The system ranks retrieved passages before generating an answer.",
+                "score": 0.90,
+            }
+        ],
     }
 
     result = prepare_revision_node(state)
 
+    # Revision returns a partial state update; it should not overwrite the cache.
+    assert state["entailment_cache"][0]["score"] == 0.90
+    assert "entailment_cache" not in result
     assert result["revision_requested"] is True
     assert result["answer_revision_count"] == 1
     assert result["revision_count"] == 1
@@ -549,7 +556,10 @@ def test_prepare_revision_replaces_stale_grounding_feedback_on_relevance_failure
     assert result["revision_count"] == 2
     assert result["grounding_feedback"] == []
     assert "ANSWER-RELEVANCE REVISION REQUIRED" in result["revision_prompt"]
-    assert "answer_relevance_failure" in result["evaluation_trace"][-1]["details"]["trigger"]
+    assert (
+        "answer_relevance_failure"
+        in result["evaluation_trace"][-1]["details"]["trigger"]
+    )
 
 
 def test_prepare_revision_relevance_failure_targets_question_not_related_evidence():
@@ -578,3 +588,140 @@ def test_prepare_revision_relevance_failure_targets_question_not_related_evidenc
     assert "directly answer the user's question" in prompt
     assert "Do not substitute a related model" in prompt
     assert "specific one requested by the user" in prompt
+
+
+def test_blocked_revision_is_classified_as_revision_failure():
+    state = {
+        "retrieval_required": True,
+        "evaluation_trace": [
+            {
+                "step": "planner",
+                "status": "technical",
+            },
+            {
+                "step": "private_retrieval",
+                "status": "success",
+                "details": {"selected_count": 3},
+            },
+            {
+                "step": "revision",
+                "status": "blocked",
+                "details": {
+                    "reason": "revision_budget_exhausted",
+                    "revision_count": 2,
+                    "max_answer_revisions": 2,
+                },
+            },
+        ],
+        "citation_valid": True,
+        "grounding_valid": True,
+        "answer_supported": True,
+        "answer_useful": False,
+        "generation_failed": False,
+    }
+
+    result = evaluate_trajectory(state)
+
+    assert result["trajectory_status"] == "failed"
+    assert "REVISION_FAILURE" in result["failure_taxonomy"]
+
+
+
+def test_unsupported_claim_metric_ignores_malformed_counts():
+    invalid_values = [
+        "unknown",
+        True,
+        -1,
+        float("inf"),
+        float("nan"),
+    ]
+
+    for invalid_value in invalid_values:
+        state = {
+            "retrieval_required": True,
+            "evaluation_trace": [
+                {"step": "planner", "status": "technical"},
+                {
+                    "step": "private_retrieval",
+                    "status": "success",
+                    "details": {"selected_count": 1},
+                },
+                {
+                    "step": "grounding_critic",
+                    "status": "passed",
+                    "details": {
+                        "atomic_claim_count": invalid_value,
+                        "unsupported_atomic_count": 1,
+                    },
+                },
+                {
+                    "step": "grounding_critic",
+                    "status": "passed",
+                    "details": {
+                        "atomic_claim_count": 2,
+                        "unsupported_atomic_count": invalid_value,
+                    },
+                },
+            ],
+            "citation_valid": True,
+            "grounding_valid": True,
+            "answer_supported": True,
+            "answer_useful": True,
+            "generation_failed": False,
+        }
+
+        result = evaluate_trajectory(state)
+        assert result["metrics"]["unsupported_claim_rate"] == 0.0
+        assert result["metrics"]["unsupported_claim_rate_available"] is False
+
+
+def test_unsupported_claim_metric_measured_zero_is_available():
+    state = {
+        "retrieval_required": True,
+        "evaluation_trace": [
+            {"step": "grounding_critic", "status": "passed", "details": {
+                "atomic_claim_count": 3,
+                "unsupported_atomic_count": 0,
+            }},
+        ],
+        "citation_valid": True,
+        "grounding_valid": True,
+        "answer_supported": True,
+        "answer_useful": True,
+        "generation_failed": False,
+    }
+
+    result = evaluate_trajectory(state)
+    assert result["metrics"]["unsupported_claim_rate"] == 0.0
+    assert result["metrics"]["unsupported_claim_rate_available"] is True
+
+
+def test_unsupported_claim_metric_caps_rate_at_one():
+    state = {
+        "retrieval_required": True,
+        "evaluation_trace": [
+            {"step": "planner", "status": "technical"},
+            {
+                "step": "private_retrieval",
+                "status": "success",
+                "details": {"selected_count": 1},
+            },
+            {
+                "step": "grounding_critic",
+                "status": "passed",
+                "details": {
+                    "atomic_claim_count": 2,
+                    "unsupported_atomic_count": 3,
+                },
+            },
+        ],
+        "citation_valid": True,
+        "grounding_valid": True,
+        "answer_supported": True,
+        "answer_useful": True,
+        "generation_failed": False,
+    }
+
+    result = evaluate_trajectory(state)
+    assert result["metrics"]["unsupported_claim_rate"] == 1.0
+    assert result["metrics"]["unsupported_claim_rate_available"] is True

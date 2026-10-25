@@ -1,13 +1,79 @@
 from __future__ import annotations
 
+import logging
+import re
+import time
+
 import logfire
 
 from app.agents.state import AgentState
 from app.evaluation.trace import append_trace_event
 from app.gateway import get_langchain_llm
 
+logger = logging.getLogger(__name__)
 
 llm = get_langchain_llm(feature="planner")
+
+
+# ============================================================
+# Configuration
+# ============================================================
+
+# Safety net on top of the prompt: at most this many words in the
+# planner's query may be NEW (not present in the user's question or the
+# conversation). Stops runaway expansion from steering retrieval.
+MAX_NOVEL_TERMS = 5
+
+# Hard cap on the final query length (terms).
+MAX_QUERY_TERMS = 18
+
+# The planner is the first node of every request, so it is the natural
+# place to clear per-request state. This matters when a thread_id is
+# reused across turns (MemorySaver keeps state): without it, counters
+# such as answer_revision_count or relevance_retrieval_count carry over
+# and silently disable revisions / re-retrieval for later questions.
+# Harmless when every request starts from a fresh state.
+RESET_PER_REQUEST_STATE = True
+
+
+# ============================================================
+# Per-request reset
+# ============================================================
+
+
+def _per_request_reset() -> dict:
+    """Fields that must start clean for every new user turn."""
+
+    return {
+        # Revision / re-retrieval budgets.
+        "answer_revision_count": 0,
+        "revision_count": 0,
+        "revision_requested": False,
+        "revision_prompt": "",
+        "relevance_retrieval_count": 0,
+        "expand_retrieval": False,
+        # Retrieval / web fallback control.
+        "retrieval_rewrite_count": 0,
+        "retrieval_failed": False,
+        "web_search_attempted": False,
+        "web_search_used": False,
+        # Generation / salvage / abstention.
+        "generation_failed": False,
+        "answer_pruned": False,
+        "pruned_answer": "",
+        "pruned_claims": [],
+        "prunable_claims": [],
+        "answer_before_pruning": "",
+        "answer_abstained": False,
+        "abstention_reason": "",
+        # HHEM score cache is per request.
+        "entailment_cache": [],
+    }
+
+
+# ============================================================
+# History / response helpers
+# ============================================================
 
 
 def _build_history(state: AgentState) -> str:
@@ -41,19 +107,234 @@ def _build_history(state: AgentState) -> str:
 def _extract_decision(response: object) -> str:
     """
     Normalize the LLM planner response.
+
+    Takes the first non-empty line, strips quotes and a stray "Query:"
+    prefix, and maps any casing of CONVERSATIONAL to the sentinel.
     """
-    decision = str(getattr(response, "content", response)).strip()
+    raw = str(getattr(response, "content", response)).strip()
+
+    if not raw:
+        return "CONVERSATIONAL"
+
+    first_line = next((line.strip() for line in raw.splitlines() if line.strip()), "")
+
+    decision = first_line.strip("\"'` ")
+    decision = re.sub(r"^(?:search\s+)?query\s*:\s*", "", decision, flags=re.IGNORECASE)
+    decision = decision.strip("\"'` ")
 
     if not decision:
         return "CONVERSATIONAL"
-
-    # Remove accidental surrounding quotes.
-    decision = decision.strip("\"'")
 
     if decision.upper().rstrip(".") == "CONVERSATIONAL":
         return "CONVERSATIONAL"
 
     return decision
+
+
+# ============================================================
+# Query guard
+# ============================================================
+
+_WORD = re.compile(r"[A-Za-z0-9][A-Za-z0-9_+\-]*")
+
+_STOPWORDS = {
+    "the",
+    "a",
+    "an",
+    "and",
+    "or",
+    "but",
+    "of",
+    "to",
+    "in",
+    "on",
+    "for",
+    "by",
+    "with",
+    "from",
+    "as",
+    "at",
+    "is",
+    "are",
+    "was",
+    "were",
+    "be",
+    "been",
+    "do",
+    "does",
+    "did",
+    "how",
+    "what",
+    "which",
+    "who",
+    "why",
+    "when",
+    "where",
+    "it",
+    "its",
+    "they",
+    "their",
+    "this",
+    "that",
+    "these",
+    "those",
+    "can",
+    "could",
+    "should",
+    "would",
+    "will",
+    "me",
+    "my",
+    "you",
+    "your",
+    "about",
+    "into",
+    "than",
+    "then",
+    "also",
+    "vs",
+    "versus",
+    "according",
+}
+
+
+def _norm(word: str) -> str:
+    """Lowercase and lightly de-pluralise so 'component' matches 'components'."""
+    word = word.lower().strip("-_+")
+
+    if len(word) > 3 and word.endswith("s"):
+        word = word[:-1]
+
+    return word
+
+
+def _content_words(text: str) -> list[str]:
+    return [
+        word
+        for word in _WORD.findall(text or "")
+        if _norm(word) and _norm(word) not in _STOPWORDS
+    ]
+
+
+def _guard_query(
+    query: str,
+    user_message: str,
+    history: str,
+) -> tuple[str, list[str], list[str]]:
+    """
+    Deterministic safety net around the planner's query.
+
+    1. Limit NEW words (not in the question or conversation) to
+       MAX_NOVEL_TERMS, so expansion cannot take over the query.
+    2. Re-add any distinctive word from the user's question that the
+       planner dropped ("five", "according to the survey", entity names),
+       so the user's own wording is never lost.
+    3. Cap total length.
+
+    Returns (query, dropped_novel_terms, restored_question_terms).
+    """
+
+    vocabulary = {_norm(w) for w in _content_words(f"{user_message} {history}")}
+
+    kept: list[str] = []
+    dropped: list[str] = []
+    novel_seen = 0
+
+    for term in query.split():
+        bare = term.strip(",.;:()[]{}\"'")
+        normalised = _norm(bare)
+
+        if not normalised:
+            continue
+
+        is_known = normalised in _STOPWORDS or normalised in vocabulary
+
+        if not is_known:
+            if novel_seen >= MAX_NOVEL_TERMS:
+                dropped.append(bare)
+                continue
+
+            novel_seen += 1
+
+        kept.append(bare)
+
+    present = {_norm(t) for t in kept}
+    restored: list[str] = []
+
+    for word in _content_words(user_message):
+        if _norm(word) not in present:
+            kept.append(word)
+            present.add(_norm(word))
+            restored.append(word)
+
+    return " ".join(kept[:MAX_QUERY_TERMS]), dropped, restored
+
+
+# ============================================================
+# Prompt
+# ============================================================
+
+
+def _build_prompt(user_message: str, history: str) -> str:
+    return f"""
+You are the retrieval planner for an enterprise Agentic RAG system.
+You do NOT know what is inside the knowledge base.
+
+Decide whether the latest user message is CONVERSATIONAL or needs
+retrieval, and if it needs retrieval, write ONE search query for a
+vector database.
+
+CONVERSATION HISTORY
+{history or "(none)"}
+
+LATEST USER MESSAGE
+"{user_message}"
+
+ROUTING
+Return CONVERSATIONAL only for: greetings, thanks or acknowledgements,
+small talk, questions about the conversation itself, or personal
+information already stated in the conversation.
+Every technical or factual question needs retrieval (definitions,
+how/why, architecture, components, mechanisms, workflows, AI/ML, LLMs,
+RAG, agents, memory, programming, infrastructure, documentation). An
+earlier answer does not make a new technical question conversational.
+
+QUERY RULES (retrieval only)
+- One standalone query of about 4-14 terms, no sentence, no quotes.
+- Keep every distinctive word of the user's question: entities, numbers,
+  and qualifiers such as "five", "main", "according to the survey".
+- Resolve references (it, its, they, this) using the history.
+- You may ADD a term only if it is
+    (a) a standard synonym, abbreviation or expansion of a term already
+        in the question or history (RAG <-> retrieval-augmented
+        generation), or
+    (b) the obvious mechanism noun implied by "how does X get/produce Y"
+        (retrieval, search, scoring, ranking).
+- NEVER add the parts, steps, components, types, or typical contents of
+  the thing being asked about. The question is asking for them, you do
+  not know what the documents call them, and guessing pulls retrieval
+  toward unrelated passages.
+- Never add facts, invented entities, technologies, answers or citations.
+
+EXAMPLES
+User: "How does a B-tree index speed up database lookups?"
+Query: B-tree index database lookup speed search keys
+
+User: "What are the main components of a transformer according to the paper?"
+Query: transformer main components according to the paper
+
+Previous: "What is LLM memory?"  Latest: "What are its main types?"
+Query: LLM memory main types
+
+OUTPUT
+Return ONLY the word CONVERSATIONAL, or the query on a single line.
+Never explain. Never use bullets. Never prefix with "Query:".
+"""
+
+
+# ============================================================
+# Node
+# ============================================================
 
 
 def planner_node(state: AgentState):
@@ -64,22 +345,32 @@ def planner_node(state: AgentState):
       1. Determine conversational vs technical retrieval.
       2. Preserve the exact user question as original_query.
       3. Produce a retrieval-optimized current_query for technical questions.
+      4. Start every request from clean per-request state.
 
-    Important design decision:
-        original_query != current_query
+    original_query != current_query
 
     original_query:
         Exact user wording, preserved for answer generation/evaluation.
 
     current_query:
         Search-oriented representation optimized for semantic retrieval.
+        Guarded so the planner cannot drop the user's own words or flood
+        the query with terms the user never mentioned.
     """
+
+    reset = _per_request_reset() if RESET_PER_REQUEST_STATE else {}
+
+    # A reused thread would otherwise accumulate trace events from earlier
+    # turns and mix them into this request's trajectory evaluation.
+    trace_state = (
+        {**state, "evaluation_trace": []} if RESET_PER_REQUEST_STATE else state
+    )
 
     messages = state.get("messages", [])
 
     if not messages:
         trace_update = append_trace_event(
-            state,
+            trace_state,
             step="planner",
             status="empty_input",
             route="simple",
@@ -87,16 +378,17 @@ def planner_node(state: AgentState):
         )
 
         return {
+            **reset,
             **trace_update,
             "current_query": "CONVERSATIONAL",
             "original_query": "",
             "route": "simple",
+            "retrieval_required": False,
             "status": "No user message provided.",
             "plan": [
                 "Intent: Conversational/Memory",
                 "Retrieval: Skipped",
             ],
-            "retrieval_loops": 0,
             "revision_count": 0,
         }
 
@@ -105,342 +397,39 @@ def planner_node(state: AgentState):
 
     history = _build_history(state)
 
-    prompt = f"""
-You are the retrieval planner for an enterprise Agentic RAG system.
+    prompt = _build_prompt(user_message, history)
 
-Your job has TWO responsibilities:
-
-1. Decide whether the latest user message is conversational or
-   requires technical knowledge retrieval.
-
-2. If retrieval is required, transform the user's question into
-   ONE HIGH-QUALITY SEMANTIC SEARCH QUERY for a vector database.
-
-The search query is an information-retrieval representation of the
-question. It must help retrieval find ALL important evidence needed
-to answer the question, including complementary passages that may
-describe different parts of the same mechanism.
-
-============================================================
-CONVERSATION HISTORY
-============================================================
-
-{history or "(No previous conversation.)"}
-
-============================================================
-LATEST USER MESSAGE
-============================================================
-
-"{user_message}"
-
-============================================================
-ROUTING RULES
-============================================================
-
-Return CONVERSATIONAL only when the latest message is:
-
-- a greeting
-- casual conversation
-- thanks/acknowledgement
-- explicitly asking about the conversation itself
-- asking what the user previously said
-- asking for personal information already present in the conversation
-
-Technical questions MUST use retrieval.
-
-Technical retrieval includes:
-
-- definitions
-- explanations
-- how/why questions
-- architecture
-- components
-- mechanisms
-- workflows
-- algorithms
-- AI/ML
-- LLMs
-- RAG
-- agents
-- memory
-- programming
-- infrastructure
-- networking
-- operating systems
-- hardware
-- scientific/technical concepts
-- documentation questions
-
-A previous assistant answer does NOT make a new technical question
-conversational.
-
-============================================================
-SEMANTIC SEARCH QUERY RULES
-============================================================
-
-For technical retrieval, produce ONE concise standalone search query.
-
-The query is NOT the answer.
-
-The query MUST:
-
-1. Preserve the user's actual information need.
-2. Include the central technical entity or system.
-3. Include important mechanisms, relationships, components, or
-   operations implied by the question.
-4. Include useful technical terminology that source documents are
-   likely to use.
-5. Represent complementary evidence when the answer may be distributed
-   across multiple passages.
-6. Remain concise and retrieval-oriented.
-7. Avoid inventing facts or technologies.
-
-Do NOT merely convert the question into a bag of generic keywords.
-
-Do NOT optimize for one expected passage.
-
-Prefer semantic concepts and technical relationships over grammatical
-phrasing.
-
-============================================================
-MECHANISM QUESTIONS
-============================================================
-
-For questions asking:
-
-- how something works
-- how something obtains, produces, processes, or retrieves something
-- why a mechanism works
-- what happens during a process
-- how components interact
-
-represent BOTH:
-
-- the main entity being asked about
-- the mechanism or operations responsible for the behavior
-
-When appropriate, include related terms for:
-
-- inputs
-- encoders
-- indexes
-- retrieval/search operations
-- scoring
-- ranking
-- selection
-- intermediate representations
-- outputs
-- conditioning
-- aggregation
-- memory
-- generation
-
-Do not add mechanisms merely because they are common in the field.
-Only add concepts reasonably implied by the question or useful as
-technical synonyms.
-
-Example:
-
-User:
-"How does the RAG retriever obtain documents for a query?"
-
-Weak:
-RAG retriever dense retrieval top-k documents input query
-
-Better:
-RAG retriever query encoder document index MIPS top-K document retrieval
-
-The better query captures both the retriever and the mechanism used
-to obtain the documents. This helps retrieve complementary passages
-that describe different parts of the same process.
-
-============================================================
-DEFINITION QUESTIONS
-============================================================
-
-For questions asking what something is, include:
-
-- the entity
-- important technical synonyms
-- the defining mechanism or purpose when directly implied
-
-Example:
-
-User:
-"What is retrieval-augmented generation?"
-
-Good:
-retrieval-augmented generation RAG definition retrieval non-parametric memory generation
-
-============================================================
-COMPONENT / ARCHITECTURE QUESTIONS
-============================================================
-
-For questions asking for:
-
-- components
-- parts
-- modules
-- architecture
-- structure
-
-include the major conceptual entities that describe the structure.
-
-Example:
-
-User:
-"What are the main components of an LLM-based agent according to the survey?"
-
-Weak:
-components of LLM-based agents
-
-Better:
-LLM-based agent architecture brain perception action memory reasoning
-
-Do not invent components that are not reasonably implied by the
-question or known terminology.
-
-============================================================
-SPECIFIC TECHNICAL CONCEPT QUESTIONS
-============================================================
-
-Example:
-
-User:
-"What is the role of the brain in an LLM-based agent?"
-
-Good:
-LLM-based agent brain memory information processing decision-making reasoning planning
-
-============================================================
-MEMORY QUESTIONS
-============================================================
-
-Example:
-
-User:
-"What memory capabilities does AutoGPT provide?"
-
-Good:
-AutoGPT memory long-term memory short-term memory memory capabilities
-
-============================================================
-QUERY EXPANSION RULES
-============================================================
-
-You MAY add:
-
-- important technical synonyms
-- domain-specific terminology implied by the question
-- named components implied by the question
-- mechanisms explicitly suggested by the wording
-- closely related retrieval terminology
-- concepts likely to appear in technical source documents
-
-You MUST NOT add:
-
-- facts unrelated to the user's question
-- speculative information
-- invented entities
-- arbitrary technologies
-- unsupported implementation details
-- answers to the question
-- citations
-- long explanations
-- punctuation-heavy prose
-
-The query should normally contain approximately 5-14 meaningful
-technical terms.
-
-Prefer a small number of high-value concepts over many generic terms.
-
-============================================================
-COMPLEMENTARY EVIDENCE
-============================================================
-
-Some technical answers are distributed across multiple passages.
-
-For example, one passage may describe:
-
-- the system or component
-
-while another passage describes:
-
-- the mechanism
-- algorithm
-- scoring method
-- indexing method
-- retrieval operation
-- downstream interaction
-
-When the user's question asks HOW or WHY something works, create a
-query that can retrieve both the entity-level explanation and the
-mechanism-level explanation.
-
-Do NOT deliberately optimize the query toward only one passage.
-
-============================================================
-CONVERSATION CONTEXT
-============================================================
-
-Use conversation history only when it helps resolve references.
-
-Example:
-
-Previous:
-"What is loop engineering?"
-
-Latest:
-"Explain the verification step."
-
-Good retrieval query:
-loop engineering verification step
-
-Example:
-
-Previous:
-"What is LLM memory?"
-
-Latest:
-"What are its main types?"
-
-Good retrieval query:
-LLM memory types short-term long-term memory
-
-The query should resolve pronouns such as "it", "its", "they", or
-"this" using the previous context and produce a standalone query.
-
-============================================================
-OUTPUT FORMAT
-============================================================
-
-Return ONLY one of:
-
-CONVERSATIONAL
-
-OR
-
-a single standalone semantic retrieval query.
-
-Never explain your decision.
-Never use bullets.
-Never prefix the query with "Query:".
-Never include quotation marks.
-"""
+    llm_failed = False
 
     with logfire.span("🧠 Planner Decision"):
-        response = llm.invoke(prompt)
-        decision = _extract_decision(response)
+        planner_started = time.perf_counter()
+
+        try:
+            response = llm.invoke(prompt)
+            decision = _extract_decision(response)
+        except Exception as exc:
+            # Planner outage must not kill the request. Fall back to
+            # retrieving with the user's own question.
+            llm_failed = True
+            decision = user_message
+            logger.warning(
+                "Planner LLM failed (%s); falling back to the user question.",
+                type(exc).__name__,
+            )
+
+        planner_ms = round((time.perf_counter() - planner_started) * 1000, 2)
+        logfire.info("Planner timing", planner_ms=planner_ms)
 
         logfire.info(
             "Intent identified",
             decision=decision,
             original_query=user_message,
+            llm_failed=llm_failed,
         )
 
     if decision == "CONVERSATIONAL":
         trace_update = append_trace_event(
-            state,
+            trace_state,
             step="planner",
             status="conversational",
             route="simple",
@@ -448,41 +437,66 @@ Never include quotation marks.
         )
 
         return {
+            **reset,
             **trace_update,
             "current_query": "CONVERSATIONAL",
             "original_query": user_message,
             "route": "simple",
+            "retrieval_required": False,
             "status": "Handling conversationally using memory...",
             "plan": [
                 "Intent: Conversational/Memory",
                 "Retrieval: Skipped",
             ],
-            "retrieval_loops": 0,
             "revision_count": 0,
         }
 
+    raw_query = decision
+
+    query, dropped_terms, restored_terms = _guard_query(
+        raw_query,
+        user_message,
+        history,
+    )
+
+    if not query:
+        query = user_message
+
+    if dropped_terms or restored_terms or query != raw_query:
+        logfire.info(
+            "Planner query guard",
+            raw_query=raw_query,
+            final_query=query,
+            dropped_novel_terms=dropped_terms,
+            restored_question_terms=restored_terms,
+        )
+
     trace_update = append_trace_event(
-        state,
+        trace_state,
         step="planner",
         status="technical",
         route="knowledge",
         retrieval_required=True,
-        query=decision,
+        query=query,
+        raw_query=raw_query,
+        dropped_novel_terms=dropped_terms,
+        restored_question_terms=restored_terms,
+        llm_failed=llm_failed,
     )
 
     return {
+        **reset,
         **trace_update,
-        # Retrieval-optimized query.
-        "current_query": decision,
+        # Retrieval-optimized, guarded query.
+        "current_query": query,
         # Exact user wording must remain untouched.
         "original_query": user_message,
         "route": "knowledge",
-        "status": (f"Technical research needed. Searching for: {decision}"),
+        "retrieval_required": True,
+        "status": f"Technical research needed. Searching for: {query}",
         "plan": [
             "Intent: Technical",
-            f"Search Term: {decision}",
+            f"Search Term: {query}",
         ],
-        "retrieval_loops": 0,
         "revision_count": 0,
     }
-

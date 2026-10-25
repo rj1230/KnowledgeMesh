@@ -4,6 +4,7 @@ import logging
 import os
 import time
 from typing import Any, Dict, List, Optional
+from app.tools.entailment_tool import warmup_hhem
 
 
 # ============================================================
@@ -189,20 +190,38 @@ def startup_event() -> None:
         _guardrails_initialized = False
 
         logger.exception(
-            "❌ KnowledgeMesh startup failed | "
-            "error_type=%s | error_message=%s",
+            "❌ KnowledgeMesh startup failed | error_type=%s | error_message=%s",
             type(exc).__name__,
             str(exc),
         )
 
         raise
 
+    # --------------------------------------------------------
+    # HHEM entailment model
+    # --------------------------------------------------------
+    # Load the hallucination-evaluation model at startup so the
+    # first query does not pay the ~48s model-load cost.
+    # Failure here is non-fatal: the model will load lazily on
+    # the first query, exactly as it does today.
+
+    try:
+        warmup_hhem()
+
+        logfire.info("✅ HHEM entailment model warmed up")
+
+    except Exception as exc:
+        logger.warning(
+            "HHEM warmup failed; will load lazily on first query | "
+            "error_type=%s | error_message=%s",
+            type(exc).__name__,
+            str(exc),
+        )
+
 
 # ============================================================
 # REQUEST MODELS
 # ============================================================
-
-
 class QueryRequest(BaseModel):
     """
     Incoming RAG request.
@@ -1437,9 +1456,7 @@ def stats() -> Dict[str, Any]:
         collection_name=settings.QDRANT_COLLECTION,
     )
 
-    chunks = int(
-        getattr(collection, "points_count", 0) or 0
-    )
+    chunks = int(getattr(collection, "points_count", 0) or 0)
 
     offset = None
 
@@ -1465,10 +1482,7 @@ def stats() -> Dict[str, Any]:
             if ingested_at:
                 ingested_at = str(ingested_at)
 
-                if (
-                    last_indexed is None
-                    or ingested_at > last_indexed
-                ):
+                if last_indexed is None or ingested_at > last_indexed:
                     last_indexed = ingested_at
 
         if next_offset is None:
@@ -1595,6 +1609,7 @@ def query(
         "request_hhem_call_count": 0,
         "request_hhem_total_ms": 0.0,
         "grounding_pass_count": 0,
+        "entailment_cache": [],
         # ----------------------------------------------------
         # Revision / retry state
         # ----------------------------------------------------
@@ -1979,7 +1994,6 @@ def query(
             default=0,
         )
 
-
         answer_revision_count = _safe_int(
             final_output.get("answer_revision_count"),
             default=revision_count,
@@ -2079,6 +2093,17 @@ def query(
         else:
             validation_status = "validation_incomplete"
 
+        # Public responses must fail closed when final validation
+        # fails or is incomplete. Do not expose the unsupported
+        # candidate through either public answer field.
+        if answer_available and not validation_passed:
+            answer = (
+                "I couldn't find evidence in the available sources "
+                "that establishes an answer to your specific question."
+            )
+            candidate_answer = answer
+            answer_source = "safe_abstention"
+
         # ====================================================
         # FINAL STATUS
         # ====================================================
@@ -2158,9 +2183,7 @@ def query(
                         "failure_taxonomy": (
                             final_output.get("failure_taxonomy") or []
                         ),
-                        "metrics": (
-                            final_output.get("trajectory_metrics") or {}
-                        ),
+                        "metrics": (final_output.get("trajectory_metrics") or {}),
                         "evaluation_trace": (
                             final_output.get("evaluation_trace") or []
                         ),
@@ -2192,7 +2215,6 @@ def query(
             # Execution trace
             # ------------------------------------------------
             "thought_process": plan,
-
             # ------------------------------------------------
             # Agentic RAG trajectory evaluation
             # ------------------------------------------------
@@ -2206,15 +2228,9 @@ def query(
                     final_output.get("required_hops"),
                     default=0,
                 ),
-                "failure_taxonomy": (
-                    final_output.get("failure_taxonomy") or []
-                ),
-                "metrics": (
-                    final_output.get("trajectory_metrics") or {}
-                ),
-                "trace": (
-                    final_output.get("evaluation_trace") or []
-                ),
+                "failure_taxonomy": (final_output.get("failure_taxonomy") or []),
+                "metrics": (final_output.get("trajectory_metrics") or {}),
+                "trace": (final_output.get("evaluation_trace") or []),
             },
             # ------------------------------------------------
             # Sources
@@ -2266,6 +2282,11 @@ def query(
             "support_score": support_score,
             "usefulness_score": usefulness_score,
             "validation_passed": validation_passed,
+            "answer_pruned": bool(final_output.get("answer_pruned", False)),
+            "pruned_claims": [
+                str(claim) for claim in (final_output.get("pruned_claims") or [])
+            ],
+            "answer_abstained": bool(final_output.get("answer_abstained", False)),
             # ------------------------------------------------
             # Retry / revision
             # ------------------------------------------------
@@ -2306,6 +2327,18 @@ def query(
                 final_output.get("grounding_pass_count"),
                 default=0,
             ),
+            "entailment_cache_hits": _safe_int(
+                final_output.get("entailment_cache_hits"), default=0
+            ),
+            "entailment_cache_misses": _safe_int(
+                final_output.get("entailment_cache_misses"), default=0
+            ),
+            "cache_entries_received": _safe_int(
+                final_output.get("cache_entries_received"), default=0
+            ),
+            "cache_entries_returned": _safe_int(
+                final_output.get("cache_entries_returned"), default=0
+            ),
             "latency_ms": elapsed_ms,
         }
 
@@ -2332,4 +2365,3 @@ def query(
             question=q,
             elapsed_ms=elapsed_ms,
         )
-

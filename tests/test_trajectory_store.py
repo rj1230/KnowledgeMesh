@@ -60,6 +60,108 @@ def test_round_trip_preserves_status_without_raw_content(tmp_path, status):
     }
 
 
+def test_grounding_diagnostics_survive_storage_without_private_content(tmp_path):
+    database = tmp_path / "grounding.db"
+    output = tmp_path / "grounding.jsonl"
+
+    trajectory = _trajectory()
+    trajectory["trace"] = [
+        {
+            "step": "grounding_critic",
+            "status": "failed",
+            "details": {
+                "claim_count": 2,
+                "atomic_claim_count": 5,
+                "unsupported_atomic_count": 2,
+                "citation_violation_count": 4,
+                "citation_warning_count": 1,
+                "substantive_result_count": 4,
+                "unsupported_claim_count": 2,
+                "citation_consistency_passed": False,
+                "semantic_support_ok": False,
+                "citation_support_ok": False,
+                "uncited_claim_count": 1,
+                "invalid_citation_count": 0,
+                "grounding_ms": 123.5,
+                "hhem_call_count": 3,
+                "hhem_total_ms": 45.0,
+                "support_score": 0.62,
+                "is_grounded": False,
+                "answer_supported": False,
+                "claim": "PRIVATE CLAIM TEXT",
+                "evidence": {"text": "PRIVATE EVIDENCE"},
+                "citation_id": "PRIVATE-CITATION-ID",
+                "unapproved_metric": 999,
+            },
+        }
+    ]
+
+    record_trajectory(database, trajectory)
+    assert export_trajectories_jsonl(database, output) == 1
+
+    record = json.loads(output.read_text(encoding="utf-8"))
+    event = record["trajectory"]["evaluation_trace"][0]
+    details = event["details"]
+
+    assert details["atomic_claim_count"] == 5
+    assert details["unsupported_atomic_count"] == 2
+    assert details["citation_violation_count"] == 4
+    assert details["citation_warning_count"] == 1
+    assert details["substantive_result_count"] == 4
+    assert details["unsupported_claim_count"] == 2
+    assert details["citation_consistency_passed"] is False
+    assert details["semantic_support_ok"] is False
+    assert details["citation_support_ok"] is False
+    assert details["unsupported_atomic_count"] / details["atomic_claim_count"] == 0.4
+    assert details["grounding_ms"] == 123.5
+    assert details["hhem_call_count"] == 3
+    assert details["support_score"] == 0.62
+
+    serialized = json.dumps(record)
+    for secret in (
+        "PRIVATE CLAIM TEXT",
+        "PRIVATE EVIDENCE",
+        "PRIVATE-CITATION-ID",
+        "unapproved_metric",
+    ):
+        assert secret not in serialized
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("atomic_claim_count", True),
+        ("unsupported_atomic_count", -1),
+        ("hhem_call_count", 100001),
+        ("grounding_ms", float("inf")),
+        ("support_score", 1.5),
+    ],
+)
+def test_invalid_grounding_diagnostics_are_omitted(tmp_path, field, value):
+    trajectory = _trajectory()
+    trajectory["trace"] = [{
+        "step": "grounding_critic",
+        "status": "failed",
+        "details": {field: value},
+    }]
+
+    record_trajectory(tmp_path / "invalid-details.db", trajectory)
+    exported = _sanitize_for_test(tmp_path / "invalid-details.db")
+    details = exported["evaluation_trace"][0].get("details", {})
+
+    assert field not in details
+
+
+def _sanitize_for_test(database):
+    from app.evaluation.store import _sanitize_trajectory
+
+    # Read the persisted trace through the same public export path.
+    output = database.with_suffix(".jsonl")
+    export_trajectories_jsonl(database, output)
+    record = json.loads(output.read_text(encoding="utf-8"))
+    return record["trajectory"]
+
+
 def test_successful_trajectory_has_no_failure_taxonomy(tmp_path):
     database = tmp_path / "test.db"
     record_trajectory(database, _trajectory("success"))

@@ -1,0 +1,378 @@
+{
+  "artifact_type": "semantic_review_batch",
+  "created_date": "2026-10-20",
+  "source_dataset": "evals/datasets/inventory_retrieval_probes_70.json",
+  "source_dataset_sha256": "21ee63518d16f2b08d8e5c1e452a4cfa8f5675b5f0322727f623c1aa2ac3e101",
+  "collection_name": "enterprise_rag_bge_base",
+  "candidate_count": 13,
+  "unique_probe_count": 13,
+  "reference_issue_count": 0,
+  "reference_issue_probe_ids": [],
+  "semantic_approvals": 0,
+  "benchmark_ready": false,
+  "decisions": [
+    {
+      "probe_id": "inv_attention_001",
+      "question": "What is the main architectural idea introduced by the Transformer in Attention Is All You Need?",
+      "source_filename": "Attention.pdf",
+      "proposed_document_id": "9ff74efe2d339c2bb9a53c06",
+      "proposed_chunk_ids": [
+        0,
+        5
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 0,
+          "point_id": "8c1ae8b6-ec27-57fd-b89d-a0e6de83cff5",
+          "source": "Attention.pdf"
+        },
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 5,
+          "point_id": "4cf81aa6-f2f5-51da-a158-251cbebf6739",
+          "source": "Attention.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "PROVISIONAL_REQUIRES_FINAL_APPROVAL",
+      "semantic_approval": false,
+      "semantic_rationale": "Strong: abstract and architecture passage support attention without recurrence or convolutions."
+    },
+    {
+      "probe_id": "inv_attention_002",
+      "question": "How does self-attention differ between the encoder and decoder with respect to which positions can be attended to?",
+      "source_filename": "Attention.pdf",
+      "proposed_document_id": "9ff74efe2d339c2bb9a53c06",
+      "proposed_chunk_ids": [
+        7,
+        11
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 7,
+          "point_id": "15784da2-e388-5343-bc56-d9096a3f9855",
+          "source": "Attention.pdf"
+        },
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 11,
+          "point_id": "70a17c77-4992-5e53-bb85-65a76a061447",
+          "source": "Attention.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "PROVISIONAL_REQUIRES_FINAL_APPROVAL",
+      "semantic_approval": false,
+      "semantic_rationale": "Strong: decoder masking and encoder/decoder attention-position rules are covered."
+    },
+    {
+      "probe_id": "inv_attention_003",
+      "question": "What do the experiments indicate about the effect of changing the number of attention heads and the attention key size?",
+      "source_filename": "Attention.pdf",
+      "proposed_document_id": "9ff74efe2d339c2bb9a53c06",
+      "proposed_chunk_ids": [
+        22,
+        23
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 22,
+          "point_id": "616a7c69-d947-54bf-afbe-78691d21ad9e",
+          "source": "Attention.pdf"
+        },
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 23,
+          "point_id": "4405331c-76f4-559c-b7d9-3a1fded2ff11",
+          "source": "Attention.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "PROVISIONAL_REQUIRES_FINAL_APPROVAL",
+      "semantic_approval": false,
+      "semantic_rationale": "Strong: experiment table and discussion cover head count and attention key-size effects."
+    },
+    {
+      "probe_id": "inv_attention_004",
+      "question": "What do the visualized attention heads reveal about anaphora resolution in the Transformer?",
+      "source_filename": "Attention.pdf",
+      "proposed_document_id": "9ff74efe2d339c2bb9a53c06",
+      "proposed_chunk_ids": [
+        35,
+        36
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 35,
+          "point_id": "84b224d4-7a41-5f59-85b2-294add2bd165",
+          "source": "Attention.pdf"
+        },
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 36,
+          "point_id": "2034b5f8-d6d1-505b-b0c9-51ffebd4cb3c",
+          "source": "Attention.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "PROVISIONAL_REQUIRES_FINAL_APPROVAL",
+      "semantic_approval": false,
+      "semantic_rationale": "Strong: visualized heads are described as apparently involved in anaphora resolution."
+    },
+    {
+      "probe_id": "inv_attention_005",
+      "question": "What BLEU score did the Transformer achieve on the WMT 2014 English-to-French translation task, and how long did training take on how many GPUs?",
+      "source_filename": "Attention.pdf",
+      "proposed_document_id": "9ff74efe2d339c2bb9a53c06",
+      "proposed_chunk_ids": [
+        1
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 1,
+          "point_id": "aaff3d78-48e2-5a6e-8fad-ca6fb05cbaec",
+          "source": "Attention.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "PROVISIONAL_REQUIRES_FINAL_APPROVAL",
+      "semantic_approval": false,
+      "semantic_rationale": "Strong: reports 41.8 BLEU for English-French, 3.5 training days, and eight GPUs."
+    },
+    {
+      "probe_id": "inv_attention_006",
+      "question": "What is self-attention, and what does it compute for positions within a single sequence?",
+      "source_filename": "Attention.pdf",
+      "proposed_document_id": "9ff74efe2d339c2bb9a53c06",
+      "proposed_chunk_ids": [
+        5
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 5,
+          "point_id": "4cf81aa6-f2f5-51da-a158-251cbebf6739",
+          "source": "Attention.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "PROVISIONAL_REQUIRES_FINAL_APPROVAL",
+      "semantic_approval": false,
+      "semantic_rationale": "Strong: defines self-attention as relating positions within a single sequence."
+    },
+    {
+      "probe_id": "inv_attention_007",
+      "question": "How does scaled dot-product attention differ from ordinary dot-product attention, and why is the scaling factor used?",
+      "source_filename": "Attention.pdf",
+      "proposed_document_id": "9ff74efe2d339c2bb9a53c06",
+      "proposed_chunk_ids": [
+        9
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 9,
+          "point_id": "962f5a8d-c31b-5d96-8cb7-f54284c6ec27",
+          "source": "Attention.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "PROVISIONAL_REQUIRES_FINAL_APPROVAL",
+      "semantic_approval": false,
+      "semantic_rationale": "Strong: explains scaling by 1/sqrt(d_k) and the softmax-gradient motivation."
+    },
+    {
+      "probe_id": "inv_attention_008",
+      "question": "What advantage does multi-head attention provide over using a single attention head?",
+      "source_filename": "Attention.pdf",
+      "proposed_document_id": "9ff74efe2d339c2bb9a53c06",
+      "proposed_chunk_ids": [
+        10
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 10,
+          "point_id": "56963805-d5a7-530a-bf86-7e666d177053",
+          "source": "Attention.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "PROVISIONAL_REQUIRES_FINAL_APPROVAL",
+      "semantic_approval": false,
+      "semantic_rationale": "Strong: explains multi-head attention across representation subspaces and positions."
+    },
+    {
+      "probe_id": "inv_attention_009",
+      "question": "Why does the Transformer architecture make learning long-range dependencies easier?",
+      "source_filename": "Attention.pdf",
+      "proposed_document_id": "9ff74efe2d339c2bb9a53c06",
+      "proposed_chunk_ids": [
+        15,
+        16
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 15,
+          "point_id": "a49f49a0-4ef9-5f48-8939-dbaa990b8267",
+          "source": "Attention.pdf"
+        },
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 16,
+          "point_id": "11e96604-ca8c-5f54-ab83-d89c099aed45",
+          "source": "Attention.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "PROVISIONAL_REQUIRES_FINAL_APPROVAL",
+      "semantic_approval": false,
+      "semantic_rationale": "Strong: shorter paths between sequence positions help learning long-range dependencies."
+    },
+    {
+      "probe_id": "inv_llm_agents_001",
+      "question": "How does the survey define an LLM-based agent, and what basic capabilities distinguish such an agent?",
+      "source_filename": "LLM Based-learning.pdf",
+      "proposed_document_id": "e65504ab611fa43ac5013829",
+      "proposed_chunk_ids": [
+        0,
+        8,
+        11
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "e65504ab611fa43ac5013829",
+          "chunk_id": 0,
+          "point_id": "6b179151-6cb4-5cc9-a295-87b402c1e4f5",
+          "source": "LLM Based-learning.pdf"
+        },
+        {
+          "document_id": "e65504ab611fa43ac5013829",
+          "chunk_id": 8,
+          "point_id": "5b2ea39e-7498-564b-96d7-7be7fa9ecfd1",
+          "source": "LLM Based-learning.pdf"
+        },
+        {
+          "document_id": "e65504ab611fa43ac5013829",
+          "chunk_id": 11,
+          "point_id": "538b9605-0d04-5458-bc7b-776bfaa0bd4d",
+          "source": "LLM Based-learning.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "PROVISIONAL_REQUIRES_FINAL_APPROVAL",
+      "semantic_approval": false,
+      "semantic_rationale": "Provisional revision: chunk 0 defines an AI agent as sensing its environment, making decisions, and taking actions. Chunk 8 describes LLM capabilities including knowledge acquisition, instruction comprehension, generalization, planning, reasoning, and natural-language interaction. Chunk 11 explains the survey's brain, perception, and action framework. Semantic approval remains pending human review."
+    },
+    {
+      "probe_id": "inv_llm_agents_003",
+      "question": "What role does AutoGPT play in the survey's discussion of autonomous or lifelong-learning agents?",
+      "source_filename": "LLM Based-learning.pdf",
+      "proposed_document_id": "e65504ab611fa43ac5013829",
+      "proposed_chunk_ids": [
+        85,
+        94
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "e65504ab611fa43ac5013829",
+          "chunk_id": 85,
+          "point_id": "0823a110-e571-543a-ae68-11bb5cd2780b",
+          "source": "LLM Based-learning.pdf"
+        },
+        {
+          "document_id": "e65504ab611fa43ac5013829",
+          "chunk_id": 94,
+          "point_id": "7c8bf42c-e239-5f24-876c-5a4a0b745c65",
+          "source": "LLM Based-learning.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "PROVISIONAL_REQUIRES_FINAL_APPROVAL",
+      "semantic_approval": false,
+      "semantic_rationale": "Provisional revision: chunk 85 describes AutoGPT as an autonomous system with external tools and short-/long-term memory for pursuing user-defined goals without repeated prompts. Chunk 94 describes Voyager as an embodied lifelong-learning agent inspired by AutoGPT, with a skill library and iterative environmental feedback. Semantic approval remains pending human review."
+    },
+    {
+      "probe_id": "inv_llm_001",
+      "question": "What motivation does the GPT-3 paper give for pretraining large language models before applying them to downstream tasks?",
+      "source_filename": "LLM.pdf",
+      "proposed_document_id": "68424e3d1aa5e84e426da70c",
+      "proposed_chunk_ids": [
+        5,
+        6,
+        8
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "68424e3d1aa5e84e426da70c",
+          "chunk_id": 5,
+          "point_id": "ac2ed1d3-a2be-50ae-b6cf-ff9458090e0b",
+          "source": "LLM.pdf"
+        },
+        {
+          "document_id": "68424e3d1aa5e84e426da70c",
+          "chunk_id": 6,
+          "point_id": "6856dd90-51af-5eff-8f9a-48cfb19b59ad",
+          "source": "LLM.pdf"
+        },
+        {
+          "document_id": "68424e3d1aa5e84e426da70c",
+          "chunk_id": 8,
+          "point_id": "8889ef62-3888-5b5b-8327-d45209a6b188",
+          "source": "LLM.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "PROVISIONAL_REQUIRES_FINAL_APPROVAL",
+      "semantic_approval": false,
+      "semantic_rationale": "Strong: supports motivation involving limited task-specific labeled data, generalization concerns, and in-context adaptation."
+    },
+    {
+      "probe_id": "inv_rag_001",
+      "question": "What limitations of pretrained language models motivate Retrieval-Augmented Generation?",
+      "source_filename": "RAG.pdf",
+      "proposed_document_id": "8f25ec73a5dcfeca772c16ff",
+      "proposed_chunk_ids": [
+        0
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "8f25ec73a5dcfeca772c16ff",
+          "chunk_id": 0,
+          "point_id": "a37dd8c0-a2a8-51a7-91c7-77a633737ea3",
+          "source": "RAG.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "PROVISIONAL_REQUIRES_FINAL_APPROVAL",
+      "semantic_approval": false,
+      "semantic_rationale": "Strong: abstract explicitly discusses knowledge access/manipulation, provenance, and updating world knowledge."
+    }
+  ],
+  "dataset_sha256": "21ee63518d16f2b08d8e5c1e452a4cfa8f5675b5f0322727f623c1aa2ac3e101",
+  "revision_metadata": {
+    "revision_of": "evals/results/inventory70_semantic_review_decisions_batch2_revision_20261020.json",
+    "source_artifact_sha256": "09352a8aeaf2f7509639db159c84dcd90ce4b15f8ae80250520a19ab04276aa2",
+    "purpose": "Provisional evidence revision for inv_llm_agents_001",
+    "semantic_approval_granted": false
+  }
+}

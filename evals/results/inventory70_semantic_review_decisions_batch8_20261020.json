@@ -1,0 +1,284 @@
+{
+  "artifact_type": "semantic_review_batch",
+  "created_date": "2026-10-20T11:29:07.847237+00:00",
+  "source_dataset": "evals/datasets/inventory_retrieval_probes_70.json",
+  "source_dataset_sha256": "21ee63518d16f2b08d8e5c1e452a4cfa8f5675b5f0322727f623c1aa2ac3e101",
+  "collection_name": "enterprise_rag_bge_base",
+  "candidate_count": 10,
+  "unique_probe_count": 10,
+  "reference_issue_count": 0,
+  "reference_issue_probe_ids": [],
+  "semantic_approvals": 10,
+  "benchmark_ready": false,
+  "decisions": [
+    {
+      "probe_id": "inv_harness_003",
+      "question": "What kinds of information does the paper suggest searching for when researching coding-agent techniques and implementations?",
+      "source_filename": "harness.pdf",
+      "proposed_document_id": "7b7add4488da35c33e99474d",
+      "proposed_chunk_ids": [
+        71,
+        72
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "7b7add4488da35c33e99474d",
+          "chunk_id": 71,
+          "point_id": "d922623d-4ab2-54d2-9f80-bd34110fc2ef",
+          "source": "harness.pdf"
+        },
+        {
+          "document_id": "7b7add4488da35c33e99474d",
+          "chunk_id": 72,
+          "point_id": "b0f27452-48ed-570d-8abe-655ea41c17d0",
+          "source": "harness.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "Chunks 71 and 72 specify concrete coding-agent research targets, including architecture and design patterns, exact measurements, real code/configuration, ablations, implementation details, and failure modes."
+    },
+    {
+      "probe_id": "inv_harness_004",
+      "question": "How does the paper describe the effect of encoding recurring coordination patterns into tools, middleware, and memory?",
+      "source_filename": "harness.pdf",
+      "proposed_document_id": "7b7add4488da35c33e99474d",
+      "proposed_chunk_ids": [
+        21,
+        108
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "7b7add4488da35c33e99474d",
+          "chunk_id": 21,
+          "point_id": "48d5b7ec-8199-5c3b-9bbf-6d6e5a956699",
+          "source": "harness.pdf"
+        },
+        {
+          "document_id": "7b7add4488da35c33e99474d",
+          "chunk_id": 108,
+          "point_id": "b9559456-0ffa-5300-8bf3-df30cb186512",
+          "source": "harness.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "Chunk 21 reports reduced aggregate token use when coordination behavior is encoded in tools, middleware, and memory; chunk 108 explains the reduced per-call re-derivation cost and faster harness iteration."
+    },
+    {
+      "probe_id": "inv_harness_005",
+      "question": "What three observability pillars are used to drive the Agentic Harness Engineering closed loop?",
+      "source_filename": "harness.pdf",
+      "proposed_document_id": "7b7add4488da35c33e99474d",
+      "proposed_chunk_ids": [
+        0,
+        5
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "7b7add4488da35c33e99474d",
+          "chunk_id": 0,
+          "point_id": "11063e0b-a873-5194-aa43-c4f82d7cd37f",
+          "source": "harness.pdf"
+        },
+        {
+          "document_id": "7b7add4488da35c33e99474d",
+          "chunk_id": 5,
+          "point_id": "0419dae4-fc17-5c32-ac58-864b12480196",
+          "source": "harness.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "Both passages identify component, experience, and decision observability. They explain file-level editable components, a structured evidence corpus, and edit predictions checked against subsequent task outcomes."
+    },
+    {
+      "probe_id": "inv_harness_006",
+      "question": "What framework is used to instantiate the editable harness substrate, and what does the substrate expose as explicit files?",
+      "source_filename": "harness.pdf",
+      "proposed_document_id": "7b7add4488da35c33e99474d",
+      "proposed_chunk_ids": [
+        10
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "7b7add4488da35c33e99474d",
+          "chunk_id": 10,
+          "point_id": "a9163479-a2be-560f-8237-dccc94dcc299",
+          "source": "harness.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "Chunk 10 explicitly identifies NexAU and the seven editable file-based component types: system prompt, tool description, tool implementation, middleware, skill, sub-agent configuration, and long-term memory."
+    },
+    {
+      "probe_id": "inv_harness_007",
+      "question": "How are failures counted for pass@1 in the Terminal-Bench evaluation, and what runtime components are described as infrastructure?",
+      "source_filename": "harness.pdf",
+      "proposed_document_id": "7b7add4488da35c33e99474d",
+      "proposed_chunk_ids": [
+        16
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "7b7add4488da35c33e99474d",
+          "chunk_id": 16,
+          "point_id": "b4b537b4-c4ef-513c-9314-6a4ad1e18605",
+          "source": "harness.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "Chunk 16 states that infrastructure-aborted or timed-out trials count as pass@1 failures and lists the runtime infrastructure: framework, dispatcher, sandbox, tracer, and concurrency."
+    },
+    {
+      "probe_id": "inv_harness_008",
+      "question": "What does the AHE evaluation report about the generality of its gains across different providers or reasoning depths?",
+      "source_filename": "harness.pdf",
+      "proposed_document_id": "7b7add4488da35c33e99474d",
+      "proposed_chunk_ids": [
+        22
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "7b7add4488da35c33e99474d",
+          "chunk_id": 22,
+          "point_id": "986a3756-2b7c-5ed9-8dce-8daa5e93db25",
+          "source": "harness.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "Chunk 22 reports positive AHE pass@1 gains across GPT-5.4 reasoning depths and alternate model families, supporting generality across providers and reasoning depths while noting operating-point limitations."
+    },
+    {
+      "probe_id": "inv_harness_009",
+      "question": "What governance mechanisms does AHE use to bound self-modification and roll back ineffective edits?",
+      "source_filename": "harness.pdf",
+      "proposed_document_id": "7b7add4488da35c33e99474d",
+      "proposed_chunk_ids": [
+        14,
+        27
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "7b7add4488da35c33e99474d",
+          "chunk_id": 14,
+          "point_id": "480c9491-e5d7-534c-a87a-fba4188d5e64",
+          "source": "harness.pdf"
+        },
+        {
+          "document_id": "7b7add4488da35c33e99474d",
+          "chunk_id": 27,
+          "point_id": "40e42236-358a-5e75-9a4f-6e29385790ff",
+          "source": "harness.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "Chunk 14 explains workspace restrictions, evidence-linked change manifests, predicted outcomes, and verification in the next round. Chunk 27 explicitly describes workspace-bounded edits, versioned manifests, and file-level rollback of ineffective edits."
+    },
+    {
+      "probe_id": "inv_harness_010",
+      "question": "What repeated guarding behaviors are codified into the AHE system prompt?",
+      "source_filename": "harness.pdf",
+      "proposed_document_id": "7b7add4488da35c33e99474d",
+      "proposed_chunk_ids": [
+        78
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "7b7add4488da35c33e99474d",
+          "chunk_id": 78,
+          "point_id": "fde22c32-2eaa-5a4f-a42f-12953a3afd90",
+          "source": "harness.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "Chunk 78 directly enumerates the seven recurring system-prompt rules: contract first, mirror the evaluator, preserve semantics, control candidate selection, generalize, manage time, and finish only when the end state is ready."
+    },
+    {
+      "probe_id": "inv_harness_011",
+      "question": "What evidence shows that the AHE loop can recover previously observed failure modes across later iterations?",
+      "source_filename": "harness.pdf",
+      "proposed_document_id": "7b7add4488da35c33e99474d",
+      "proposed_chunk_ids": [
+        90,
+        93
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "7b7add4488da35c33e99474d",
+          "chunk_id": 90,
+          "point_id": "e9d730a0-3eed-5565-83be-201f82d51324",
+          "source": "harness.pdf"
+        },
+        {
+          "document_id": "7b7add4488da35c33e99474d",
+          "chunk_id": 93,
+          "point_id": "5ca49440-e29a-5232-bbf6-b7b5648595ed",
+          "source": "harness.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "Chunk 90 describes the evolving configure-git-webserver trajectory and the need to patch a guard loophole and middleware salience gap. Chunk 93 records the failure mechanism and reports recovery from 0/2 to 2/2 after the iteration-8 changes."
+    },
+    {
+      "probe_id": "inv_harness_012",
+      "question": "What task does configure-git-webserver require the agent to complete, and what loophole or middleware issue was patched?",
+      "source_filename": "harness.pdf",
+      "proposed_document_id": "7b7add4488da35c33e99474d",
+      "proposed_chunk_ids": [
+        91,
+        93,
+        103
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "7b7add4488da35c33e99474d",
+          "chunk_id": 91,
+          "point_id": "80b8c76e-c1b0-59db-84f9-dc9dd92b9cbe",
+          "source": "harness.pdf"
+        },
+        {
+          "document_id": "7b7add4488da35c33e99474d",
+          "chunk_id": 93,
+          "point_id": "5ca49440-e29a-5232-bbf6-b7b5648595ed",
+          "source": "harness.pdf"
+        },
+        {
+          "document_id": "7b7add4488da35c33e99474d",
+          "chunk_id": 103,
+          "point_id": "ccd7a3a8-18a6-5e3a-ac95-7b268f847500",
+          "source": "harness.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "Chunk 91 defines configure-git-webserver and the failed cleanup after deployment. Chunk 93 describes the overrideable cleanup loophole and later 0/2-to-2/2 recovery; chunk 103 specifies hard blocks against deleting protected output or emptying protected roots, plus middleware reminders."
+    }
+  ]
+}

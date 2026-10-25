@@ -422,21 +422,12 @@ def _get_documents_for_generation(
     if generation_documents:
         return generation_documents[:MAX_GENERATION_DOCUMENTS]
 
-    web_search_used = bool(state.get("web_search_used"))
-
-    web_documents = _safe_list(state.get("web_documents"))
-
-    if web_search_used and web_documents:
-        return web_documents[:MAX_GENERATION_DOCUMENTS]
-
     logfire.warning(
         "No generation-approved evidence available.",
         grader_status=grader_status,
         grading_mode=grading_mode,
         retrieved_documents=len(_safe_list(state.get("documents"))),
         generation_documents=0,
-        web_search_used=web_search_used,
-        web_documents=len(web_documents),
     )
 
     return []

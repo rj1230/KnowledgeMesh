@@ -1,0 +1,33 @@
+{
+  "probe_id": "inv_harness_003",
+  "question": "What kinds of information does the paper suggest searching for when researching coding-agent techniques and implementations?",
+  "source_filename": "harness.pdf",
+  "original_relevant_chunks": [
+    {
+      "document_id": "66f55cf4060534797ac59189",
+      "chunk_id": 62
+    }
+  ],
+  "candidate_live_document_id": "7b7add4488da35c33e99474d",
+  "proposed_minimal_live_chunk_ids": [
+    69
+  ],
+  "verified_live_references": [
+    {
+      "document_id": "7b7add4488da35c33e99474d",
+      "chunk_id": 69,
+      "point_id": "e67df65b-c940-531e-a461-ea881e6c5bd1",
+      "source": "harness.pdf"
+    }
+  ],
+  "excluded_supplemental_candidates": [
+    {
+      "chunk_id": 72,
+      "point_id": "b0f27452-48ed-570d-8abe-655ea41c17d0",
+      "reason": "Contains example search queries and follow-up instructions; not necessary for the core answer."
+    }
+  ],
+  "rationale": "Chunk 69 directly lists concrete research targets including implementation code/configuration, ablation data, exact implementation details, and failure-mode analysis.",
+  "review_status": "PROPOSED_MINIMAL_SET_REQUIRES_FINAL_REVIEW",
+  "original_dataset_modified": false
+}

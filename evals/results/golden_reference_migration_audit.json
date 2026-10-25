@@ -1,0 +1,734 @@
+{
+  "mode": "diagnostic_only_manual_review_required",
+  "source_dataset": "evals\\datasets\\golden_questions.json",
+  "historical_inventory": "evals\\datasets\\true_chunk_inventory.csv",
+  "candidate_inventory": "evals\\results\\current_chunk_inventory_candidate.csv",
+  "qdrant_collection": "enterprise_rag_bge_base",
+  "verified_live_points": 1101,
+  "processed_document_count": 12,
+  "case_count": 11,
+  "references": [
+    {
+      "case_id": "gp001",
+      "question": "What is retrieval-augmented generation and what two types of memory does it combine?",
+      "expected_answer_points": [
+        "RAG combines retrieval with language generation",
+        "RAG combines parametric memory and non-parametric memory"
+      ],
+      "old_reference": {
+        "document_id": "89e40c0de3ce2081b9d726b9",
+        "chunk_id": 0
+      },
+      "status": "manual_evidence_review_required",
+      "top_candidates": [
+        {
+          "document_id": "8f25ec73a5dcfeca772c16ff",
+          "chunk_id": 0,
+          "similarity": 0.9993,
+          "preview": "Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks Patrick Lewis†‡, Ethan Perez⋆, Aleksandra Piktus†, Fabio Petroni†, Vladimir Karpukhin†, Naman Goyal†, Heinrich Kütt"
+        },
+        {
+          "document_id": "8f25ec73a5dcfeca772c16ff",
+          "chunk_id": 26,
+          "similarity": 0.2478,
+          "preview": "retrieval into individual tasks, showing that a single retrieval-based architecture is capable of achieving strong performance across several tasks. 8 General-Purpose Architectures"
+        },
+        {
+          "document_id": "8f25ec73a5dcfeca772c16ff",
+          "chunk_id": 5,
+          "similarity": 0.2465,
+          "preview": "ed with extensive knowledge. Crucially, by using pre-trained access mechanisms, the ability to access knowledge is present without additional training Our results highlight the ben"
+        },
+        {
+          "document_id": "8f25ec73a5dcfeca772c16ff",
+          "chunk_id": 22,
+          "similarity": 0.2428,
+          "preview": "oding [33, 59, 39], we also investigate generation diversity by ca Table 5 shows that RAG-Sequence’s generations are more diverse than RAG-Token’s, and both are signiﬁcantly more d"
+        },
+        {
+          "document_id": "8f25ec73a5dcfeca772c16ff",
+          "chunk_id": 48,
+          "similarity": 0.2338,
+          "preview": "iahai Wang, and Jia Appendices for Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks A Implementation Details For Open-domain QA we report test numbers using 15 retr"
+        }
+      ],
+      "filename": "RAG.pdf",
+      "current_document_id": "8f25ec73a5dcfeca772c16ff"
+    },
+    {
+      "case_id": "gp001",
+      "question": "What is retrieval-augmented generation and what two types of memory does it combine?",
+      "expected_answer_points": [
+        "RAG combines retrieval with language generation",
+        "RAG combines parametric memory and non-parametric memory"
+      ],
+      "old_reference": {
+        "document_id": "89e40c0de3ce2081b9d726b9",
+        "chunk_id": 1
+      },
+      "status": "manual_evidence_review_required",
+      "top_candidates": [
+        {
+          "document_id": "8f25ec73a5dcfeca772c16ff",
+          "chunk_id": 1,
+          "similarity": 1.0,
+          "preview": "emory is a pre-trained seq2seq model and the non-parametric memory is a dense vector index of Wikipedia, accessed with a pre-trained neural retriever. We com- pare two RAG formulat"
+        },
+        {
+          "document_id": "8f25ec73a5dcfeca772c16ff",
+          "chunk_id": 4,
+          "similarity": 0.2995,
+          "preview": "generation models with a non-parametric memory through a general-purpose ﬁne-tuning approach which w We build RAG models where the parametric memory is a pre-trained seq2seq transf"
+        },
+        {
+          "document_id": "8f25ec73a5dcfeca772c16ff",
+          "chunk_id": 9,
+          "similarity": 0.2796,
+          "preview": "cument index as the non-parametric memory. 2.3 Generator: BART The generator component pθ(yi|x, z, y1:i−1) could be modelled using any encoder-decoder We use BART-large [32], a pre"
+        },
+        {
+          "document_id": "8f25ec73a5dcfeca772c16ff",
+          "chunk_id": 25,
+          "similarity": 0.2744,
+          "preview": "elated Work Single-Task Retrieval Prior work has shown that retrieval improves performance across a variety of NLP tasks when considered in isolation. Such tasks include open-domai"
+        },
+        {
+          "document_id": "8f25ec73a5dcfeca772c16ff",
+          "chunk_id": 14,
+          "similarity": 0.2439,
+          "preview": "27K test examples. As this is a new task, we train a BART mod Q-BLEU is a variant of BLEU with a higher weight for matching entities and has higher correlation with human judgment "
+        }
+      ],
+      "filename": "RAG.pdf",
+      "current_document_id": "8f25ec73a5dcfeca772c16ff"
+    },
+    {
+      "case_id": "gp002",
+      "question": "What are the main components of an LLM-based agent according to the survey?",
+      "expected_answer_points": [
+        "brain",
+        "perception",
+        "action"
+      ],
+      "old_reference": {
+        "document_id": "7ed18d7a17efb3ce8ec56478",
+        "chunk_id": 9
+      },
+      "status": "manual_evidence_review_required",
+      "top_candidates": [
+        {
+          "document_id": "e65504ab611fa43ac5013829",
+          "chunk_id": 11,
+          "similarity": 0.8684,
+          "preview": "for the LLM- based agents with three key parts: brain, perception, and action (§ 3), and the framework can be tailored to suit different applications We first introduce the brain, "
+        },
+        {
+          "document_id": "e65504ab611fa43ac5013829",
+          "chunk_id": 30,
+          "similarity": 0.432,
+          "preview": "te the workflow: When a human asks whether it will rain, the perception module c Then the brain module begins to reason according to the current weather and the weather reports on "
+        },
+        {
+          "document_id": "e65504ab611fa43ac5013829",
+          "chunk_id": 31,
+          "similarity": 0.3485,
+          "preview": "rpose is to broaden the agent’s perception space from a text-only domain to a multimodal sphere that includes textual, auditory, and visual modalities This extension equips the age"
+        },
+        {
+          "document_id": "e65504ab611fa43ac5013829",
+          "chunk_id": 1,
+          "similarity": 0.3244,
+          "preview": "LMs as the foundation to build AI agents and have achieved significant progress. In this paper, we perform a comprehensive survey on LLM-based agents. We start by tracing the conce"
+        },
+        {
+          "document_id": "e65504ab611fa43ac5013829",
+          "chunk_id": 29,
+          "similarity": 0.29,
+          "preview": "interpretable manner. This agents can enhance task performance through social behaviors such as collaboration and competition [108; 111; 129; 130]. By inputting specific prompts, L"
+        }
+      ],
+      "filename": "LLM Based-learning.pdf",
+      "current_document_id": "e65504ab611fa43ac5013829"
+    },
+    {
+      "case_id": "gp003",
+      "question": "What memory capabilities does AutoGPT provide?",
+      "expected_answer_points": [
+        "long-term memory",
+        "short-term memory"
+      ],
+      "old_reference": {
+        "document_id": "7ed18d7a17efb3ce8ec56478",
+        "chunk_id": 74
+      },
+      "status": "manual_evidence_review_required",
+      "top_candidates": [
+        {
+          "document_id": "e65504ab611fa43ac5013829",
+          "chunk_id": 86,
+          "similarity": 0.7672,
+          "preview": "As shown in Figure 8, we introduce the astonishingly diverse capabilities that the agent exhibits in scenarios where only one single agent is present. 4.1.1 Task-oriented Deploymen"
+        },
+        {
+          "document_id": "e65504ab611fa43ac5013829",
+          "chunk_id": 85,
+          "similarity": 0.4423,
+          "preview": "we elucidate the diverse application scenarios of Single Agent, including task-oriented, innovation-oriented, and lifecycle-oriented scenarios (§ 4.1) Then, we present the signific"
+        },
+        {
+          "document_id": "e65504ab611fa43ac5013829",
+          "chunk_id": 26,
+          "similarity": 0.2767,
+          "preview": "s [114; 115]. Moreover, they can dynamically adjust their outputs based on environment Furthermore, they can showcase autonomy through exhibiting creativity like coming up with nov"
+        },
+        {
+          "document_id": "e65504ab611fa43ac5013829",
+          "chunk_id": 144,
+          "similarity": 0.27,
+          "preview": "ese language-based models can conti This offers a more robust and interpretable controller. With just a task description or demonstration, they can effectively handle previously un"
+        },
+        {
+          "document_id": "e65504ab611fa43ac5013829",
+          "chunk_id": 155,
+          "similarity": 0.2654,
+          "preview": "s have found that This phenomenon is widely observed even in LLMs, posing significant challenges to the development of LLM-based agents [616; 617]. There are also some relevant att"
+        }
+      ],
+      "filename": "LLM Based-learning.pdf",
+      "current_document_id": "e65504ab611fa43ac5013829"
+    },
+    {
+      "case_id": "gp004",
+      "question": "What is the role of the brain in an LLM-based agent?",
+      "expected_answer_points": [
+        "stores memories, information, and knowledge",
+        "information processing",
+        "decision-making",
+        "reasoning",
+        "planning"
+      ],
+      "old_reference": {
+        "document_id": "7ed18d7a17efb3ce8ec56478",
+        "chunk_id": 9
+      },
+      "status": "manual_evidence_review_required",
+      "top_candidates": [
+        {
+          "document_id": "e65504ab611fa43ac5013829",
+          "chunk_id": 11,
+          "similarity": 0.8684,
+          "preview": "for the LLM- based agents with three key parts: brain, perception, and action (§ 3), and the framework can be tailored to suit different applications We first introduce the brain, "
+        },
+        {
+          "document_id": "e65504ab611fa43ac5013829",
+          "chunk_id": 30,
+          "similarity": 0.432,
+          "preview": "te the workflow: When a human asks whether it will rain, the perception module c Then the brain module begins to reason according to the current weather and the weather reports on "
+        },
+        {
+          "document_id": "e65504ab611fa43ac5013829",
+          "chunk_id": 31,
+          "similarity": 0.3485,
+          "preview": "rpose is to broaden the agent’s perception space from a text-only domain to a multimodal sphere that includes textual, auditory, and visual modalities This extension equips the age"
+        },
+        {
+          "document_id": "e65504ab611fa43ac5013829",
+          "chunk_id": 1,
+          "similarity": 0.3244,
+          "preview": "LMs as the foundation to build AI agents and have achieved significant progress. In this paper, we perform a comprehensive survey on LLM-based agents. We start by tracing the conce"
+        },
+        {
+          "document_id": "e65504ab611fa43ac5013829",
+          "chunk_id": 29,
+          "similarity": 0.29,
+          "preview": "interpretable manner. This agents can enhance task performance through social behaviors such as collaboration and competition [108; 111; 129; 130]. By inputting specific prompts, L"
+        }
+      ],
+      "filename": "LLM Based-learning.pdf",
+      "current_document_id": "e65504ab611fa43ac5013829"
+    },
+    {
+      "case_id": "gp005",
+      "question": "How does the RAG retriever obtain documents for a query?",
+      "expected_answer_points": [
+        "retrieves top-k documents",
+        "uses a dense retriever",
+        "retrieval is conditioned on the input query"
+      ],
+      "old_reference": {
+        "document_id": "89e40c0de3ce2081b9d726b9",
+        "chunk_id": 2
+      },
+      "status": "manual_evidence_review_required",
+      "top_candidates": [
+        {
+          "document_id": "8f25ec73a5dcfeca772c16ff",
+          "chunk_id": 3,
+          "similarity": 0.8701,
+          "preview": "d models that combine masked language models [8] with a differentiable retriever, have shown promising The Divine Comedy (x) q Query Encoder q(x) MIPS pθ Generator pθ (Parametric) "
+        },
+        {
+          "document_id": "8f25ec73a5dcfeca772c16ff",
+          "chunk_id": 2,
+          "similarity": 0.3186,
+          "preview": "48] can address some of these issues because knowledge can be directly revised and expanded, and accessed knowledge can be inspected and interpreted. REALM [20] and ORQA [31], two "
+        },
+        {
+          "document_id": "8f25ec73a5dcfeca772c16ff",
+          "chunk_id": 21,
+          "similarity": 0.2745,
+          "preview": "ncy needed in Scotland is the pound sterling. Jeopardy Question Gener -a RAG-T It’s the only U.S. state named for a U.S. president RAG-S It’s the state where you’ll ﬁnd Mount Raini"
+        },
+        {
+          "document_id": "8f25ec73a5dcfeca772c16ff",
+          "chunk_id": 25,
+          "similarity": 0.2423,
+          "preview": "elated Work Single-Task Retrieval Prior work has shown that retrieval improves performance across a variety of NLP tasks when considered in isolation. Such tasks include open-domai"
+        },
+        {
+          "document_id": "8f25ec73a5dcfeca772c16ff",
+          "chunk_id": 9,
+          "similarity": 0.2288,
+          "preview": "cument index as the non-parametric memory. 2.3 Generator: BART The generator component pθ(yi|x, z, y1:i−1) could be modelled using any encoder-decoder We use BART-large [32], a pre"
+        }
+      ],
+      "filename": "RAG.pdf",
+      "current_document_id": "8f25ec73a5dcfeca772c16ff"
+    },
+    {
+      "case_id": "gp005",
+      "question": "How does the RAG retriever obtain documents for a query?",
+      "expected_answer_points": [
+        "retrieves top-k documents",
+        "uses a dense retriever",
+        "retrieval is conditioned on the input query"
+      ],
+      "old_reference": {
+        "document_id": "89e40c0de3ce2081b9d726b9",
+        "chunk_id": 3
+      },
+      "status": "manual_evidence_review_required",
+      "top_candidates": [
+        {
+          "document_id": "8f25ec73a5dcfeca772c16ff",
+          "chunk_id": 4,
+          "similarity": 0.9182,
+          "preview": "generation models with a non-parametric memory through a general-purpose ﬁne-tuning approach which w We build RAG models where the parametric memory is a pre-trained seq2seq transf"
+        },
+        {
+          "document_id": "8f25ec73a5dcfeca772c16ff",
+          "chunk_id": 1,
+          "similarity": 0.2745,
+          "preview": "emory is a pre-trained seq2seq model and the non-parametric memory is a dense vector index of Wikipedia, accessed with a pre-trained neural retriever. We com- pare two RAG formulat"
+        },
+        {
+          "document_id": "8f25ec73a5dcfeca772c16ff",
+          "chunk_id": 0,
+          "similarity": 0.2501,
+          "preview": "Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks Patrick Lewis†‡, Ethan Perez⋆, Aleksandra Piktus†, Fabio Petroni†, Vladimir Karpukhin†, Naman Goyal†, Heinrich Kütt"
+        },
+        {
+          "document_id": "8f25ec73a5dcfeca772c16ff",
+          "chunk_id": 24,
+          "similarity": 0.2469,
+          "preview": "d 2016 leaders, 4% with the 2016 index and 2018 leaders). This shows we can update RAG’s world knowledge by simply replacing its non-parametric memory Effect of Retrieving more doc"
+        },
+        {
+          "document_id": "8f25ec73a5dcfeca772c16ff",
+          "chunk_id": 53,
+          "similarity": 0.2457,
+          "preview": "ugh we do not tra Table 7: Number of instances in the datasets used. *A hidden subset of this data is used for evaluation Task Train Development Test Natural Questions 79169 8758 3"
+        }
+      ],
+      "filename": "RAG.pdf",
+      "current_document_id": "8f25ec73a5dcfeca772c16ff"
+    },
+    {
+      "case_id": "gp006",
+      "question": "What BLEU score did the Transformer achieve on the WMT 2014 English-to-French translation task, and how long did it take to train?",
+      "expected_answer_points": [
+        "BLEU score of 41.8",
+        "trained for 3.5 days on eight GPUs"
+      ],
+      "old_reference": {
+        "document_id": "c5403b511fa73a2221411a42",
+        "chunk_id": 1
+      },
+      "status": "manual_evidence_review_required",
+      "top_candidates": [
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 1,
+          "similarity": 1.0,
+          "preview": "achieves On the WMT 2014 English-to-French translation task, our model establishes a new single-model state-of-the-art BLEU score of 41.8 after training for 3.5 days on eight GPUs,"
+        },
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 5,
+          "similarity": 0.2694,
+          "preview": "ced e Self-attention, sometimes called intra-attention is an attention mechanism relating different positions of a single sequence in order to compute a representation of the seque"
+        },
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 26,
+          "similarity": 0.2567,
+          "preview": "uence-to-seque 7 Conclusion In this work, we presented the Transformer, the first sequence transduction model based entirely on attention, replacing the recurrent layers most commo"
+        },
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 25,
+          "similarity": 0.2341,
+          "preview": "e on the Section 22 development set, all other parameters remained unchanged from the English-to-German base translation model. During inference, we 9 Table 4: The Transformer gene"
+        },
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 35,
+          "similarity": 0.2273,
+          "preview": "rase ‘making...more difficult’. Attentions here shown only for the word ‘making’. Different colors represent different heads. Best viewed in color. 13 The Law will never be perfect"
+        }
+      ],
+      "filename": "Attention.pdf",
+      "current_document_id": "9ff74efe2d339c2bb9a53c06"
+    },
+    {
+      "case_id": "gp007",
+      "question": "What is the formula for scaled dot-product attention, and how does it compare to additive attention?",
+      "expected_answer_points": [
+        "softmax of QK transpose divided by the square root of dk, times V",
+        "dot-product attention is faster and more space-efficient than additive attention"
+      ],
+      "old_reference": {
+        "document_id": "c5403b511fa73a2221411a42",
+        "chunk_id": 6
+      },
+      "status": "manual_evidence_review_required",
+      "top_candidates": [
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 8,
+          "similarity": 0.7193,
+          "preview": "query and a set of key-value pairs to an ou Scaled Dot-Product Attention Multi-Head Attention Figure 2: (left) Scaled Dot-Product Attention. (right) Multi-Head Attention consists o"
+        },
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 7,
+          "similarity": 0.4491,
+          "preview": "d by layer normalization. We also modify the self-attention sub-layer in the decoder stack to prevent positions from attending to subsequent positions This masking, combined with f"
+        },
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 35,
+          "similarity": 0.2175,
+          "preview": "rase ‘making...more difficult’. Attentions here shown only for the word ‘making’. Different colors represent different heads. Best viewed in color. 13 The Law will never be perfect"
+        },
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 10,
+          "similarity": 0.2073,
+          "preview": "ts of q and k are independent ran output values. These are concatenated and once again projected, resulting in the final values, as depicted in Figure 2. Multi-head attention allow"
+        },
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 11,
+          "similarity": 0.1987,
+          "preview": "In a self-attention layer all of the keys, values and queries come from the same place, in this case, the output of the prev Each position in the encoder can attend to all position"
+        }
+      ],
+      "filename": "Attention.pdf",
+      "current_document_id": "9ff74efe2d339c2bb9a53c06"
+    },
+    {
+      "case_id": "gp007",
+      "question": "What is the formula for scaled dot-product attention, and how does it compare to additive attention?",
+      "expected_answer_points": [
+        "softmax of QK transpose divided by the square root of dk, times V",
+        "dot-product attention is faster and more space-efficient than additive attention"
+      ],
+      "old_reference": {
+        "document_id": "c5403b511fa73a2221411a42",
+        "chunk_id": 7
+      },
+      "status": "manual_evidence_review_required",
+      "top_candidates": [
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 9,
+          "similarity": 0.8822,
+          "preview": "t-product attention is much faster and more space-efficient in practice, since it can be implemented using highly optimized matrix multiplication code While for small values of dk "
+        },
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 8,
+          "similarity": 0.2953,
+          "preview": "query and a set of key-value pairs to an ou Scaled Dot-Product Attention Multi-Head Attention Figure 2: (left) Scaled Dot-Product Attention. (right) Multi-Head Attention consists o"
+        },
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 6,
+          "similarity": 0.2633,
+          "preview": "nt at a time. At each step the model is auto-regressive [10], consuming the previously Figure 1: The Transformer - model architecture. The Transformer follows this overall architec"
+        },
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 26,
+          "similarity": 0.2593,
+          "preview": "uence-to-seque 7 Conclusion In this work, we presented the Transformer, the first sequence transduction model based entirely on attention, replacing the recurrent layers most commo"
+        },
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 34,
+          "similarity": 0.2226,
+          "preview": "te shift-reduce constituent parsing. In Proceedings of the 51st Annual Meeting of the ACL (Volume 1: Long Papers), pages 434–443. ACL, August 2013. 12 Attention Visualizations It i"
+        }
+      ],
+      "filename": "Attention.pdf",
+      "current_document_id": "9ff74efe2d339c2bb9a53c06"
+    },
+    {
+      "case_id": "gp008",
+      "question": "In the GPT-3 paper's human-detection experiment, how accurately could people distinguish GPT-3 175B-generated news articles from human-written ones, compared to the easy-to-spot control articles?",
+      "expected_answer_points": [
+        "about 86% accuracy detecting the intentionally bad control articles",
+        "only about 52% accuracy detecting the 175B model's articles, barely above chance"
+      ],
+      "old_reference": {
+        "document_id": "3caf265f6ce786e3c2bd0ad6",
+        "chunk_id": 58
+      },
+      "status": "manual_evidence_review_required",
+      "top_candidates": [
+        {
+          "document_id": "68424e3d1aa5e84e426da70c",
+          "chunk_id": 69,
+          "similarity": 0.8578,
+          "preview": "ral assignments per By contrast, mean human accuracy at detecting articles that were produced by the 175B parameter model was barely above chance at ∼52% (see Table 3.11).5 Human a"
+        },
+        {
+          "document_id": "68424e3d1aa5e84e426da70c",
+          "chunk_id": 70,
+          "similarity": 0.28,
+          "preview": "of future research. Ippolito et al. [IDCBE19] also note that human acc To do a preliminary investigation of how good humans are at detecting longer news articles generated by GPT-3"
+        },
+        {
+          "document_id": "68424e3d1aa5e84e426da70c",
+          "chunk_id": 67,
+          "similarity": 0.2722,
+          "preview": "an an experiment to control for participant effort and attention that followed the same format but involved intentionally bad model generated articles This was done by generating a"
+        },
+        {
+          "document_id": "68424e3d1aa5e84e426da70c",
+          "chunk_id": 72,
+          "similarity": 0.2589,
+          "preview": "would drop below 50%. Indeed, many individual participants scored below 50% on this task. 7Additional non-news samples can be found in Appendix F. 26 Figure 3.13: People’s ability "
+        },
+        {
+          "document_id": "68424e3d1aa5e84e426da70c",
+          "chunk_id": 4,
+          "similarity": 0.2536,
+          "preview": "ic News Articles 46 F Additional Samples from GPT-3 48 G Details of Task Phrasing and Speciﬁcations 50 H Results on All Tasks for 1 Introduction Recent years have featured a trend "
+        }
+      ],
+      "filename": "LLM.pdf",
+      "current_document_id": "68424e3d1aa5e84e426da70c"
+    },
+    {
+      "case_id": "gp009",
+      "question": "How does the 1.3B parameter InstructGPT model compare to the 175B parameter GPT-3 model in human evaluations, and what improvements does InstructGPT show?",
+      "expected_answer_points": [
+        "1.3B parameter InstructGPT outputs are preferred over the 175B GPT-3 outputs despite 100x fewer parameters",
+        "improvements in truthfulness",
+        "reductions in toxic output generation"
+      ],
+      "old_reference": {
+        "document_id": "c7cc94a4d3e661a199e0bb13",
+        "chunk_id": 0
+      },
+      "status": "manual_evidence_review_required",
+      "top_candidates": [
+        {
+          "document_id": "c87e9c2e56842a8dfa14ef5e",
+          "chunk_id": 0,
+          "similarity": 0.9996,
+          "preview": "Training language models to follow instructions with human feedback Long Ouyang∗ Jeff Wu∗ Xu Jiang∗ Diogo Almeida∗ Carroll L. Wainwright∗ Pamela Mishkin∗ Chong Zhang Sandhini Agarw"
+        },
+        {
+          "document_id": "c87e9c2e56842a8dfa14ef5e",
+          "chunk_id": 96,
+          "similarity": 0.2775,
+          "preview": "adata ﬁelds, and developed a better understanding of what we wanted to measure. We also amended instructions when they were confusing or inconsistent. Of particular note, during th"
+        },
+        {
+          "document_id": "c87e9c2e56842a8dfa14ef5e",
+          "chunk_id": 29,
+          "similarity": 0.2693,
+          "preview": "), and (2) using Similarly to honesty, measuring the harms of language models also poses many challenges. In most cases, the harms from language models depend on how their outputs "
+        },
+        {
+          "document_id": "c87e9c2e56842a8dfa14ef5e",
+          "chunk_id": 37,
+          "similarity": 0.2628,
+          "preview": "thfulQA dat This behavior is the default: our models do not have to be speciﬁcally instructed to tell the truth to exhibit improved truthfulness. Interestingly, the exception is ou"
+        },
+        {
+          "document_id": "c87e9c2e56842a8dfa14ef5e",
+          "chunk_id": 146,
+          "similarity": 0.2482,
+          "preview": "t cherry-picked to show ability to follow instructions to describe code, along with random samples from the GPT-3 175B and InstructGPT 175B models. 64 Prompt: Based on the followin"
+        }
+      ],
+      "filename": "Training Llm.pdf",
+      "current_document_id": "c87e9c2e56842a8dfa14ef5e"
+    },
+    {
+      "case_id": "gp009",
+      "question": "How does the 1.3B parameter InstructGPT model compare to the 175B parameter GPT-3 model in human evaluations, and what improvements does InstructGPT show?",
+      "expected_answer_points": [
+        "1.3B parameter InstructGPT outputs are preferred over the 175B GPT-3 outputs despite 100x fewer parameters",
+        "improvements in truthfulness",
+        "reductions in toxic output generation"
+      ],
+      "old_reference": {
+        "document_id": "c7cc94a4d3e661a199e0bb13",
+        "chunk_id": 1
+      },
+      "status": "manual_evidence_review_required",
+      "top_candidates": [
+        {
+          "document_id": "c87e9c2e56842a8dfa14ef5e",
+          "chunk_id": 1,
+          "similarity": 0.8799,
+          "preview": "pt distribution, outputs from the 1.3B parameter InstructGPT model are preferred to outputs from the 175B GPT-3, despite having 100x fewer parameters. Moreover, InstructGPT models "
+        },
+        {
+          "document_id": "c87e9c2e56842a8dfa14ef5e",
+          "chunk_id": 142,
+          "similarity": 0.2744,
+          "preview": "turned and bounded back up th Figure 43: Model samples on a prompt cherry-picked to show instruction following behavior in other languages, along with random samples from the GPT-3"
+        },
+        {
+          "document_id": "c87e9c2e56842a8dfa14ef5e",
+          "chunk_id": 11,
+          "similarity": 0.266,
+          "preview": "edback to augment prompts and improve the performance of GPT-3. There has also been work o a normative prior (Nahian et al., 2021). Our work can be seen as a direct application of "
+        },
+        {
+          "document_id": "c87e9c2e56842a8dfa14ef5e",
+          "chunk_id": 57,
+          "similarity": 0.2631,
+          "preview": "efforts is to obtain a model that performs well on a company’s speciﬁc use case, rather th 5.3 Limitations Methodology. The behavior of our InstructGPT models is determined in part"
+        },
+        {
+          "document_id": "c87e9c2e56842a8dfa14ef5e",
+          "chunk_id": 2,
+          "similarity": 0.2516,
+          "preview": "lowe@openai.com. †Work done while at OpenAI. Current afﬁliations: AA: Anthropic; PC: Alignment Researc 1.3B 6B 175B Model size 0.2 0.4 0.6 Win rate against SFT 175B Model PPO-ptx P"
+        }
+      ],
+      "filename": "Training Llm.pdf",
+      "current_document_id": "c87e9c2e56842a8dfa14ef5e"
+    },
+    {
+      "case_id": "gp010",
+      "question": "How much does Agentic Harness Engineering (AHE) improve pass@1 on Terminal-Bench 2, and how does the evolved harness compare to the human-designed Codex harness?",
+      "expected_answer_points": [
+        "lifts pass@1 on Terminal-Bench 2 from 69.7% to 77.0%",
+        "surpasses the human-designed Codex harness at 71.9%"
+      ],
+      "old_reference": {
+        "document_id": "66f55cf4060534797ac59189",
+        "chunk_id": 1
+      },
+      "status": "manual_evidence_review_required",
+      "top_candidates": [
+        {
+          "document_id": "7b7add4488da35c33e99474d",
+          "chunk_id": 1,
+          "similarity": 0.9987,
+          "preview": "get Empirically, ten AHE iterations lift pass@1 on Terminal-Bench 2 from 69.7% to 77.0%, surpassing the human-designed harness Codex (71.9%) and the self-evolving baselines ACE and"
+        },
+        {
+          "document_id": "7b7add4488da35c33e99474d",
+          "chunk_id": 21,
+          "similarity": 0.2859,
+          "preview": "ch 2. Marginal regressions appear only on the three smallest repositories, consistent with pass@1 variance on small repos exceeding the per-repo gain. AHE also cuts aggregate token"
+        },
+        {
+          "document_id": "7b7add4488da35c33e99474d",
+          "chunk_id": 18,
+          "similarity": 0.2774,
+          "preview": "baselines ACE [49] and Training-Free GRPO (TF-GRPO) [4] start from the same NexAU0 seed. AHE outperforms both human-designed and self-evolve baselines AHE outperforms every baselin"
+        },
+        {
+          "document_id": "7b7add4488da35c33e99474d",
+          "chunk_id": 26,
+          "similarity": 0.2654,
+          "preview": "eering (AHE), an observability-driven loop that turns a coding agent’s harness into a learnable adaptation surface while the base model remains fixed. AHE exposes components as fil"
+        },
+        {
+          "document_id": "7b7add4488da35c33e99474d",
+          "chunk_id": 108,
+          "similarity": 0.2623,
+          "preview": "only self-evolution baselines, which broadens access to capable coding assistants for academic groups, smaller organizations, and educational settings Because the loop encodes recu"
+        }
+      ],
+      "filename": "harness.pdf",
+      "current_document_id": "7b7add4488da35c33e99474d"
+    },
+    {
+      "case_id": "gp011",
+      "question": "Does designing agent loops eliminate the need for prompt engineering, according to the paper?",
+      "expected_answer_points": [
+        "loops do not retire prompt engineering",
+        "loop and prompt are distinct tools with distinct uses"
+      ],
+      "old_reference": {
+        "document_id": "a26a0a845b9004cd2b884c79",
+        "chunk_id": 1
+      },
+      "status": "manual_evidence_review_required",
+      "top_candidates": [
+        {
+          "document_id": "23b038dd8383e3d47638322b",
+          "chunk_id": 1,
+          "similarity": 1.0,
+          "preview": "loop, and we argue, against the stronger headlines, that it does not retire prompt engineering; loop and prompt are distinct tools with distinct uses. We offer four contributions: "
+        },
+        {
+          "document_id": "23b038dd8383e3d47638322b",
+          "chunk_id": 5,
+          "similarity": 0.3572,
+          "preview": "neering,” https://www.youtube. com/watch?v=JirDfgJcJFU, which argues that the title is a provocation a prompt (Section 3). We give an anatomy and taxonomy of loop specifications, o"
+        },
+        {
+          "document_id": "23b038dd8383e3d47638322b",
+          "chunk_id": 39,
+          "similarity": 0.3265,
+          "preview": "on in The New Stack, “Loop Engineering.” 17S. Willison, “Designing age terminal states and memory as first-class configuration, so that a loop’s position in our taxonomy is declare"
+        },
+        {
+          "document_id": "23b038dd8383e3d47638322b",
+          "chunk_id": 4,
+          "similarity": 0.3015,
+          "preview": "inds, runs, verifies and remembers the work without a human in the middle of each step. Each layer subsumes the previous one rather than discarding it We therefore resist the stron"
+        },
+        {
+          "document_id": "23b038dd8383e3d47638322b",
+          "chunk_id": 20,
+          "similarity": 0.2761,
+          "preview": "r-loop table and machine-readable JSON) accompany this paper; the corpus is the public Loop Library, https://signals.forwardfuture.ai/loop-library/. 8 When a judge appears, it rare"
+        }
+      ],
+      "filename": "loop.pdf",
+      "current_document_id": "23b038dd8383e3d47638322b"
+    }
+  ],
+  "summary": {
+    "candidate_chunk_count": 1101,
+    "processed_document_count": 12,
+    "gold_reference_count": 15,
+    "reference_status_counts": {
+      "manual_evidence_review_required": 15
+    },
+    "gold_labels_changed": false
+  }
+}

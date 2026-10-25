@@ -1,0 +1,271 @@
+"""Privacy-conscious persistence for evaluated KnowledgeMesh trajectories."""
+
+from __future__ import annotations
+
+import json
+from contextlib import contextmanager
+import math
+import sqlite3
+import tempfile
+import uuid
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
+
+from app.evaluation.contracts import (
+    FAILURE_CATEGORIES,
+    SAFE_METRIC_NAMES,
+    SAFE_STATUSES,
+    SAFE_STEPS,
+)
+
+
+STATUSES = {"success", "recovered", "failed"}
+MAX_EVENTS = 500
+
+
+@contextmanager
+def _managed_connection(database_path: str | Path):
+    """Commit or roll back a transaction, then always close SQLite."""
+    connection = sqlite3.connect(database_path, timeout=5.0)
+    try:
+        with connection:
+            yield connection
+    finally:
+        connection.close()
+
+
+
+def _sanitize_trajectory(trajectory: Any) -> dict[str, Any]:
+    """Validate and retain only fields approved for trajectory storage."""
+    if not isinstance(trajectory, dict):
+        raise ValueError("trajectory must be an object")
+
+    status = trajectory.get("trajectory_status", trajectory.get("status"))
+    if not isinstance(status, str) or status not in STATUSES:
+        raise ValueError("unrecognized trajectory status")
+
+    failures = trajectory.get("failure_taxonomy", [])
+    if not isinstance(failures, list) or any(
+        not isinstance(item, str) for item in failures
+    ):
+        raise ValueError("failure_taxonomy must be a list of strings")
+
+    if len(failures) > len(FAILURE_CATEGORIES):
+        raise ValueError("too many failure categories")
+
+    unknown = set(failures) - FAILURE_CATEGORIES
+    if unknown:
+        raise ValueError("unrecognized failure categories")
+
+    metrics = trajectory.get("metrics", trajectory.get("trajectory_metrics", {}))
+    if not isinstance(metrics, dict):
+        raise ValueError("metrics must be an object")
+
+    safe_metrics: dict[str, float | int] = {}
+    for name in SAFE_METRIC_NAMES:
+        if name not in metrics or metrics[name] is None:
+            continue
+        value = metrics[name]
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            raise ValueError(f"metric {name!r} must be a number in [0, 1]")
+        try:
+            valid_metric = math.isfinite(value) and 0 <= value <= 1
+        except (OverflowError, TypeError, ValueError):
+            valid_metric = False
+        if not valid_metric:
+            raise ValueError(f"metric {name!r} must be finite and in [0, 1]")
+        safe_metrics[name] = value
+
+    trace = trajectory.get("evaluation_trace", trajectory.get("trace", []))
+    if not isinstance(trace, list):
+        raise ValueError("trace must be a list")
+    if len(trace) > MAX_EVENTS:
+        raise ValueError(f"trace exceeds maximum of {MAX_EVENTS} events")
+
+    safe_trace = []
+    for event in trace:
+        if not isinstance(event, dict):
+            raise ValueError("each trace event must be an object")
+        step, event_status = event.get("step", ""), event.get("status", "")
+        if not isinstance(step, str) or not isinstance(event_status, str):
+            raise ValueError("trace step and status must be strings")
+        safe_step = step if step in SAFE_STEPS else "unknown"
+        safe_event = {
+            "step": safe_step,
+            "status": (
+                event_status if event_status in SAFE_STATUSES else "unknown"
+            ),
+        }
+
+        # Only retain explicitly approved scalar diagnostics from grounding.
+        # Never persist raw claims, evidence, citations, or nested objects.
+        details = event.get("details")
+        if safe_step == "grounding_critic" and isinstance(details, dict):
+            safe_details: dict[str, bool | int | float] = {}
+
+            count_fields = (
+                "claim_count",
+                "atomic_claim_count",
+                "unsupported_atomic_count",
+                "uncited_claim_count",
+                "invalid_citation_count",
+                "hhem_call_count",
+            )
+            for name in count_fields:
+                value = details.get(name)
+                if (
+                    isinstance(value, int)
+                    and not isinstance(value, bool)
+                    and 0 <= value <= 100000
+                ):
+                    safe_details[name] = value
+
+            duration_fields = ("grounding_ms", "hhem_total_ms")
+            for name in duration_fields:
+                value = details.get(name)
+                if (
+                    isinstance(value, (int, float))
+                    and not isinstance(value, bool)
+                    and math.isfinite(value)
+                    and 0 <= value <= 1_000_000_000
+                ):
+                    safe_details[name] = value
+
+            score = details.get("support_score")
+            if (
+                isinstance(score, (int, float))
+                and not isinstance(score, bool)
+                and math.isfinite(score)
+                and 0 <= score <= 1
+            ):
+                safe_details["support_score"] = score
+
+            for name in ("is_grounded", "answer_supported"):
+                value = details.get(name)
+                if isinstance(value, bool):
+                    safe_details[name] = value
+
+            if safe_details:
+                safe_event["details"] = safe_details
+
+        safe_trace.append(safe_event)
+
+    return {
+        "trajectory_status": status,
+        "failure_taxonomy": sorted(set(failures)),
+        "metrics": safe_metrics,
+        "evaluation_trace": safe_trace,
+    }
+
+
+def initialize_store(database_path: str | Path) -> None:
+    """Create the trajectory table without modifying other tables."""
+    path = Path(database_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with _managed_connection(path) as connection:
+        connection.execute("""
+            CREATE TABLE IF NOT EXISTS evaluated_trajectories (
+                trajectory_id TEXT PRIMARY KEY,
+                created_at TEXT NOT NULL,
+                trajectory_status TEXT NOT NULL
+                    CHECK (trajectory_status IN ('success', 'recovered', 'failed')),
+                failure_taxonomy_json TEXT NOT NULL,
+                metrics_json TEXT NOT NULL,
+                trace_json TEXT NOT NULL
+            )
+        """)
+        connection.execute("""
+            CREATE INDEX IF NOT EXISTS
+            idx_evaluated_trajectories_created_at
+            ON evaluated_trajectories(created_at)
+        """)
+
+
+def record_trajectory(
+    database_path: str | Path,
+    trajectory: dict[str, Any],
+) -> str:
+    """Persist a sanitized trajectory and return its opaque ID."""
+    safe = _sanitize_trajectory(trajectory)
+    initialize_store(database_path)
+
+    trajectory_id = str(uuid.uuid4())
+    created_at = datetime.now(timezone.utc).isoformat()
+
+    with _managed_connection(database_path) as connection:
+        connection.execute(
+            """
+            INSERT INTO evaluated_trajectories (
+                trajectory_id, created_at, trajectory_status,
+                failure_taxonomy_json, metrics_json, trace_json
+            ) VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (
+                trajectory_id,
+                created_at,
+                safe["trajectory_status"],
+                json.dumps(safe["failure_taxonomy"], sort_keys=True),
+                json.dumps(safe["metrics"], sort_keys=True),
+                json.dumps(safe["evaluation_trace"], sort_keys=True),
+            ),
+        )
+
+    return trajectory_id
+
+
+def export_trajectories_jsonl(
+    database_path: str | Path,
+    output_path: str | Path,
+    *,
+    limit: int = 10000,
+) -> int:
+    """Export miner-compatible records; never export raw request content."""
+    if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 100000:
+        raise ValueError("limit must be an integer between 1 and 100000")
+
+    source = Path(database_path)
+    if not source.is_file():
+        raise FileNotFoundError(source)
+
+    with _managed_connection(source) as connection:
+        rows = connection.execute(
+            """
+            SELECT trajectory_status, failure_taxonomy_json,
+                   metrics_json, trace_json
+            FROM evaluated_trajectories
+            ORDER BY created_at, trajectory_id
+            LIMIT ?
+            """,
+            (limit,),
+        ).fetchall()
+
+    target = Path(output_path)
+    if target.resolve() == source.resolve():
+        raise ValueError("output_path must not overwrite the database")
+    target.parent.mkdir(parents=True, exist_ok=True)
+    fd, temporary_name = tempfile.mkstemp(
+        prefix=f".{target.name}.", suffix=".tmp", dir=str(target.parent)
+    )
+    import os
+    os.close(fd)
+    temporary = Path(temporary_name)
+
+    try:
+        with temporary.open("w", encoding="utf-8", newline="\n") as stream:
+            for status, failures, metrics, trace in rows:
+                record = {
+                    "trajectory": {
+                        "trajectory_status": status,
+                        "failure_taxonomy": json.loads(failures),
+                        "metrics": json.loads(metrics),
+                        "evaluation_trace": json.loads(trace),
+                    }
+                }
+                stream.write(json.dumps(record, sort_keys=True) + "\n")
+        temporary.replace(target)
+    except BaseException:
+        temporary.unlink(missing_ok=True)
+        raise
+
+    return len(rows)

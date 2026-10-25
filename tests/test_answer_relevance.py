@@ -212,6 +212,10 @@ def test_answer_abstention_node():
         "evaluation_trace": [],
         "answer_useful": False,
         "usefulness_score": 0.08,
+        "grounding_feedback": [
+            "All substantive claims passed strict grounding validation."
+        ],
+        "citation_feedback": "Previous attempt passed citation validation.",
     }
 
     result = answer_abstention_node(state)
@@ -223,6 +227,8 @@ def test_answer_abstention_node():
     assert result["grounding_valid"] is False
     assert result["citation_valid"] is False
     assert result["support_score"] == 0.0
+    assert result["grounding_feedback"] == []
+    assert result["citation_feedback"] == ""
     assert result["final_answer"].startswith(
         "I couldn't find evidence"
     )

@@ -1,0 +1,334 @@
+diff --git a/app/agents/nodes/grounding_critic.py b/app/agents/nodes/grounding_critic.py
+index 85d8a82..f89ec8b 100644
+--- a/app/agents/nodes/grounding_critic.py
++++ b/app/agents/nodes/grounding_critic.py
+@@ -1599,7 +1599,7 @@ def _deterministic_exact_support(
+ 
+ def _get_entailment_scorer():
+     try:
+-        from app.tools.entailment_tool import score_entailment, get_hhem_profile
++        from app.tools.entailment_tool import score_entailment
+ 
+         return score_entailment
+ 
+@@ -2258,7 +2258,9 @@ def _audit_citation_consistency(
+             continue
+ 
+         citations = _dedupe_preserve_order(
+-            atomic_result.get("citations") or []
++            atomic_result.get("source_citations")
++            or atomic_result.get("citations")
++            or []
+         )
+ 
+         if not citations:
+@@ -2406,8 +2408,9 @@ def _build_revision_prompt(
+ # ---------------------------------------------------------------------------
+ 
+ 
+-def grounding_critic_node(
++def _grounding_critic_node_with_profile(
+     state: Dict[str, Any],
++    hhem_profile: Dict[str, float],
+ ) -> Dict[str, Any]:
+     """
+     Strict post-generation grounding validator.
+@@ -2415,9 +2418,6 @@ def grounding_critic_node(
+ 
+     grounding_started = perf_counter()
+ 
+-    # Per-pass HHEMv2 profiling baseline.
+-    from app.tools.entailment_tool import get_hhem_profile
+-    hhem_profile_start = get_hhem_profile()
+ 
+     final_answer = _safe_text(
+         state.get("final_answer")
+@@ -2497,7 +2497,11 @@ def grounding_critic_node(
+                     and math.isfinite(score)
+                     and 0.0 <= score <= 1.0
+                 ):
+-                    entailment_cache[(claim, evidence)] = float(score)
++                    normalized_claim = _clean_claim_text(claim)
++                    if normalized_claim:
++                        entailment_cache[
++                            (normalized_claim, evidence)
++                        ] = float(score)
+ 
+     cache_entries_received = len(entailment_cache)
+ 
+@@ -2569,6 +2573,8 @@ def grounding_critic_node(
+                 entailment_cache,
+             )
+ 
++            result["source_citations"] = list(citations)
++
+             best_citation = _safe_text(
+                 result.get("best_citation")
+             )
+@@ -2727,7 +2733,11 @@ def grounding_critic_node(
+ 
+     semantic_support_ok = bool(substantive_results and not unsupported_claims)
+ 
+-    citation_support_ok = bool(not uncited_claims and not invalid_citations)
++    citation_support_ok = bool(
++        not uncited_claims
++        and not invalid_citations
++        and citation_consistency["passed"]
++    )
+ 
+     answer_supported = bool(semantic_support_ok and citation_support_ok)
+ 
+@@ -2796,16 +2806,8 @@ def grounding_critic_node(
+     # Final state update
+     # ------------------------------------------------------------------
+ 
+-    hhem_profile_end = get_hhem_profile()
+-    hhem_call_count = (
+-        int(hhem_profile_end.get("call_count", 0))
+-        - int(hhem_profile_start.get("call_count", 0))
+-    )
+-    hhem_total_ms = round(
+-        float(hhem_profile_end.get("total_ms", 0.0))
+-        - float(hhem_profile_start.get("total_ms", 0.0)),
+-        2,
+-    )
++    hhem_call_count = int(hhem_profile["call_count"])
++    hhem_total_ms = round(float(hhem_profile["total_ms"]), 2)
+ 
+     grounding_ms = round(
+         (perf_counter() - grounding_started) * 1000,
+@@ -2900,3 +2902,19 @@ def grounding_critic_node(
+             )
+         ),
+     }
++
++
++def grounding_critic_node(
++    state: Dict[str, Any],
++) -> Dict[str, Any]:
++    """Run grounding validation with exception-safe HHEM profiling."""
++    from app.tools.entailment_tool import (
++        start_hhem_profile,
++        stop_hhem_profile,
++    )
++
++    profile_token, profile = start_hhem_profile()
++    try:
++        return _grounding_critic_node_with_profile(state, profile)
++    finally:
++        stop_hhem_profile(profile_token)
+diff --git a/tests/test_grounding_critic.py b/tests/test_grounding_critic.py
+index 3e94dda..eac56f5 100644
+--- a/tests/test_grounding_critic.py
++++ b/tests/test_grounding_critic.py
+@@ -105,9 +105,23 @@ def test_grounding_node_restores_serialized_entailment_cache(monkeypatch):
+             ][:limit],
+     )
+ 
+-    # Stable profile values isolate this test from real HHEMv2 inference.
+-    profile = {"call_count": 0, "total_ms": 0.0}
+-    monkeypatch.setattr(entailment_tool, "get_hhem_profile", lambda: profile.copy())
++    # Controlled per-pass profiles isolate accumulation from real HHEMv2.
++    profiles = iter([
++        {"call_count": 2, "total_ms": 12.34},
++        {"call_count": 1, "total_ms": 5.67},
++        {"call_count": 3, "total_ms": 8.90},
++    ])
++
++    def fake_start_hhem_profile():
++        profile = next(profiles)
++        return object(), profile
++
++    monkeypatch.setattr(
++        entailment_tool,
++        "start_hhem_profile",
++        fake_start_hhem_profile,
++    )
++    monkeypatch.setattr(entailment_tool, "stop_hhem_profile", lambda token: None)
+ 
+     initial_state = {
+         "final_answer": f"{claim} [chunk_1]",
+@@ -127,19 +141,47 @@ def test_grounding_node_restores_serialized_entailment_cache(monkeypatch):
+     assert len(scorer_calls) == 1
+     assert first["entailment_cache"]
+     assert first["cache_entries_returned"] >= 1
++    assert first["hhem_call_count"] == 2
++    assert first["hhem_total_ms"] == 12.34
++    assert first["request_hhem_call_count"] == 2
++    assert first["request_hhem_total_ms"] == 12.34
++    assert first["grounding_pass_count"] == 1
++
++    # Simulate serialized cache keys containing Markdown and citation suffixes.
++    serialized_cache = [
++        {
++            **entry,
++            "claim": f"**{entry['claim']}** [chunk_1]",
++        }
++        for entry in first["entailment_cache"]
++    ]
+ 
+     second = grounding_critic_node(
+         {
+             **initial_state,
+-            "entailment_cache": first["entailment_cache"],
++            "entailment_cache": serialized_cache,
+             "grounding_pass_count": first["grounding_pass_count"],
++            "request_hhem_call_count": first["request_hhem_call_count"],
++            "request_hhem_total_ms": first["request_hhem_total_ms"],
+         }
+     )
+ 
+-    assert len(scorer_calls) == 1, "Second pass repeated an entailment score"
++    assert len(scorer_calls) == 1, (
++        "A normalized cached score was recomputed after serialized-key restoration"
++    )
+     assert second["cache_entries_received"] >= 1
+     assert second["entailment_cache_hits"] >= 1
+     assert second["cache_entries_returned"] >= 1
++    assert second["hhem_call_count"] == 1
++    assert second["hhem_total_ms"] == 5.67
++    assert second["request_hhem_call_count"] == 3
++    assert second["request_hhem_total_ms"] == 18.01
++    assert second["grounding_pass_count"] == 2
++    assert all(
++        "[chunk_1]" not in entry["claim"]
++        and not entry["claim"].startswith("**")
++        for entry in second["entailment_cache"]
++    ), "Restored cache keys were not normalized"
+ 
+     # Invalid restored scores must be rejected and recomputed.
+     invalid_cache = [
+@@ -390,3 +432,133 @@ def test_grounding_node_rejects_claim_when_source_company_mismatches_query(
+     assert result["revision_prompt"], (
+         "The unsupported claim should produce revision guidance."
+     )
++
++
++def test_grounding_critic_restores_hhem_profile_after_exception(monkeypatch):
++    import pytest
++    import app.agents.nodes.grounding_critic as grounding
++    import app.tools.entailment_tool as entailment_tool
++
++    outer_token, outer_profile = entailment_tool.start_hhem_profile()
++
++    def fail_inside_node(state, profile):
++        raise RuntimeError("intentional profiling cleanup test")
++
++    try:
++        monkeypatch.setattr(
++            grounding,
++            "_grounding_critic_node_with_profile",
++            fail_inside_node,
++        )
++
++        with pytest.raises(
++            RuntimeError,
++            match="intentional profiling cleanup test",
++        ):
++            grounding.grounding_critic_node({})
++
++        assert entailment_tool._active_hhem_profile.get() is outer_profile
++    finally:
++        entailment_tool.stop_hhem_profile(outer_token)
++
++
++def test_citation_audit_flags_nonselected_available_citation():
++    import app.agents.nodes.grounding_critic as grounding
++
++    result = grounding._audit_citation_consistency(
++        atomic_results=[
++            {
++                "claim": "The platform ranks retrieved passages before generation.",
++                "citations": ["chunk_supporting", "chunk_unrelated"],
++                "best_citation": "chunk_supporting",
++                "score": 0.95,
++                "supported": True,
++                "support_method": "entailment",
++                "best_evidence_unit": (
++                    "The platform ranks retrieved passages before generation."
++                ),
++            }
++        ],
++        evidence_map={
++            "chunk_supporting": [
++                "The platform ranks retrieved passages before generation."
++            ],
++            "chunk_unrelated": [
++                "The platform stores user interface preferences."
++            ],
++        },
++    )
++
++    assert result["passed"] is False
++    assert result["violation_count"] == 1
++    assert result["violations"][0]["citation"] == "chunk_unrelated"
++    assert result["violations"][0]["support_method"] == "not_selected"
++
++
++def test_grounding_node_rejects_unrelated_available_citation(monkeypatch):
++    import app.agents.nodes.grounding_critic as grounding
++    import app.tools.entailment_tool as entailment_tool
++
++    claim = "The platform ranks retrieved passages before generation."
++    supporting_evidence = claim
++    unrelated_evidence = "The platform stores user interface preferences."
++
++    monkeypatch.setattr(
++        grounding,
++        "_validate_atomic_claim",
++        lambda claim, citations, evidence_map, entailment_cache=None: {
++            "claim": claim,
++            "score": 1.0,
++            "supported": True,
++            "best_evidence_unit": supporting_evidence,
++            "best_citation": "chunk_supporting",
++            "citations": ["chunk_supporting"],
++            "support_method": "deterministic_exact_match",
++        },
++    )
++    monkeypatch.setattr(
++        grounding,
++        "_split_compound_claim",
++        lambda text: [text],
++    )
++    monkeypatch.setattr(
++        entailment_tool,
++        "start_hhem_profile",
++        lambda: (object(), {"call_count": 0, "total_ms": 0.0}),
++    )
++    monkeypatch.setattr(
++        entailment_tool,
++        "stop_hhem_profile",
++        lambda token: None,
++    )
++
++    state = {
++        "final_answer": (
++            f"{claim} [chunk_supporting] [chunk_unrelated]"
++        ),
++        "citation_provenance": {
++            "chunk_supporting": {
++                "citation_id": "chunk_supporting",
++                "text": supporting_evidence,
++                "document_id": "doc_supporting",
++                "chunk_id": 1,
++            },
++            "chunk_unrelated": {
++                "citation_id": "chunk_unrelated",
++                "text": unrelated_evidence,
++                "document_id": "doc_unrelated",
++                "chunk_id": 2,
++            },
++        },
++        "evaluation_trace": [],
++    }
++
++    result = grounding.grounding_critic_node(state)
++
++    assert result["citation_consistency"]["passed"] is False, (
++        "The audit must inspect the citations actually present in the answer, "
++        "including available citations that do not support the claim."
++    )
++    assert result["is_grounded"] is False, (
++        "An answer containing an unrelated citation must not pass grounding."
++    )

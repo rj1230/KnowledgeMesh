@@ -1,0 +1,266 @@
+import json
+import sqlite3
+
+import pytest
+
+from app.evaluation.store import (
+    export_trajectories_jsonl,
+    initialize_store,
+    record_trajectory,
+)
+
+
+def _trajectory(status="recovered"):
+    return {
+        "status": status,
+        "failure_taxonomy": ["RETRIEVAL_FAILURE"] if status != "success" else [],
+        "metrics": {"unsupported_claim_rate": 0.25, "secret_metric": 0.5},
+        "trace": [
+            {
+                "step": "private_retrieval",
+                "status": "failed",
+                "details": {"question": "PRIVATE QUESTION"},
+            },
+            {
+                "step": "customer@example.com",
+                "status": "private answer: secret-token",
+                "details": {"answer": "PRIVATE ANSWER"},
+            },
+        ],
+        "question": "PRIVATE QUESTION",
+        "answer": "PRIVATE ANSWER",
+    }
+
+
+@pytest.mark.parametrize("status", ["success", "recovered", "failed"])
+def test_round_trip_preserves_status_without_raw_content(tmp_path, status):
+    database = tmp_path / "test.db"
+    output = tmp_path / "export.jsonl"
+
+    record_trajectory(database, _trajectory(status))
+    assert export_trajectories_jsonl(database, output) == 1
+
+    record = json.loads(output.read_text(encoding="utf-8"))
+    trajectory = record["trajectory"]
+    assert trajectory["trajectory_status"] == status
+
+    serialized = json.dumps(record)
+    for secret in (
+        "PRIVATE QUESTION",
+        "PRIVATE ANSWER",
+        "customer@example.com",
+        "secret-token",
+        "secret_metric",
+    ):
+        assert secret not in serialized
+
+    assert trajectory["evaluation_trace"][1] == {
+        "step": "unknown",
+        "status": "unknown",
+    }
+
+
+def test_grounding_diagnostics_survive_storage_without_private_content(tmp_path):
+    database = tmp_path / "grounding.db"
+    output = tmp_path / "grounding.jsonl"
+
+    trajectory = _trajectory()
+    trajectory["trace"] = [
+        {
+            "step": "grounding_critic",
+            "status": "failed",
+            "details": {
+                "claim_count": 2,
+                "atomic_claim_count": 5,
+                "unsupported_atomic_count": 2,
+                "citation_violation_count": 4,
+                "citation_warning_count": 1,
+                "uncited_claim_count": 1,
+                "invalid_citation_count": 0,
+                "grounding_ms": 123.5,
+                "hhem_call_count": 3,
+                "hhem_total_ms": 45.0,
+                "support_score": 0.62,
+                "is_grounded": False,
+                "answer_supported": False,
+                "claim": "PRIVATE CLAIM TEXT",
+                "evidence": {"text": "PRIVATE EVIDENCE"},
+                "citation_id": "PRIVATE-CITATION-ID",
+                "unapproved_metric": 999,
+            },
+        }
+    ]
+
+    record_trajectory(database, trajectory)
+    assert export_trajectories_jsonl(database, output) == 1
+
+    record = json.loads(output.read_text(encoding="utf-8"))
+    event = record["trajectory"]["evaluation_trace"][0]
+    details = event["details"]
+
+    assert details["atomic_claim_count"] == 5
+    assert details["unsupported_atomic_count"] == 2
+    assert details["citation_violation_count"] == 4
+    assert details["citation_warning_count"] == 1
+    assert details["unsupported_atomic_count"] / details["atomic_claim_count"] == 0.4
+    assert details["grounding_ms"] == 123.5
+    assert details["hhem_call_count"] == 3
+    assert details["support_score"] == 0.62
+
+    serialized = json.dumps(record)
+    for secret in (
+        "PRIVATE CLAIM TEXT",
+        "PRIVATE EVIDENCE",
+        "PRIVATE-CITATION-ID",
+        "unapproved_metric",
+    ):
+        assert secret not in serialized
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("atomic_claim_count", True),
+        ("unsupported_atomic_count", -1),
+        ("hhem_call_count", 100001),
+        ("grounding_ms", float("inf")),
+        ("support_score", 1.5),
+    ],
+)
+def test_invalid_grounding_diagnostics_are_omitted(tmp_path, field, value):
+    trajectory = _trajectory()
+    trajectory["trace"] = [{
+        "step": "grounding_critic",
+        "status": "failed",
+        "details": {field: value},
+    }]
+
+    record_trajectory(tmp_path / "invalid-details.db", trajectory)
+    exported = _sanitize_for_test(tmp_path / "invalid-details.db")
+    details = exported["evaluation_trace"][0].get("details", {})
+
+    assert field not in details
+
+
+def _sanitize_for_test(database):
+    from app.evaluation.store import _sanitize_trajectory
+
+    # Read the persisted trace through the same public export path.
+    output = database.with_suffix(".jsonl")
+    export_trajectories_jsonl(database, output)
+    record = json.loads(output.read_text(encoding="utf-8"))
+    return record["trajectory"]
+
+
+def test_successful_trajectory_has_no_failure_taxonomy(tmp_path):
+    database = tmp_path / "test.db"
+    record_trajectory(database, _trajectory("success"))
+
+    with sqlite3.connect(database) as connection:
+        row = connection.execute(
+            "SELECT failure_taxonomy_json FROM evaluated_trajectories"
+        ).fetchone()
+
+    assert json.loads(row[0]) == []
+
+
+def test_invalid_status_is_rejected(tmp_path):
+    with pytest.raises(ValueError, match="status"):
+        record_trajectory(tmp_path / "test.db", _trajectory("unknown"))
+
+
+def test_unknown_failure_category_is_rejected(tmp_path):
+    trajectory = _trajectory()
+    trajectory["failure_taxonomy"] = ["INVENTED_FAILURE"]
+
+    with pytest.raises(ValueError, match="failure categories"):
+        record_trajectory(tmp_path / "test.db", trajectory)
+
+
+def test_invalid_metric_is_rejected(tmp_path):
+    trajectory = _trajectory()
+    trajectory["metrics"]["unsupported_claim_rate"] = 2.0
+
+    with pytest.raises(ValueError, match="finite and in"):
+        record_trajectory(tmp_path / "test.db", trajectory)
+
+
+def test_export_refuses_invalid_limit(tmp_path):
+    database = tmp_path / "test.db"
+    initialize_store(database)
+
+    with pytest.raises(ValueError, match="limit"):
+        export_trajectories_jsonl(database, tmp_path / "out.jsonl", limit=0)
+
+
+def test_store_does_not_modify_existing_tables(tmp_path):
+    database = tmp_path / "test.db"
+    with sqlite3.connect(database) as connection:
+        connection.execute("CREATE TABLE existing_table (value TEXT)")
+        connection.execute("INSERT INTO existing_table VALUES ('preserve-me')")
+
+    initialize_store(database)
+
+    with sqlite3.connect(database) as connection:
+        value = connection.execute(
+            "SELECT value FROM existing_table"
+        ).fetchone()[0]
+
+    assert value == "preserve-me"
+
+
+def test_extremely_large_metric_is_rejected_cleanly(tmp_path):
+    trajectory = _trajectory()
+    trajectory["metrics"]["unsupported_claim_rate"] = 10**10000
+
+    with pytest.raises(ValueError, match="finite and in"):
+        record_trajectory(tmp_path / "test.db", trajectory)
+
+
+def test_unhashable_status_is_rejected_cleanly(tmp_path):
+    trajectory = _trajectory()
+    trajectory["status"] = []
+
+    with pytest.raises(ValueError, match="status"):
+        record_trajectory(tmp_path / "test.db", trajectory)
+
+
+def test_export_refuses_to_overwrite_database(tmp_path):
+    database = tmp_path / "test.db"
+    record_trajectory(database, _trajectory())
+
+    with pytest.raises(ValueError, match="must not overwrite"):
+        export_trajectories_jsonl(database, database)
+
+def test_all_trajectory_metrics_survive_storage_and_export(tmp_path):
+    database = tmp_path / "metrics.db"
+    output = tmp_path / "metrics.jsonl"
+
+    expected = {
+        "hop_success_rate": 1.0,
+        "required_hop_completion": 1.0,
+        "retrieval_success_rate": 0.5,
+        "evidence_acquisition_rate": 1.0,
+        "web_fallback_rate": 0.0,
+        "citation_support_rate": 1.0,
+        "unsupported_claim_rate": 0.25,
+        "revision_rate": 1.0,
+        "revision_success_rate": 1.0,
+        "recovery_after_grounding_failure": 1.0,
+        "recovery_after_citation_failure": 0.0,
+    }
+
+    trajectory = _trajectory()
+    trajectory["metrics"] = {
+        **expected,
+        "secret_metric": 0.5,
+    }
+
+    record_trajectory(database, trajectory)
+    assert export_trajectories_jsonl(database, output) == 1
+
+    record = json.loads(output.read_text(encoding="utf-8"))
+    exported_metrics = record["trajectory"]["metrics"]
+
+    assert exported_metrics == expected
+    assert "secret_metric" not in json.dumps(record)

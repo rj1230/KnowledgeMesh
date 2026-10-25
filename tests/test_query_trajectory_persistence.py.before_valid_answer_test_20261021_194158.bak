@@ -1,0 +1,169 @@
+import json
+import sqlite3
+
+import app.main as main
+from app.evaluation.store import record_trajectory as real_record_trajectory
+
+
+PRIVATE_QUESTION = "PRIVATE_QUERY_INTEGRATION_TEST"
+PRIVATE_ANSWER = "PRIVATE_ANSWER_INTEGRATION_TEST"
+
+
+def mock_graph_output():
+    return {
+        "final_answer": PRIVATE_ANSWER,
+        "candidate_answer": PRIVATE_ANSWER,
+        "status": "completed",
+        "citation_valid": True,
+        "is_grounded": True,
+        "trajectory_status": "success",
+        "hop_count": 3,
+        "required_hops": 3,
+        "failure_taxonomy": [],
+        "trajectory_metrics": {
+            "retrieval_success_rate": 1.0,
+            "citation_support_rate": 1.0,
+        },
+        "evaluation_trace": [
+            {"step": "retrieval", "status": "success"},
+            {"step": "generation", "status": "success"},
+        ],
+        "plan": ["Retrieve", "Generate"],
+        "documents": [],
+        "all_documents": [],
+        "graded_documents": [],
+        "web_documents": [],
+    }
+
+
+def mock_query(monkeypatch):
+    monkeypatch.setattr(main, "guard", lambda _q: (False, None))
+    monkeypatch.setattr(
+        main,
+        "rag_agent",
+        type("MockGraph", (), {"invoke": staticmethod(
+            lambda _state, config: mock_graph_output()
+        )})(),
+    )
+
+
+def test_query_persists_sanitized_trajectory_without_private_text(
+    tmp_path, monkeypatch
+):
+    database = tmp_path / "trajectory.db"
+
+    def isolated_record(_configured_database, trajectory):
+        return real_record_trajectory(database, trajectory)
+
+    mock_query(monkeypatch)
+    monkeypatch.setattr(main, "record_trajectory", isolated_record)
+
+    response = main.query(main.QueryRequest(q=PRIVATE_QUESTION))
+
+    assert response["answer"] == PRIVATE_ANSWER
+    assert response["trajectory"]["status"] == "success"
+
+    connection = sqlite3.connect(database)
+    try:
+        rows = connection.execute(
+            """
+            SELECT trajectory_status, failure_taxonomy_json,
+                   metrics_json, trace_json
+            FROM evaluated_trajectories
+            """
+        ).fetchall()
+    finally:
+        connection.close()
+
+    assert len(rows) == 1
+    assert rows[0][0] == "success"
+
+    serialized = json.dumps(rows)
+    assert PRIVATE_QUESTION not in serialized
+    assert PRIVATE_ANSWER not in serialized
+
+
+def test_query_response_survives_trajectory_persistence_failure(
+    monkeypatch
+):
+    mock_query(monkeypatch)
+
+    def fail_persistence(*_args, **_kwargs):
+        raise OSError("simulated storage failure")
+
+    monkeypatch.setattr(main, "record_trajectory", fail_persistence)
+
+    response = main.query(main.QueryRequest(q="SECOND_PRIVATE_QUERY"))
+
+    assert response["answer"] == PRIVATE_ANSWER
+    assert response["trajectory"]["status"] == "success"
+
+def test_query_abstains_when_final_validation_fails_or_is_incomplete(
+    monkeypatch,
+):
+    mock_query(monkeypatch)
+    monkeypatch.setattr(main, "record_trajectory", lambda *_args, **_kwargs: None)
+
+    cases = [
+        (False, True, "citation_validation_failed"),
+        (True, False, "grounding_validation_failed"),
+        (None, None, "validation_incomplete"),
+    ]
+
+    safe_answer = (
+        "I couldn't find evidence in the available sources "
+        "that establishes an answer to your specific question."
+    )
+
+    for citation_valid, is_grounded, expected_status in cases:
+        output = mock_graph_output()
+
+        if citation_valid is None:
+            output.pop("citation_valid", None)
+        else:
+            output["citation_valid"] = citation_valid
+
+        if is_grounded is None:
+            output.pop("is_grounded", None)
+        else:
+            output["is_grounded"] = is_grounded
+
+        monkeypatch.setattr(
+            main,
+            "rag_agent",
+            type(
+                "MockGraph",
+                (),
+                {"invoke": staticmethod(lambda _state, config, o=output: o)},
+            )(),
+        )
+
+        response = main.query(
+            main.QueryRequest(q="VALIDATION_FAIL_CLOSED_TEST")
+        )
+
+        assert response["answer"] == safe_answer
+        assert response["candidate_answer"] == safe_answer
+        assert response["validation_passed"] is False
+        assert response["validation_status"] == expected_status
+
+
+def test_query_http_endpoint_returns_json_and_preserves_answer(monkeypatch):
+    from fastapi.testclient import TestClient
+
+    mock_query(monkeypatch)
+    monkeypatch.setattr(main, "record_trajectory", lambda *_args, **_kwargs: None)
+
+    # Do not enter the TestClient context manager: this avoids running
+    # application startup hooks for this mocked route-level test.
+    client = TestClient(main.app)
+    response = client.post(
+        "/query",
+        json={"q": "HTTP_ROUTE_INTEGRATION_TEST"},
+    )
+
+    assert response.status_code == 200, response.text
+
+    payload = response.json()
+    assert payload["answer"] == PRIVATE_ANSWER
+    assert payload["trajectory"]["status"] == "success"
