@@ -19,3 +19,4 @@ DATA/audit.db
 run.log
 *.bak_*
 scores_*.json
+scores_*.json
