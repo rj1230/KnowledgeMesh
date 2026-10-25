@@ -343,10 +343,10 @@ def answer_abstention_node(
     actually evaluated, and overwriting them made a single failure look
     like a citation failure, a grounding failure and zero support at once.
 
-    The reason is chosen in PIPELINE ORDER: generation, relevance
-    evaluator, citation, relevance, grounding. Relevance runs before
-    grounding, so a relevance failure must be recognised before the
-    (not yet evaluated, or reset) grounding flags are consulted.
+    The reason is chosen in PIPELINE ORDER: generation, named-document
+    scope, relevance evaluator, citation, relevance, grounding. Relevance
+    runs before grounding, so a relevance failure must be recognised before
+    the (not yet evaluated, or reset) grounding flags are consulted.
 
     Consumers must check `answer_abstained` before presenting or scoring
     the answer.
@@ -357,6 +357,18 @@ def answer_abstention_node(
         status_message = (
             "Final answer abstained because the revision could not be "
             "generated and the previous answer had failed validation."
+        )
+    elif (
+        bool(state.get("document_scoped"))
+        and not str(state.get("candidate_answer") or "").strip()
+    ):
+        # The question named a document, retrieval found nothing in it, and
+        # the web fallback was deliberately skipped. No answer was ever
+        # generated, so no validation stage failed.
+        reason = "named_document_has_no_evidence"
+        status_message = (
+            "Final answer abstained because the document named in the "
+            "question has no supporting evidence."
         )
     elif bool(state.get("relevance_evaluator_failed", False)):
         reason = "answer_relevance_evaluator_unavailable"
@@ -378,10 +390,16 @@ def answer_abstention_node(
         reason = "grounding_validation_revision_budget_exhausted"
         status_message = "Final answer abstained because grounding validation failed."
 
-    abstention = (
-        "I couldn't find evidence in the available sources that "
-        "establishes an answer to your specific question."
-    )
+    if reason == "named_document_has_no_evidence":
+        abstention = (
+            "The document you referred to does not contain an answer to this "
+            "question, and I did not substitute other sources."
+        )
+    else:
+        abstention = (
+            "I couldn't find evidence in the available sources that "
+            "establishes an answer to your specific question."
+        )
 
     trace_update = append_trace_event(
         state,

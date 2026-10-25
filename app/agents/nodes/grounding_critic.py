@@ -382,6 +382,31 @@ TABLE_SEPARATOR_PATTERN = re.compile(
 )
 
 
+_ABSENCE_RE = re.compile(
+    r"\b(?:evidence|sources?|documents?|context|passages?|paper|survey|report)\b"
+    r"[^.;]{0,40}\b(?:does|do|did)\s+not\s+"
+    r"(?:contain|provide|include|mention|state|specify|establish|report|cover|address|give)\b"
+    r"|\b(?:there\s+is|there's|is)\s+no\s+(?:evidence|information|data|mention)\b"
+    r"|\bcould(?:n't|\s+not)\s+find\b",
+    re.IGNORECASE,
+)
+
+
+def _is_pure_absence(text: str) -> bool:
+    """A short single-clause statement about what the sources lack.
+
+    Mixed sentences (an absence clause joined to a factual clause) are NOT
+    matched, so the factual part is still verified.
+    """
+    text = _strip_citations(text or "").strip()
+
+    return bool(
+        _ABSENCE_RE.search(text)
+        and len(text.split()) <= 28
+        and not re.search(r";|,\s*(?:while|whereas|but|and)\b", text, re.IGNORECASE)
+    )
+
+
 def _strip_citations(text: str) -> str:
     return CITATION_PATTERN.sub("", text)
 
@@ -559,6 +584,8 @@ def _split_compound_claim(text: str) -> List[str]:
 
         cleaned.append(piece)
 
+    cleaned = [piece for piece in cleaned if not _is_pure_absence(piece)]
+
     return _dedupe_preserve_order(cleaned)
 
 
@@ -583,6 +610,9 @@ def _extract_claim_records(answer: str) -> List[Dict[str, Any]]:
         atomic_claims = _split_compound_claim(claim)
 
         if not atomic_claims:
+            if _is_pure_absence(claim):
+                continue  # a limitation statement; nothing to verify
+
             atomic_claims = [claim]
 
         records.append(

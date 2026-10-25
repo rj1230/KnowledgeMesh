@@ -15,6 +15,10 @@ A retry is only worth its cost if it can change the outcome:
     inference), so an off-topic answer never pays for grounding.
   * A pruned (salvaged) answer is derived from an answer that already
     passed relevance, so it is NOT re-checked for relevance.
+  * A question that names a document is never answered from the web:
+    one rewrite, then abstain.
+  * An answer that only says "the sources don't contain this" abstains
+    immediately; regenerating from the same context cannot change it.
 
 Pipeline
 --------
@@ -30,13 +34,15 @@ planner
               context_evaluator
                 ├── strong → responder
                 ├── insufficient → query_rewriter → private_retry → grader
-                └── web fallback → web_search → grader
+                ├── web fallback → web_search → grader
+                └── named document, no evidence → answer_abstention
 
 responder
   ├── generation failed, first attempt → trajectory_evaluation
   ├── generation failed during a revision
   │      ├── supported lines can be salvaged → apply_pruned_answer
   │      └── otherwise → answer_abstention
+  ├── answer only states the sources lack evidence → answer_abstention
   └── answer generated → citation_check
                            ├── PASS → answer_relevance
                            │            ├── useful → grounding_critic
@@ -78,14 +84,16 @@ Assumptions to verify in the nodes this file does not contain
 3. grounding_critic only helps SALVAGE_FIRST if it offers `pruned_answer`
    even while revision budget remains. If it only offers it once the
    budget is spent, SALVAGE_FIRST is a harmless no-op.
+4. `document_scoped` must be set in state by the planner/retriever and
+   declared in AgentState; otherwise the scoped router never triggers.
 """
 
 from __future__ import annotations
 
 import logging
+import re
 import time
 from typing import Any, Dict
-import re
 
 import logfire
 
@@ -360,12 +368,42 @@ def route_after_context_evaluator(
     return "query_rewriter"
 
 
+def route_after_context_evaluator_scoped(state: AgentState) -> str:
+    """
+    A question that names a document must not be answered from the web.
+
+    Try one query rewrite first; if the document still has nothing, abstain.
+    """
+
+    decision = route_after_context_evaluator(state)
+
+    if decision == "web_search" and bool(state.get("document_scoped")):
+        if _safe_int(state.get("retrieval_rewrite_count", 0)) < 1:
+            logger.info(
+                "Context route: query_rewriter | named document, "
+                "one rewrite before giving up"
+            )
+            return "query_rewriter"
+
+        logger.info(
+            "Context route: abstain | named document has no evidence; "
+            "web fallback skipped"
+        )
+        return "abstain"
+
+    return decision
+
+
 # ============================================================
 # Responder routing
 # ============================================================
+
 _ABSENCE = re.compile(
-    r"\b(does|do|did) not (contain|provide|include|mention|state|specify|establish)"
-    r"|\bno (evidence|information|data)\b|could(n't| not) find",
+    r"\b(?:evidence|sources?|documents?|context|passages?|paper|survey|report)\b"
+    r"[^.;]{0,40}\b(?:does|do|did)\s+not\s+"
+    r"(?:contain|provide|include|mention|state|specify|establish|report|cover|address|give)\b"
+    r"|\b(?:there\s+is|there's|is)\s+no\s+(?:evidence|information|data|mention)\b"
+    r"|\bcould(?:n't|\s+not)\s+find\b",
     re.IGNORECASE,
 )
 
@@ -827,8 +865,8 @@ def apply_pruned_answer_node(
         **trace_update,
         "answer_before_pruning": state.get("final_answer")
         or state.get("candidate_answer"),
-        "final_answer": pruned,
-        "candidate_answer": pruned,
+        "final_answer": "",
+        "candidate_answer": "",
         "answer_pruned": True,
         "generation_failed": False,
         "pruned_claims": removed,
@@ -970,11 +1008,12 @@ def build_graph():
 
     workflow.add_conditional_edges(
         "context_evaluator",
-        route_after_context_evaluator,
+        route_after_context_evaluator_scoped,
         {
             "responder": "responder",
             "query_rewriter": "query_rewriter",
             "web_search": "web_search",
+            "abstain": "answer_abstention",
         },
     )
 
