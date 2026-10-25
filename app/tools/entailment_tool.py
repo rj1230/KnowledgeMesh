@@ -83,7 +83,7 @@ HHEM_BATCH_SIZE = int(os.getenv("HHEM_BATCH_SIZE", "8"))
 
 # Max tokens of premise per pair. 512 means "no extra cap": the premise
 # then only has to fit the model window, as before.
-HHEM_PREMISE_TOKENS = int(os.getenv("HHEM_PREMISE_TOKENS", "512"))
+HHEM_PREMISE_TOKENS = int(os.getenv("HHEM_PREMISE_TOKENS", "256"))
 
 
 # "1" = int8 dynamic quantization of the T5 component (CPU only).
