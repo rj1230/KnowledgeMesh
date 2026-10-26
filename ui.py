@@ -10,7 +10,8 @@ Optional files next to it:
     assets/favicon.png, assets/favicon-warning.png, assets/favicon-error.png
 
 Environment:
-    BACKEND_URL                http://localhost:8000
+    BACKEND_URL                http://127.0.0.1:8000   (use 127.0.0.1, not
+                               localhost, on Windows to avoid an IPv6 delay)
     BACKEND_TIMEOUT_SECONDS    180
     LOGFIRE_TOKEN              optional
     KM_DEBUG=1                 shows developer hints, raw error bodies and the
@@ -38,7 +39,6 @@ import streamlit as st
 from dotenv import load_dotenv
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
-from fastapi.testclient import TestClient
 
 
 # ============================================================
@@ -79,7 +79,7 @@ if STREAMLIT_CLOUD_MODE:
 else:
     DEFAULT_BACKEND_URL = os.getenv(
         "BACKEND_URL",
-        "http://localhost:8000",
+        "http://127.0.0.1:8000",
     ).rstrip("/")
 
 BACKEND_TIMEOUT_SECONDS = int(os.getenv("BACKEND_TIMEOUT_SECONDS", "180"))
@@ -93,14 +93,12 @@ _STRETCH = (
 )
 
 
-def _release_inprocess_backend(client):
-    """Shut down FastAPI lifespan when Streamlit releases the cached client."""
-    client.__exit__(None, None, None)
-
-
-@st.cache_resource(show_spinner=False, on_release=_release_inprocess_backend)
+@st.cache_resource(show_spinner=False)
 def get_inprocess_backend():
     """Create a FastAPI TestClient for Streamlit Cloud mode."""
+    # Imported here so a frontend-only deployment does not need FastAPI.
+    from fastapi.testclient import TestClient
+
     secret_names = (
         "QDRANT_CLUSTER_ENDPOINT",
         "QDRANT_API_KEY",
@@ -123,9 +121,7 @@ def get_inprocess_backend():
 
     from app.main import app
 
-    client = TestClient(app)
-    client.__enter__()  # Run FastAPI startup/lifespan for the cached client.
-    return client
+    return TestClient(app)
 
 
 # ============================================================
@@ -281,6 +277,44 @@ def _generation_failed(status_text: str) -> bool:
 
 
 # ============================================================
+# ABSTENTION (answer withheld by the backend)
+# ============================================================
+
+ABSTENTION_COPY = {
+    "answer_relevance_revision_budget_exhausted": (
+        "The retrieved sources did not address the question, so no answer was given."
+    ),
+    "grounding_validation_revision_budget_exhausted": (
+        "The draft contained claims the sources do not support, so it was withheld."
+    ),
+    "citation_validation_revision_budget_exhausted": (
+        "The draft's citations could not be verified, so it was withheld."
+    ),
+    "named_document_has_no_evidence": (
+        "The document named in the question does not contain an answer, "
+        "so no answer was given."
+    ),
+    "answer_relevance_evaluator_unavailable": (
+        "The relevance check was unavailable, so the answer was not released."
+    ),
+    "generation_failed_during_revision": (
+        "A revision could not be generated and the earlier draft had failed validation."
+    ),
+}
+
+
+def is_abstained(trace) -> bool:
+    return bool((trace or {}).get("answer_abstained"))
+
+
+def abstention_description(trace) -> str:
+    return ABSTENTION_COPY.get(
+        (trace or {}).get("abstention_reason"),
+        "The sources do not establish an answer to this question.",
+    )
+
+
+# ============================================================
 # PAGE CONFIG + FAVICON
 # ============================================================
 
@@ -299,6 +333,7 @@ def _favicon_variant() -> str:
             trace.get("citation_valid") is False
             or trace.get("is_grounded") is False
             or trace.get("web_search_used")
+            or trace.get("answer_abstained")
         ):
             return "favicon-warning"
 
@@ -496,6 +531,10 @@ section[data-testid="stSidebar"] .stDownloadButton>button{justify-content:center
 .km-fail-tags{margin-bottom:3px;color:var(--km-danger);font-size:11.5px;font-weight:600}
 .km-fail-cites{margin-top:4px;color:var(--km-muted);font:12px var(--km-mono)}
 .km-fail-more{padding-top:8px;color:var(--km-muted);font-size:12.5px}
+.km-withheld{margin:10px 0 14px;padding:14px 16px;border:1px solid var(--km-warning-border);border-left:3px solid var(--km-warning);border-radius:var(--km-r-md);background:var(--km-warning-soft)}
+.km-withheld-title{color:var(--km-warning);font-size:14px;font-weight:600}
+.km-withheld-body{margin-top:4px;color:var(--km-ink-2);font-size:12.5px;line-height:1.55}
+.km-withheld-note{margin-top:8px;color:var(--km-muted);font-size:12.5px}
 [class*="st-key-km_cites_"] .stButton>button{min-height:30px;padding:2px 12px;border:1px solid var(--km-accent-border);border-radius:999px;background:var(--km-accent-soft);color:var(--km-accent-strong);font:500 12px var(--km-mono);transition:background .15s,border-color .15s}
 [class*="st-key-km_cites_"] .stButton>button:hover{border-color:var(--km-accent);background:var(--km-surface-3);color:var(--km-ink)}
 [class*="st-key-km_cites_"] [data-testid="stHorizontalBlock"]{gap:.4rem}
@@ -706,11 +745,14 @@ PIPELINE_STAGES = [
 
 STAGE_TITLES = {key: title for key, title, _ in PIPELINE_STAGES}
 
+# The critic's time is the grounding model (HHEM) time summed across the
+# whole request; it does not overlap the other stages, which run in sequence.
 STAGE_LATENCY_FIELDS = {
     "retrieval": "retrieval_latency_ms",
     "reranking": "rerank_latency_ms",
     "grader": "grader_latency_ms",
     "responder": "generation_latency_ms",
+    "critic": "request_hhem_total_ms",
 }
 
 TRACE_PATTERNS = [
@@ -951,6 +993,13 @@ def run_outcome(trace: dict) -> dict:
             ),
         }
 
+    if is_abstained(trace):
+        return {
+            "kind": "abstained",
+            "title": "Answer withheld",
+            "description": abstention_description(trace),
+        }
+
     if trace.get("citation_valid") is False or trace.get("is_grounded") is False:
         return {
             "kind": "warning",
@@ -1006,17 +1055,25 @@ def outcome_badge_class(kind: str) -> str:
         "memory": "ok",
         "fallback": "warning",
         "warning": "warning",
+        "abstained": "warning",
         "failed": "danger",
     }.get(kind, "")
 
 
 def derive_completion_state(
-    status_text, citation_valid, is_grounded, web_search_used, thought_process
+    status_text,
+    citation_valid,
+    is_grounded,
+    web_search_used,
+    thought_process,
+    abstained=False,
 ):
     trace_text = " ".join(str(step) for step in (thought_process or []))
 
     if _generation_failed(status_text):
         return "error", "Completed with generation issue"
+    if abstained:
+        return "complete", "Answer withheld"
     if citation_valid is False or is_grounded is False:
         return "complete", "Completed with validation warning"
     if web_search_used:
@@ -1049,7 +1106,7 @@ def render_run_banner(trace: dict) -> str:
         ("Total time", esc(format_seconds(trace.get("latency")))),
         ("Private evidence", len(private_sources)),
         ("Web evidence", len(web_sources) if web_used else "—"),
-        ("Cited sources", len(answer_sources)),
+        ("Cited sources", 0 if is_abstained(trace) else len(answer_sources)),
         ("Context", esc(context_label)),
     ]
     stats_html = "".join(
@@ -1135,7 +1192,7 @@ def render_latency_panel(trace: dict) -> str:
     slow = bottleneck_key(trace)
     segments, legend, known = [], [], 0.0
 
-    for key in ("retrieval", "reranking", "grader", "responder"):
+    for key in ("retrieval", "reranking", "grader", "responder", "critic"):
         value = stage_latency_ms(trace, key)
 
         if not value:
@@ -1171,24 +1228,19 @@ def render_latency_panel(trace: dict) -> str:
         max(latency * 1000 - total, 0) if isinstance(latency, (int, float)) else None
     )
 
-    # Grounding and HHEM overlap: display them as diagnostics, not extra
-    # latency-bar segments, so backend time is never double-counted.
+    # The Critic segment above is the request-wide HHEM time. The single
+    # grounding pass is shown as a diagnostic only, so it is never counted twice.
     grounding_ms = trace.get("grounding_ms")
-    hhem_ms = trace.get("request_hhem_total_ms")
     hhem_calls = trace.get("request_hhem_call_count")
 
     grounding_detail = ""
     if isinstance(grounding_ms, (int, float)) and grounding_ms >= 0:
         grounding_detail = (
-            f'<div class="km-lat-note">Grounding critic pass: '
+            f'<div class="km-lat-note">Last grounding pass: '
             f"{esc(format_ms(float(grounding_ms)))}"
         )
-        if isinstance(hhem_ms, (int, float)) and hhem_ms >= 0:
-            grounding_detail += (
-                f" &middot; HHEM across request: {esc(format_ms(float(hhem_ms)))}"
-            )
         if isinstance(hhem_calls, int) and hhem_calls >= 0:
-            grounding_detail += f" ({hhem_calls} HHEM calls)"
+            grounding_detail += f" &middot; {hhem_calls} HHEM calls in this request"
         grounding_detail += "</div>"
 
     note = ""
@@ -1299,10 +1351,14 @@ def render_recovery_notice(trace: dict) -> str:
 
 
 def render_partial_answer_notice(trace: dict) -> str:
+    trace = trace or {}
+
+    # Only for an answer that was actually pruned on this turn.
+    if not trace.get("answer_pruned"):
+        return ""
+
     removed = [
-        str(c).strip()
-        for c in (trace or {}).get("pruned_claims") or []
-        if str(c).strip()
+        str(c).strip() for c in trace.get("pruned_claims") or [] if str(c).strip()
     ]
 
     if not removed:
@@ -1315,8 +1371,9 @@ def render_partial_answer_notice(trace: dict) -> str:
         <div class="km-recovery-card">
             <div class="km-recovery-title">{icon("warning", 14, "#e8b25c")} Partial answer</div>
             <div class="km-recovery-body">
-                {len(removed)} point(s) could not be verified against the sources
-                and were removed. What you see below is fully grounded.
+                {len(removed)} statement(s) could not be verified against the sources
+                and were left out of the answer. Everything in the answer is grounded.
+                <div style="margin-top:8px;color:var(--km-muted)">Left out:</div>
                 <ul class="km-trace-list">{items}{more}</ul>
             </div>
         </div>
@@ -1757,11 +1814,16 @@ def render_failure_panel(trace, claims, details, revisions) -> str:
     if safe_int(revisions) >= REVISION_BUDGET:
         facts.append("Revision budget exhausted")
 
-    title = (
-        "Grounding validation failed"
-        if trace.get("is_grounded") is False
-        else "Citation validation failed"
-    )
+    # The checks run in order: citations, relevance, grounding. Name the one
+    # that actually failed instead of assuming grounding.
+    if trace.get("citation_valid") is False:
+        title = "Citation validation failed"
+    elif trace.get("answer_useful") is False:
+        title = "Relevance check failed"
+    elif trace.get("is_grounded") is False:
+        title = "Grounding validation failed"
+    else:
+        title = "Validation failed"
 
     rows = []
 
@@ -1803,8 +1865,24 @@ def render_failure_panel(trace, claims, details, revisions) -> str:
     )
 
 
+def render_abstention_panel(trace) -> str:
+    return (
+        '<div class="km-withheld">'
+        '<div class="km-withheld-title">Answer withheld</div>'
+        f'<div class="km-withheld-body">{esc(abstention_description(trace))}</div>'
+        '<div class="km-withheld-note">The withheld draft and its checks are in '
+        "the Quality tab under Execution details.</div></div>"
+    )
+
+
 def render_answer_health(trace: dict) -> str:
     trace = trace or {}
+
+    # The scores below describe the withheld draft, not the text on screen,
+    # so an abstention gets its own panel instead of misleading tiles.
+    if is_abstained(trace):
+        return render_abstention_panel(trace)
+
     signals = (
         "support_score",
         "usefulness_score",
@@ -1999,6 +2077,11 @@ def open_evidence(source, trace):
 
 def render_citation_row(index, answer, trace):
     trace = trace or {}
+
+    # A withheld answer cites nothing; do not offer sources as if it did.
+    if is_abstained(trace):
+        return
+
     by_id = _sources_by_citation(trace)
     ids = cited_ids(answer, by_id)
     partial_html = render_partial_answer_notice(trace)
@@ -2053,8 +2136,12 @@ def transcript_markdown(messages):
             f"- Reranking latency: {format_ms(trace.get('rerank_latency_ms'))}",
             f"- Grading latency: {format_ms(trace.get('grader_latency_ms'))}",
             f"- Generation latency: {format_ms(trace.get('generation_latency_ms'))}",
+            f"- Grounding model time: {format_ms(trace.get('request_hhem_total_ms'))}",
             "",
         ]
+
+        if is_abstained(trace):
+            lines += [f"- Answer withheld: {abstention_description(trace)}", ""]
 
         for label, key in (
             ("Context quality", "context_quality"),
@@ -2080,7 +2167,7 @@ def transcript_markdown(messages):
 
         answer_sources = trace.get("answer_sources", [])
 
-        if answer_sources:
+        if answer_sources and not is_abstained(trace):
             lines += ["### Cited sources", ""]
 
             for source in answer_sources:
@@ -2107,9 +2194,12 @@ def transcript_markdown(messages):
 
 # ============================================================
 # BACKEND HEALTH
+# Cached briefly so the script does not call /health and /ready on every
+# rerun. clear_backend_caches() / start_new_session() reset them.
 # ============================================================
 
 
+@st.cache_data(ttl=15, show_spinner=False)
 def check_backend_health(backend_url):
     try:
         if STREAMLIT_CLOUD_MODE:
@@ -2131,6 +2221,7 @@ def check_backend_health(backend_url):
         return False
 
 
+@st.cache_data(ttl=15, show_spinner=False)
 def check_backend_ready(backend_url):
     try:
         if STREAMLIT_CLOUD_MODE:
@@ -2179,6 +2270,8 @@ def fetch_kb_stats(backend_url):
 
 
 def clear_backend_caches():
+    check_backend_health.clear()
+    check_backend_ready.clear()
     fetch_kb_stats.clear()
 
 
@@ -2272,6 +2365,9 @@ def start_new_session():
     st.session_state.pending = False
     st.session_state.session_started_at = time.strftime("%H:%M:%S")
 
+    check_backend_health.clear()
+    check_backend_ready.clear()
+
 
 # ============================================================
 # REQUEST HANDLING
@@ -2306,6 +2402,7 @@ def parse_response(data: dict, elapsed: float, http_status: int):
     citation_valid = data.get("citation_valid")
     is_grounded = data.get("is_grounded")
     context_quality = data.get("context_quality")
+    abstained = bool(data.get("answer_abstained", False))
 
     # citation_provenance arrives as a dict keyed by citation id
     raw_provenance = data.get("citation_provenance") or {}
@@ -2357,7 +2454,12 @@ def parse_response(data: dict, elapsed: float, http_status: int):
         private_retrieval_status = "Used"
 
     completion_state, completion_label = derive_completion_state(
-        status_text, citation_valid, is_grounded, web_search_used, thought_process
+        status_text,
+        citation_valid,
+        is_grounded,
+        web_search_used,
+        thought_process,
+        abstained=abstained,
     )
 
     passthrough = (
@@ -2385,6 +2487,10 @@ def parse_response(data: dict, elapsed: float, http_status: int):
         "grounding_pass_count",
         "pruned_claims",
         "answer_pruned",
+        "answer_abstained",
+        "abstention_reason",
+        "terminal_failures",
+        "recovered_failures",
     )
 
     trace = {key: data.get(key) for key in passthrough}
@@ -2520,6 +2626,7 @@ def run_pending_query():
                 answer_source_count=len(trace["answer_sources"]),
                 citation_valid=trace["citation_valid"],
                 is_grounded=trace["is_grounded"],
+                answer_abstained=trace.get("answer_abstained"),
                 latency_seconds=elapsed,
                 retrieval_latency_ms=trace["retrieval_latency_ms"],
                 rerank_latency_ms=trace["rerank_latency_ms"],
@@ -2690,7 +2797,7 @@ with st.sidebar:
                 value=st.session_state.backend_url,
                 label_visibility="collapsed",
                 key="km_backend_url_input",
-                placeholder="http://localhost:8000",
+                placeholder="http://127.0.0.1:8000",
             ).rstrip("/")
 
             if backend_url_input and backend_url_input != st.session_state.backend_url:
@@ -2736,13 +2843,13 @@ with st.sidebar:
 KB_TOPICS = (
     "LLM-based agents",
     "loop engineering",
-    "reliability and rate limiting",
+    "harness engineering",
 )
 
 STARTERS = (
     "What is loop engineering?",
     "What are the main components of an LLM-based agent?",
-    "What does the documentation say about rate limiting?",
+    "How do workflows differ from agents?",
 )
 
 
@@ -2930,7 +3037,7 @@ def render_message(index: int, message: dict, last_index: int):
                     "Used" if trace.get("web_search_used") else "Not used",
                 ),
                 ("Private sources", len(private_list)),
-                ("Answer sources", len(answer_list)),
+                ("Answer sources", 0 if is_abstained(trace) else len(answer_list)),
             ]
             chips_html = "".join(
                 f'<span class="km-chip">{esc(label)} <span class="num">{esc(value)}</span></span>'
@@ -2972,7 +3079,11 @@ def render_message(index: int, message: dict, last_index: int):
                         f'<div class="km-sources">{render_source_cards(items)}</div>'
                     )
 
-            if not answer_list and (private_list or web_list):
+            if (
+                not answer_list
+                and (private_list or web_list)
+                and not is_abstained(trace)
+            ):
                 display_html(
                     '<div class="km-empty-note">Retrieved evidence is listed above, '
                     "but the backend did not record any source as directly used in "
@@ -2989,6 +3100,15 @@ def render_message(index: int, message: dict, last_index: int):
                 st.info("No source evidence was reported for this response.")
 
         with quality_tab:
+            if is_abstained(trace):
+                display_html(
+                    '<div class="km-info-card"><div class="km-info-card-title">'
+                    "About these checks</div>"
+                    '<div class="km-info-card-body">The answer was withheld. '
+                    "The signals and claims below describe the withheld draft, "
+                    "not the text shown to the user.</div></div>"
+                )
+
             quality_html = render_quality_summary(trace)
 
             if quality_html:
