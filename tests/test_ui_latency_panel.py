@@ -48,7 +48,7 @@ def test_latency_panel_works_when_grounding_diagnostics_are_missing():
     )
 
     assert rendered
-    assert "Grounding critic pass" not in rendered
+    assert "Last grounding pass" not in rendered
     assert "HHEM across request" not in rendered
 
 
