@@ -17,6 +17,10 @@ def test_coffee_request_is_blocked_before_rag_graph(
     classifier_result,
     expected_text,
 ):
+    # Simulate completed startup; this test supplies its own classifier result.
+    monkeypatch.setattr(rails, "_rails", object())
+    monkeypatch.setattr(rails, "_check_topic_llm", object())
+
     monkeypatch.setattr(
         rails,
         "_run_topic_classifier",

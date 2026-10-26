@@ -574,8 +574,6 @@ def _run_topic_classifier(
     Classify a request synchronously for the FastAPI pre-RAG gate.
     """
 
-    ensure_rails_initialized()
-
     user_message = str(message or "").strip()
 
     if not user_message:
@@ -595,6 +593,12 @@ def _run_topic_classifier(
             user_message[:120],
         )
         return "TECHNICAL"
+
+    if _check_topic_llm is None:
+        logger.warning(
+            "TOPIC_DIAG: classifier_unavailable result=AMBIGUOUS"
+        )
+        return "AMBIGUOUS"
 
     try:
         logger.info("TOPIC_DIAG: invoking_classifier_sync")
@@ -673,6 +677,14 @@ def guard(
                 message[:120],
             )
             return (True, small_talk)
+
+        try:
+            ensure_rails_initialized()
+        except RuntimeError:
+            logger.exception(
+                "TOPIC_DIAG: guardrails_uninitialized result=BLOCK"
+            )
+            return (True, _AMBIGUOUS_RESPONSE)
 
         scope = _run_topic_classifier(message)
 

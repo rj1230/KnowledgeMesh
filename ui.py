@@ -93,7 +93,12 @@ _STRETCH = (
 )
 
 
-@st.cache_resource(show_spinner=False)
+def _release_inprocess_backend(client):
+    """Shut down FastAPI lifespan when Streamlit releases the cached client."""
+    client.__exit__(None, None, None)
+
+
+@st.cache_resource(show_spinner=False, on_release=_release_inprocess_backend)
 def get_inprocess_backend():
     """Create a FastAPI TestClient for Streamlit Cloud mode."""
     # Imported here so a frontend-only deployment does not need FastAPI.
@@ -121,7 +126,9 @@ def get_inprocess_backend():
 
     from app.main import app
 
-    return TestClient(app)
+    client = TestClient(app)
+    client.__enter__()  # Run FastAPI startup/lifespan for the cached client.
+    return client
 
 
 # ============================================================

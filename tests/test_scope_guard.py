@@ -2,6 +2,16 @@ import pytest
 import app.guardrails.rails as rails
 
 
+@pytest.fixture(autouse=True)
+def _guard_initialized_for_guard_tests(monkeypatch, request):
+    """Simulate startup for guard tests without loading real models."""
+    if request.node.name == "test_classifier_uninitialized_returns_AMBIGUOUS":
+        return
+
+    monkeypatch.setattr(rails, "_rails", object())
+    monkeypatch.setattr(rails, "_check_topic_llm", object())
+
+
 def test_guard_allows_technical_request(monkeypatch):
     monkeypatch.setattr(
         rails,
