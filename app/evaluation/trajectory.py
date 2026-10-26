@@ -49,6 +49,7 @@ _ABSTENTION_REASON_CATEGORIES = {
     "answer_relevance_revision_budget_exhausted": ANSWER_RELEVANCE_FAILURE,
     "answer_relevance_evaluator_unavailable": EVALUATOR_FAILURE,
     "generation_failed_during_revision": GENERATION_FAILURE,
+    "named_document_has_no_evidence": NO_APPROVED_EVIDENCE,
 }
 
 

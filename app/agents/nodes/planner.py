@@ -52,6 +52,9 @@ def _per_request_reset() -> dict:
         "revision_prompt": "",
         "relevance_retrieval_count": 0,
         "expand_retrieval": False,
+        "final_answer": "",
+        "candidate_answer": "",
+        "document_scoped": False,
         # Retrieval / web fallback control.
         "retrieval_rewrite_count": 0,
         "retrieval_failed": False,

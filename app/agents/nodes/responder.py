@@ -1230,12 +1230,8 @@ def _has_citation_detail_overlap(sentence: str, evidence: str) -> bool:
     if not sentence_details:
         return True
 
-    normalized_sentence = {
-        token.replace("-", "") for token in sentence_details
-    }
-    normalized_evidence = {
-        token.replace("-", "") for token in evidence_details
-    }
+    normalized_sentence = {token.replace("-", "") for token in sentence_details}
+    normalized_evidence = {token.replace("-", "") for token in evidence_details}
 
     # If the claim explicitly compares against GPT-3, the evidence must
     # also contain GPT-3. This prevents generic InstructGPT/SFT evidence
@@ -1796,9 +1792,7 @@ def _enforce_citations(
                 if not payload:
                     continue
 
-                evidence_text = str(
-                    payload.get("text") or ""
-                ).strip()
+                evidence_text = str(payload.get("text") or "").strip()
 
                 if not evidence_text:
                     continue
@@ -1834,16 +1828,13 @@ def _enforce_citations(
 
                 units_cited += 1
 
-                valid_model_citations_preserved += len(
-                    validated_model_citations
-                )
+                valid_model_citations_preserved += len(validated_model_citations)
 
                 # Any valid model citation that failed sentence-level
                 # validation was replaced by the lexical selector below.
                 invalid_model_citations_removed += max(
                     0,
-                    len(model_citations)
-                    - len(validated_model_citations),
+                    len(model_citations) - len(validated_model_citations),
                 )
 
                 continue
@@ -1997,7 +1988,8 @@ def generate_node(
 
     started = time.perf_counter()
 
-    query = str(state.get("current_query") or state.get("original_query") or "").strip()
+    # Use the user's own wording. current_query is a search-oriented rewrite.
+    query = str(state.get("original_query") or state.get("current_query") or "").strip()
 
     private_documents = _safe_list(state.get("documents"))
 
@@ -2026,6 +2018,12 @@ def generate_node(
             "revision_requested",
             False,
         )
+    )
+    # The previous draft is context only for a REVISION. On a first generation
+    # it is a stale answer to another question, so it must not reach the prompt
+    # or be returned as a fallback.
+    previous_answer = (
+        str(state.get("final_answer") or "").strip() if revision_requested else ""
     )
 
     # ========================================================
@@ -2237,9 +2235,7 @@ def generate_node(
             )
 
             raw_answer_text = _extract_response_text(response)
-            raw_answer_text = _normalize_citation_markers(
-                raw_answer_text
-            )
+            raw_answer_text = _normalize_citation_markers(raw_answer_text)
 
             raw_answer_text = _strip_invalid_citation_markers(
                 raw_answer_text,
@@ -2321,9 +2317,7 @@ def generate_node(
                 state,
                 step="responder",
                 status=(
-                    "revised_generated"
-                    if next_revision_count > 0
-                    else "generated"
+                    "revised_generated" if next_revision_count > 0 else "generated"
                 ),
                 generation_evidence_count=len(generation_documents),
                 revision_count=next_revision_count,
@@ -2505,5 +2499,3 @@ def generate_node(
                     2,
                 ),
             }
-
-

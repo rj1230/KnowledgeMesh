@@ -371,6 +371,10 @@ class AgentState(TypedDict, total=False):
 
     messages: List[Any]
 
+    # True when the question names a specific document ("according to the
+    # loop paper"); the graph then skips the web fallback.
+    document_scoped: bool
+
     # ============================================================
     # Status / observability
     # ============================================================
