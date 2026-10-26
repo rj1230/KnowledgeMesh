@@ -865,8 +865,8 @@ def apply_pruned_answer_node(
         **trace_update,
         "answer_before_pruning": state.get("final_answer")
         or state.get("candidate_answer"),
-        "final_answer": "",
-        "candidate_answer": "",
+        "final_answer": pruned,
+        "candidate_answer": pruned,
         "answer_pruned": True,
         "generation_failed": False,
         "pruned_claims": removed,

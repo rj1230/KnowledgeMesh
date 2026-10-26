@@ -71,3 +71,21 @@ def test_grounding_critic_skips_pure_absence_only():
     assert not _is_pure_absence(
         "HyDE improves recall, while the evidence does not contain latency numbers."
     )
+
+
+def test_apply_pruned_answer_writes_the_pruned_text():
+    from app.agents.graph import apply_pruned_answer_node
+
+    state = {
+        "final_answer": "Supported line.\nUnsupported line.",
+        "candidate_answer": "Supported line.\nUnsupported line.",
+        "pruned_answer": "Supported line.",
+        "prunable_claims": ["Unsupported line."],
+        "evaluation_trace": [],
+    }
+
+    result = apply_pruned_answer_node(state)
+
+    assert result["final_answer"] == "Supported line."
+    assert result["candidate_answer"] == "Supported line."
+    assert result["answer_pruned"] is True
