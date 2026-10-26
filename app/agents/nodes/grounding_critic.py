@@ -2802,7 +2802,11 @@ def _audit_citation_consistency(
             if item["supported"]:
                 continue
 
-            if STRICT_CITATION_AUDIT or item["support_method"] == "missing_evidence" or not any_supported:
+            if (
+                STRICT_CITATION_AUDIT
+                or item["support_method"] == "missing_evidence"
+                or not any_supported
+            ):
                 item["severity"] = "hard"
 
                 if best_citation and best_citation not in citations:
@@ -3548,6 +3552,11 @@ def _grounding_critic_node_with_profile(
         unsupported_atomic_count=len(unsupported_atomic_claims),
         uncited_claim_count=len(uncited_claims),
         invalid_citation_count=len(invalid_citations),
+        substantive_result_count=len(substantive_results),
+        unsupported_claim_count=len(unsupported_claims),
+        semantic_support_ok=semantic_support_ok,
+        citation_consistency_passed=citation_consistency["passed"],
+        citation_support_ok=citation_support_ok,
         citation_violation_count=citation_consistency["violation_count"],
         citation_warning_count=citation_consistency.get("warning_count", 0),
         prunable=bool(pruned_answer),
