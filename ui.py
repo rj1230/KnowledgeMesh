@@ -107,6 +107,9 @@ def get_inprocess_backend():
     secret_names = (
         "QDRANT_CLUSTER_ENDPOINT",
         "QDRANT_API_KEY",
+        "QDRANT_COLLECTION",
+        "EMBEDDING_MODEL",
+        "EMBEDDING_DIMENSION",
         "GROQ_API_KEY",
         "TAVILY_API_KEY",
         "PORTKEY_API_KEY",
