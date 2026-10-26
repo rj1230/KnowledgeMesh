@@ -1,0 +1,2052 @@
+{
+  "question": "What is loop engineering?",
+  "answer": "- Loop engineering creates an external, bounded, reusable loop specification that a human designs and hands to an agent harness, enabling the agent to find, run, verify, and remember work without a human in each step . [chunk_1]\n- A loop specification assembles five reusable pieces and an external memory . [chunk_2]\n- The trigger starts the agent; the goal and verification decide whether the work is done; the result is logged and persisted in memory; the loop repeats until a terminal state, which is governed by a budget ceiling or a no‑progress detector . [chunk_3]\n- A loop is only a loop when feedback from one iteration changes the next action . [chunk_3]\n- Practitioners have shifted from prompting agents directly to designing loops that prompt them, and a public Loop Library provides reusable loop artifacts . [chunk_4]\n- A loop is inappropriate when the next action does not change with new feedback . [chunk_5]",
+  "candidate_answer": "- Loop engineering creates an external, bounded, reusable loop specification that a human designs and hands to an agent harness, enabling the agent to find, run, verify, and remember work without a human in each step . [chunk_1]\n- A loop specification assembles five reusable pieces and an external memory . [chunk_2]\n- The trigger starts the agent; the goal and verification decide whether the work is done; the result is logged and persisted in memory; the loop repeats until a terminal state, which is governed by a budget ceiling or a no‑progress detector . [chunk_3]\n- A loop is only a loop when feedback from one iteration changes the next action . [chunk_3]\n- Practitioners have shifted from prompting agents directly to designing loops that prompt them, and a public Loop Library provides reusable loop artifacts . [chunk_4]\n- A loop is inappropriate when the next action does not change with new feedback . [chunk_5]",
+  "answer_available": true,
+  "answer_source": "final_answer",
+  "status": "Answer relevance validation passed.",
+  "validation_status": "validated",
+  "thought_process": [
+    "Intent: Technical",
+    "Search Term: loop engineering definition feedback loop design iterative development control loop optimization",
+    "Internal Dense Retrieval: 50/50 candidates",
+    "Internal Semantic Reranking: 50/50 scored",
+    "Internal Dense Recovery: top 20, threshold 0.68",
+    "Internal Evidence Selection: 5/5 documents",
+    "Retrieval Time: 1639 ms",
+    "Rerank Time: 699 ms",
+    "Document Grade: 5/5 usable",
+    "Evidence Quality: 5 content / 0 reference / 0 navigation",
+    "Generation Evidence: 5 content / 0 reference",
+    "Generation Context: 5/5",
+    "Context Quality: strong",
+    "Grader Time: 824 ms",
+    "Context Quality: strong",
+    "Web Search Required: False",
+    "Citation Check: PASS",
+    "Citation Check: PASS"
+  ],
+  "trajectory": {
+    "status": "recovered",
+    "hop_count": 1,
+    "required_hops": 1,
+    "failure_taxonomy": [
+      "GROUNDING_FAILURE"
+    ],
+    "metrics": {
+      "hop_success_rate": 1.0,
+      "required_hop_completion": 1.0,
+      "retrieval_success_rate": 1.0,
+      "evidence_acquisition_rate": 1.0,
+      "web_fallback_rate": 0.0,
+      "citation_support_rate": 1.0,
+      "unsupported_claim_rate": 0.2222222222222222,
+      "revision_rate": 1.0,
+      "revision_success_rate": 1.0,
+      "recovery_after_grounding_failure": 1.0,
+      "recovery_after_citation_failure": 1.0
+    },
+    "trace": [
+      {
+        "step": "planner",
+        "status": "technical",
+        "details": {
+          "route": "knowledge",
+          "retrieval_required": true,
+          "query": "loop engineering definition feedback loop design iterative development control loop optimization"
+        }
+      },
+      {
+        "step": "private_retrieval",
+        "status": "success",
+        "details": {
+          "candidate_count": 50,
+          "reranked_count": 50,
+          "selected_count": 5,
+          "query": "loop engineering definition feedback loop design iterative development control loop optimization"
+        }
+      },
+      {
+        "step": "grader",
+        "status": "success",
+        "details": {
+          "document_count": 5,
+          "graded_count": 5,
+          "generation_count": 5,
+          "content_count": 5,
+          "reference_count": 0,
+          "navigation_count": 0,
+          "context_quality": "strong"
+        }
+      },
+      {
+        "step": "context_evaluator",
+        "status": "strong",
+        "details": {
+          "should_search_web": false,
+          "reason": "5 relevant internal documents are available for generation.",
+          "graded_documents": 5,
+          "generation_documents": 5
+        }
+      },
+      {
+        "step": "responder",
+        "status": "generated",
+        "details": {
+          "generation_evidence_count": 5,
+          "revision_count": 0
+        }
+      },
+      {
+        "step": "citation_check",
+        "status": "passed",
+        "details": {
+          "citation_valid": true,
+          "uncited_claims": 0,
+          "invalid_citations": 0,
+          "citation_count": 6
+        }
+      },
+      {
+        "step": "grounding_critic",
+        "status": "failed",
+        "details": {
+          "is_grounded": false,
+          "answer_supported": false,
+          "support_score": 0.1822,
+          "claim_count": 5,
+          "atomic_claim_count": 9,
+          "unsupported_atomic_count": 2,
+          "uncited_claim_count": 0,
+          "invalid_citation_count": 0,
+          "grounding_ms": 18345.47,
+          "hhem_call_count": 58,
+          "hhem_total_ms": 17954.68
+        }
+      },
+      {
+        "step": "revision",
+        "status": "requested",
+        "details": {
+          "revision_count": 1,
+          "previous_revision_count": 0,
+          "max_answer_revisions": 2,
+          "trigger": [
+            "grounding_failure"
+          ],
+          "has_citation_feedback": false,
+          "grounding_feedback_count": 1,
+          "has_revision_prompt": true
+        }
+      },
+      {
+        "step": "responder",
+        "status": "revised_generated",
+        "details": {
+          "generation_evidence_count": 5,
+          "revision_count": 1
+        }
+      },
+      {
+        "step": "citation_check",
+        "status": "passed",
+        "details": {
+          "citation_valid": true,
+          "uncited_claims": 0,
+          "invalid_citations": 0,
+          "citation_count": 6
+        }
+      },
+      {
+        "step": "grounding_critic",
+        "status": "passed",
+        "details": {
+          "is_grounded": true,
+          "answer_supported": true,
+          "support_score": 0.8187,
+          "claim_count": 6,
+          "atomic_claim_count": 10,
+          "unsupported_atomic_count": 0,
+          "uncited_claim_count": 0,
+          "invalid_citation_count": 0,
+          "grounding_ms": 2136.6,
+          "hhem_call_count": 10,
+          "hhem_total_ms": 1935.46
+        }
+      },
+      {
+        "step": "answer_relevance",
+        "status": "passed",
+        "details": {
+          "answer_useful": true,
+          "usefulness_score": 0.96,
+          "reason": "The answer directly defines and explains loop engineering, describing its purpose, components, and how it works, which fully addresses the user's question.",
+          "relevance_ms": 448.39
+        }
+      }
+    ]
+  },
+  "sources": [
+    {
+      "id": "77523bd3-617e-516d-9599-db671097fced",
+      "document_id": "23b038dd8383e3d47638322b",
+      "chunk_id": 12,
+      "total_chunks": 55,
+      "content": "-shot, not a loop. The value of a loop is iteration with embedded verification, so the first design question is always whether genuine feedback exists The operational anatomy: five pieces plus memory Concretely, a real loop system assembles five reusable pieces and an external memory.8 Scheduled automations discover and triage the work (the scheduled trigger made concrete); 6A. Osmani, “Loop Engineering,” https://addyosmani.com/blog/loop-engineering/; S. Willison, “Design- ing agentic loops,” https://simonwillison.net/2025/Sep/30/designing-agentic-loops/. 7This triage criterion crystallised in community discussion of the practice; see the threads summarised around the Loop Library release. 8This operational anatomy follows A. Osmani, “Loop Engineering,” https://addyosmani.com/blog/ loop-engineering/. 5",
+      "source": "loop.pdf",
+      "source_type": "true_data",
+      "score": 0.69628316,
+      "rerank_score": 0.9955810904502869,
+      "url": null,
+      "grader_score": null,
+      "grader_relevant": null,
+      "grader_reason": ""
+    },
+    {
+      "id": "d50d3204-2cc3-5a95-933f-7b6fa09d6c40",
+      "document_id": "23b038dd8383e3d47638322b",
+      "chunk_id": 3,
+      "total_chunks": 55,
+      "content": "i.com/blog/loop-engineering/. 2Loop Library (Fo what a corpus of real loops actually looks like, and which of the practitioner claims survive contact with the scientific literature. The first task is to fix the object of study, because the word “loop” carries at least three meanings. An ordinary programming loop is plain control flow. The internal cycle of an agent, the model running tools in a while over a stop condition, is the perceive-act-observe machinery that frameworks from ReAct [50] onward formalized; it is part of the harness and it exists whether or not anyone designs it. Neither of these is what the new practice means. The loop specification is a third thing: an external, bounded, reusable artifact, a trigger plus a goal plus a verification step plus a stopping rule plus a memory, that a human designs and hands to a harness such as Claude Code or Codex so the agent finds the work, does it, checks its own result, and knows when to stop or call for help. The harness supplies the engine; loop engineering writes the pilot. We situate the practice as a new layer in a progression (Figure 1).3 Prompt engineering asked how to ask. Context engineering asked what the agent knows and remembers. Harness engineering asked what environment, tools and limits the agent has. Loop engineering asks what system one builds so the agent finds, runs, verifies and remembers the work without a human in the middle of each step. Each layer subsumes the previous one rather than discarding it",
+      "source": "loop.pdf",
+      "source_type": "true_data",
+      "score": 0.7108673,
+      "rerank_score": 0.889462947845459,
+      "url": null,
+      "grader_score": null,
+      "grader_relevant": null,
+      "grader_reason": ""
+    },
+    {
+      "id": "41d41060-0f6b-5301-bd0d-f97dd467c833",
+      "document_id": "23b038dd8383e3d47638322b",
+      "chunk_id": 2,
+      "total_chunks": 55,
+      "content": "ry step and instead design the loop that prompts it. Practitioners building these tools stated the shift bluntly, from “I don’t prompt Claude anymore. I have loops running that prompt Claude” to the sharper imperative, circulated to several million viewers in a day, that one should no longer be prompting coding agents but designing the loops that prompt them.1 Around the same time, a public catalogue of reusable loops, the Loop Library, turned the slogan into concrete artifacts.2 The claim is striking and the practice is real, but the concept arrived through threads, talks and blog posts rather than through any reviewable account. That gap motivates this paper. We ask what exactly is being built, how it relates to the loops that already exist inside an agent, 1Quoted in The New Stack, “Loop Engineering,” https://thenewstack.io/loop-engineering/, and in A. Osmani, “Loop Engineering,” https://addyosmani.com/blog/loop-engineering/. 2Loop Library (Forward Future), https://signals.forwardfuture.ai/loop-library/. 1 arXiv:2607.00038v1 [cs.SE] 28 Jun 2026",
+      "source": "loop.pdf",
+      "source_type": "true_data",
+      "score": 0.6474683,
+      "rerank_score": 0.7456080913543701,
+      "url": null,
+      "grader_score": null,
+      "grader_relevant": null,
+      "grader_reason": ""
+    },
+    {
+      "id": "a86dd799-c7e4-5097-b6c8-f398c57d4b6d",
+      "document_id": "23b038dd8383e3d47638322b",
+      "chunk_id": 11,
+      "total_chunks": 55,
+      "content": "he senses apart is not pedantry: most Figure 2: The anatomy of a loop specification. A trigger starts the agent; the agent executes by calling proven skills; a goal and verification decide whether the work is done; the result is logged and state persists in memory. The loop repeats until it reaches a named terminal state, held in check by a budget ceiling and a no-progress detector. academic lineage in Section 2 builds the engine, whereas the practice studied here builds the pilot, and conflating them is exactly the confusion the slogan invites. The central skill is the check, not the prompt Practitioner accounts converge on a single point: the hard, valuable part of a loop is designing the check that decides when the work is done, not writing a better instruction.6 A loop with nothing to push back is an agent agreeing with itself. This is why the definition puts verification at the center of gravity: the loop earns its keep by trading blind trust for reproducible evidence, and by the moment at which it returns control to the human. The golden rule: a loop only when feedback changes the next action A loop specification is justified over a bare scheduled prompt only when the result of one turn changes the next action.7 If a fixed task runs on a fixed cadence and nothing about the last run informs the next, that is a scheduled one-shot, not a loop. The value of a loop is iteration with embedded verification, so the first design question is always whether genuine feedback exists",
+      "source": "loop.pdf",
+      "source_type": "true_data",
+      "score": 0.6620855,
+      "rerank_score": 0.6101693511009216,
+      "url": null,
+      "grader_score": null,
+      "grader_relevant": null,
+      "grader_reason": ""
+    },
+    {
+      "id": "063985a0-119c-5a23-acf7-900cd8527d08",
+      "document_id": "23b038dd8383e3d47638322b",
+      "chunk_id": 37,
+      "total_chunks": 55,
+      "content": "dentials in test or staging, and a tight budget cap.17 These are not optional extras for an autonomous loop; they are the price of leavi When not to use a loop A loop is the wrong tool when the next action does not change with new feedback (do it one-shot, perhaps scheduled), when the goal is pure taste with no reproducible check, when the work is ambiguous greenfield construction where the right direction is unknown, or when the cost of looping does not pay for itself. Naming these cases is part of the discipline, not a retreat from it. Limitations This is a position paper anchored in a descriptive corpus study, not a controlled experiment. The fifty-loop coding is our own qualitative reading of a single public catalogue; a different coder might assign some loops differently, the corpus is not a random sample of all loops in the wild, and ambiguous entries were inferred from text. The aggregate percentages describe this corpus, not the population of all loop specifications, and we draw no causal conclusion from them. The design principles are grounded in cited behaviour of related systems, but those systems mostly study the internal agent cycle, so transferring their lessons to the external loop is an argued analogy, not a measured result. We have deliberately fabricated no usage data, including for the sandeco-loop skill, which we release as an accompanying artifact rather than an evaluated system. Future work The clearest next step is the empirical study this paper sets up",
+      "source": "loop.pdf",
+      "source_type": "true_data",
+      "score": 0.6929228,
+      "rerank_score": 0.2874162793159485,
+      "url": null,
+      "grader_score": null,
+      "grader_relevant": null,
+      "grader_reason": ""
+    }
+  ],
+  "private_sources": [
+    {
+      "id": "77523bd3-617e-516d-9599-db671097fced",
+      "document_id": "23b038dd8383e3d47638322b",
+      "chunk_id": 12,
+      "total_chunks": 55,
+      "content": "-shot, not a loop. The value of a loop is iteration with embedded verification, so the first design question is always whether genuine feedback exists The operational anatomy: five pieces plus memory Concretely, a real loop system assembles five reusable pieces and an external memory.8 Scheduled automations discover and triage the work (the scheduled trigger made concrete); 6A. Osmani, “Loop Engineering,” https://addyosmani.com/blog/loop-engineering/; S. Willison, “Design- ing agentic loops,” https://simonwillison.net/2025/Sep/30/designing-agentic-loops/. 7This triage criterion crystallised in community discussion of the practice; see the threads summarised around the Loop Library release. 8This operational anatomy follows A. Osmani, “Loop Engineering,” https://addyosmani.com/blog/ loop-engineering/. 5",
+      "source": "loop.pdf",
+      "source_type": "true_data",
+      "score": 0.69628316,
+      "rerank_score": 0.9955810904502869,
+      "url": null,
+      "grader_score": null,
+      "grader_relevant": null,
+      "grader_reason": ""
+    },
+    {
+      "id": "d50d3204-2cc3-5a95-933f-7b6fa09d6c40",
+      "document_id": "23b038dd8383e3d47638322b",
+      "chunk_id": 3,
+      "total_chunks": 55,
+      "content": "i.com/blog/loop-engineering/. 2Loop Library (Fo what a corpus of real loops actually looks like, and which of the practitioner claims survive contact with the scientific literature. The first task is to fix the object of study, because the word “loop” carries at least three meanings. An ordinary programming loop is plain control flow. The internal cycle of an agent, the model running tools in a while over a stop condition, is the perceive-act-observe machinery that frameworks from ReAct [50] onward formalized; it is part of the harness and it exists whether or not anyone designs it. Neither of these is what the new practice means. The loop specification is a third thing: an external, bounded, reusable artifact, a trigger plus a goal plus a verification step plus a stopping rule plus a memory, that a human designs and hands to a harness such as Claude Code or Codex so the agent finds the work, does it, checks its own result, and knows when to stop or call for help. The harness supplies the engine; loop engineering writes the pilot. We situate the practice as a new layer in a progression (Figure 1).3 Prompt engineering asked how to ask. Context engineering asked what the agent knows and remembers. Harness engineering asked what environment, tools and limits the agent has. Loop engineering asks what system one builds so the agent finds, runs, verifies and remembers the work without a human in the middle of each step. Each layer subsumes the previous one rather than discarding it",
+      "source": "loop.pdf",
+      "source_type": "true_data",
+      "score": 0.7108673,
+      "rerank_score": 0.889462947845459,
+      "url": null,
+      "grader_score": null,
+      "grader_relevant": null,
+      "grader_reason": ""
+    },
+    {
+      "id": "41d41060-0f6b-5301-bd0d-f97dd467c833",
+      "document_id": "23b038dd8383e3d47638322b",
+      "chunk_id": 2,
+      "total_chunks": 55,
+      "content": "ry step and instead design the loop that prompts it. Practitioners building these tools stated the shift bluntly, from “I don’t prompt Claude anymore. I have loops running that prompt Claude” to the sharper imperative, circulated to several million viewers in a day, that one should no longer be prompting coding agents but designing the loops that prompt them.1 Around the same time, a public catalogue of reusable loops, the Loop Library, turned the slogan into concrete artifacts.2 The claim is striking and the practice is real, but the concept arrived through threads, talks and blog posts rather than through any reviewable account. That gap motivates this paper. We ask what exactly is being built, how it relates to the loops that already exist inside an agent, 1Quoted in The New Stack, “Loop Engineering,” https://thenewstack.io/loop-engineering/, and in A. Osmani, “Loop Engineering,” https://addyosmani.com/blog/loop-engineering/. 2Loop Library (Forward Future), https://signals.forwardfuture.ai/loop-library/. 1 arXiv:2607.00038v1 [cs.SE] 28 Jun 2026",
+      "source": "loop.pdf",
+      "source_type": "true_data",
+      "score": 0.6474683,
+      "rerank_score": 0.7456080913543701,
+      "url": null,
+      "grader_score": null,
+      "grader_relevant": null,
+      "grader_reason": ""
+    },
+    {
+      "id": "a86dd799-c7e4-5097-b6c8-f398c57d4b6d",
+      "document_id": "23b038dd8383e3d47638322b",
+      "chunk_id": 11,
+      "total_chunks": 55,
+      "content": "he senses apart is not pedantry: most Figure 2: The anatomy of a loop specification. A trigger starts the agent; the agent executes by calling proven skills; a goal and verification decide whether the work is done; the result is logged and state persists in memory. The loop repeats until it reaches a named terminal state, held in check by a budget ceiling and a no-progress detector. academic lineage in Section 2 builds the engine, whereas the practice studied here builds the pilot, and conflating them is exactly the confusion the slogan invites. The central skill is the check, not the prompt Practitioner accounts converge on a single point: the hard, valuable part of a loop is designing the check that decides when the work is done, not writing a better instruction.6 A loop with nothing to push back is an agent agreeing with itself. This is why the definition puts verification at the center of gravity: the loop earns its keep by trading blind trust for reproducible evidence, and by the moment at which it returns control to the human. The golden rule: a loop only when feedback changes the next action A loop specification is justified over a bare scheduled prompt only when the result of one turn changes the next action.7 If a fixed task runs on a fixed cadence and nothing about the last run informs the next, that is a scheduled one-shot, not a loop. The value of a loop is iteration with embedded verification, so the first design question is always whether genuine feedback exists",
+      "source": "loop.pdf",
+      "source_type": "true_data",
+      "score": 0.6620855,
+      "rerank_score": 0.6101693511009216,
+      "url": null,
+      "grader_score": null,
+      "grader_relevant": null,
+      "grader_reason": ""
+    },
+    {
+      "id": "063985a0-119c-5a23-acf7-900cd8527d08",
+      "document_id": "23b038dd8383e3d47638322b",
+      "chunk_id": 37,
+      "total_chunks": 55,
+      "content": "dentials in test or staging, and a tight budget cap.17 These are not optional extras for an autonomous loop; they are the price of leavi When not to use a loop A loop is the wrong tool when the next action does not change with new feedback (do it one-shot, perhaps scheduled), when the goal is pure taste with no reproducible check, when the work is ambiguous greenfield construction where the right direction is unknown, or when the cost of looping does not pay for itself. Naming these cases is part of the discipline, not a retreat from it. Limitations This is a position paper anchored in a descriptive corpus study, not a controlled experiment. The fifty-loop coding is our own qualitative reading of a single public catalogue; a different coder might assign some loops differently, the corpus is not a random sample of all loops in the wild, and ambiguous entries were inferred from text. The aggregate percentages describe this corpus, not the population of all loop specifications, and we draw no causal conclusion from them. The design principles are grounded in cited behaviour of related systems, but those systems mostly study the internal agent cycle, so transferring their lessons to the external loop is an argued analogy, not a measured result. We have deliberately fabricated no usage data, including for the sandeco-loop skill, which we release as an accompanying artifact rather than an evaluated system. Future work The clearest next step is the empirical study this paper sets up",
+      "source": "loop.pdf",
+      "source_type": "true_data",
+      "score": 0.6929228,
+      "rerank_score": 0.2874162793159485,
+      "url": null,
+      "grader_score": null,
+      "grader_relevant": null,
+      "grader_reason": ""
+    }
+  ],
+  "answer_sources": [
+    {
+      "id": "77523bd3-617e-516d-9599-db671097fced",
+      "document_id": "23b038dd8383e3d47638322b",
+      "chunk_id": 12,
+      "total_chunks": 55,
+      "content": "-shot, not a loop. The value of a loop is iteration with embedded verification, so the first design question is always whether genuine feedback exists The operational anatomy: five pieces plus memory Concretely, a real loop system assembles five reusable pieces and an external memory.8 Scheduled automations discover and triage the work (the scheduled trigger made concrete); 6A. Osmani, “Loop Engineering,” https://addyosmani.com/blog/loop-engineering/; S. Willison, “Design- ing agentic loops,” https://simonwillison.net/2025/Sep/30/designing-agentic-loops/. 7This triage criterion crystallised in community discussion of the practice; see the threads summarised around the Loop Library release. 8This operational anatomy follows A. Osmani, “Loop Engineering,” https://addyosmani.com/blog/ loop-engineering/. 5",
+      "source": "loop.pdf",
+      "source_type": "true_data",
+      "score": 0.69628316,
+      "rerank_score": 0.9955810904502869,
+      "url": null,
+      "grader_score": null,
+      "grader_relevant": null,
+      "grader_reason": ""
+    },
+    {
+      "id": "d50d3204-2cc3-5a95-933f-7b6fa09d6c40",
+      "document_id": "23b038dd8383e3d47638322b",
+      "chunk_id": 3,
+      "total_chunks": 55,
+      "content": "i.com/blog/loop-engineering/. 2Loop Library (Fo what a corpus of real loops actually looks like, and which of the practitioner claims survive contact with the scientific literature. The first task is to fix the object of study, because the word “loop” carries at least three meanings. An ordinary programming loop is plain control flow. The internal cycle of an agent, the model running tools in a while over a stop condition, is the perceive-act-observe machinery that frameworks from ReAct [50] onward formalized; it is part of the harness and it exists whether or not anyone designs it. Neither of these is what the new practice means. The loop specification is a third thing: an external, bounded, reusable artifact, a trigger plus a goal plus a verification step plus a stopping rule plus a memory, that a human designs and hands to a harness such as Claude Code or Codex so the agent finds the work, does it, checks its own result, and knows when to stop or call for help. The harness supplies the engine; loop engineering writes the pilot. We situate the practice as a new layer in a progression (Figure 1).3 Prompt engineering asked how to ask. Context engineering asked what the agent knows and remembers. Harness engineering asked what environment, tools and limits the agent has. Loop engineering asks what system one builds so the agent finds, runs, verifies and remembers the work without a human in the middle of each step. Each layer subsumes the previous one rather than discarding it",
+      "source": "loop.pdf",
+      "source_type": "true_data",
+      "score": 0.7108673,
+      "rerank_score": 0.889462947845459,
+      "url": null,
+      "grader_score": null,
+      "grader_relevant": null,
+      "grader_reason": ""
+    },
+    {
+      "id": "41d41060-0f6b-5301-bd0d-f97dd467c833",
+      "document_id": "23b038dd8383e3d47638322b",
+      "chunk_id": 2,
+      "total_chunks": 55,
+      "content": "ry step and instead design the loop that prompts it. Practitioners building these tools stated the shift bluntly, from “I don’t prompt Claude anymore. I have loops running that prompt Claude” to the sharper imperative, circulated to several million viewers in a day, that one should no longer be prompting coding agents but designing the loops that prompt them.1 Around the same time, a public catalogue of reusable loops, the Loop Library, turned the slogan into concrete artifacts.2 The claim is striking and the practice is real, but the concept arrived through threads, talks and blog posts rather than through any reviewable account. That gap motivates this paper. We ask what exactly is being built, how it relates to the loops that already exist inside an agent, 1Quoted in The New Stack, “Loop Engineering,” https://thenewstack.io/loop-engineering/, and in A. Osmani, “Loop Engineering,” https://addyosmani.com/blog/loop-engineering/. 2Loop Library (Forward Future), https://signals.forwardfuture.ai/loop-library/. 1 arXiv:2607.00038v1 [cs.SE] 28 Jun 2026",
+      "source": "loop.pdf",
+      "source_type": "true_data",
+      "score": 0.6474683,
+      "rerank_score": 0.7456080913543701,
+      "url": null,
+      "grader_score": null,
+      "grader_relevant": null,
+      "grader_reason": ""
+    },
+    {
+      "id": "a86dd799-c7e4-5097-b6c8-f398c57d4b6d",
+      "document_id": "23b038dd8383e3d47638322b",
+      "chunk_id": 11,
+      "total_chunks": 55,
+      "content": "he senses apart is not pedantry: most Figure 2: The anatomy of a loop specification. A trigger starts the agent; the agent executes by calling proven skills; a goal and verification decide whether the work is done; the result is logged and state persists in memory. The loop repeats until it reaches a named terminal state, held in check by a budget ceiling and a no-progress detector. academic lineage in Section 2 builds the engine, whereas the practice studied here builds the pilot, and conflating them is exactly the confusion the slogan invites. The central skill is the check, not the prompt Practitioner accounts converge on a single point: the hard, valuable part of a loop is designing the check that decides when the work is done, not writing a better instruction.6 A loop with nothing to push back is an agent agreeing with itself. This is why the definition puts verification at the center of gravity: the loop earns its keep by trading blind trust for reproducible evidence, and by the moment at which it returns control to the human. The golden rule: a loop only when feedback changes the next action A loop specification is justified over a bare scheduled prompt only when the result of one turn changes the next action.7 If a fixed task runs on a fixed cadence and nothing about the last run informs the next, that is a scheduled one-shot, not a loop. The value of a loop is iteration with embedded verification, so the first design question is always whether genuine feedback exists",
+      "source": "loop.pdf",
+      "source_type": "true_data",
+      "score": 0.6620855,
+      "rerank_score": 0.6101693511009216,
+      "url": null,
+      "grader_score": null,
+      "grader_relevant": null,
+      "grader_reason": ""
+    },
+    {
+      "id": "063985a0-119c-5a23-acf7-900cd8527d08",
+      "document_id": "23b038dd8383e3d47638322b",
+      "chunk_id": 37,
+      "total_chunks": 55,
+      "content": "dentials in test or staging, and a tight budget cap.17 These are not optional extras for an autonomous loop; they are the price of leavi When not to use a loop A loop is the wrong tool when the next action does not change with new feedback (do it one-shot, perhaps scheduled), when the goal is pure taste with no reproducible check, when the work is ambiguous greenfield construction where the right direction is unknown, or when the cost of looping does not pay for itself. Naming these cases is part of the discipline, not a retreat from it. Limitations This is a position paper anchored in a descriptive corpus study, not a controlled experiment. The fifty-loop coding is our own qualitative reading of a single public catalogue; a different coder might assign some loops differently, the corpus is not a random sample of all loops in the wild, and ambiguous entries were inferred from text. The aggregate percentages describe this corpus, not the population of all loop specifications, and we draw no causal conclusion from them. The design principles are grounded in cited behaviour of related systems, but those systems mostly study the internal agent cycle, so transferring their lessons to the external loop is an argued analogy, not a measured result. We have deliberately fabricated no usage data, including for the sandeco-loop skill, which we release as an accompanying artifact rather than an evaluated system. Future work The clearest next step is the empirical study this paper sets up",
+      "source": "loop.pdf",
+      "source_type": "true_data",
+      "score": 0.6929228,
+      "rerank_score": 0.2874162793159485,
+      "url": null,
+      "grader_score": null,
+      "grader_relevant": null,
+      "grader_reason": ""
+    }
+  ],
+  "retrieved_private_sources": [
+    {
+      "id": "77523bd3-617e-516d-9599-db671097fced",
+      "document_id": "23b038dd8383e3d47638322b",
+      "chunk_id": 12,
+      "total_chunks": 55,
+      "content": "-shot, not a loop. The value of a loop is iteration with embedded verification, so the first design question is always whether genuine feedback exists The operational anatomy: five pieces plus memory Concretely, a real loop system assembles five reusable pieces and an external memory.8 Scheduled automations discover and triage the work (the scheduled trigger made concrete); 6A. Osmani, “Loop Engineering,” https://addyosmani.com/blog/loop-engineering/; S. Willison, “Design- ing agentic loops,” https://simonwillison.net/2025/Sep/30/designing-agentic-loops/. 7This triage criterion crystallised in community discussion of the practice; see the threads summarised around the Loop Library release. 8This operational anatomy follows A. Osmani, “Loop Engineering,” https://addyosmani.com/blog/ loop-engineering/. 5",
+      "source": "loop.pdf",
+      "source_type": "true_data",
+      "score": 0.69628316,
+      "rerank_score": 0.9955810904502869,
+      "url": null,
+      "grader_score": null,
+      "grader_relevant": null,
+      "grader_reason": ""
+    },
+    {
+      "id": "d50d3204-2cc3-5a95-933f-7b6fa09d6c40",
+      "document_id": "23b038dd8383e3d47638322b",
+      "chunk_id": 3,
+      "total_chunks": 55,
+      "content": "i.com/blog/loop-engineering/. 2Loop Library (Fo what a corpus of real loops actually looks like, and which of the practitioner claims survive contact with the scientific literature. The first task is to fix the object of study, because the word “loop” carries at least three meanings. An ordinary programming loop is plain control flow. The internal cycle of an agent, the model running tools in a while over a stop condition, is the perceive-act-observe machinery that frameworks from ReAct [50] onward formalized; it is part of the harness and it exists whether or not anyone designs it. Neither of these is what the new practice means. The loop specification is a third thing: an external, bounded, reusable artifact, a trigger plus a goal plus a verification step plus a stopping rule plus a memory, that a human designs and hands to a harness such as Claude Code or Codex so the agent finds the work, does it, checks its own result, and knows when to stop or call for help. The harness supplies the engine; loop engineering writes the pilot. We situate the practice as a new layer in a progression (Figure 1).3 Prompt engineering asked how to ask. Context engineering asked what the agent knows and remembers. Harness engineering asked what environment, tools and limits the agent has. Loop engineering asks what system one builds so the agent finds, runs, verifies and remembers the work without a human in the middle of each step. Each layer subsumes the previous one rather than discarding it",
+      "source": "loop.pdf",
+      "source_type": "true_data",
+      "score": 0.7108673,
+      "rerank_score": 0.889462947845459,
+      "url": null,
+      "grader_score": null,
+      "grader_relevant": null,
+      "grader_reason": ""
+    },
+    {
+      "id": "41d41060-0f6b-5301-bd0d-f97dd467c833",
+      "document_id": "23b038dd8383e3d47638322b",
+      "chunk_id": 2,
+      "total_chunks": 55,
+      "content": "ry step and instead design the loop that prompts it. Practitioners building these tools stated the shift bluntly, from “I don’t prompt Claude anymore. I have loops running that prompt Claude” to the sharper imperative, circulated to several million viewers in a day, that one should no longer be prompting coding agents but designing the loops that prompt them.1 Around the same time, a public catalogue of reusable loops, the Loop Library, turned the slogan into concrete artifacts.2 The claim is striking and the practice is real, but the concept arrived through threads, talks and blog posts rather than through any reviewable account. That gap motivates this paper. We ask what exactly is being built, how it relates to the loops that already exist inside an agent, 1Quoted in The New Stack, “Loop Engineering,” https://thenewstack.io/loop-engineering/, and in A. Osmani, “Loop Engineering,” https://addyosmani.com/blog/loop-engineering/. 2Loop Library (Forward Future), https://signals.forwardfuture.ai/loop-library/. 1 arXiv:2607.00038v1 [cs.SE] 28 Jun 2026",
+      "source": "loop.pdf",
+      "source_type": "true_data",
+      "score": 0.6474683,
+      "rerank_score": 0.7456080913543701,
+      "url": null,
+      "grader_score": null,
+      "grader_relevant": null,
+      "grader_reason": ""
+    },
+    {
+      "id": "a86dd799-c7e4-5097-b6c8-f398c57d4b6d",
+      "document_id": "23b038dd8383e3d47638322b",
+      "chunk_id": 11,
+      "total_chunks": 55,
+      "content": "he senses apart is not pedantry: most Figure 2: The anatomy of a loop specification. A trigger starts the agent; the agent executes by calling proven skills; a goal and verification decide whether the work is done; the result is logged and state persists in memory. The loop repeats until it reaches a named terminal state, held in check by a budget ceiling and a no-progress detector. academic lineage in Section 2 builds the engine, whereas the practice studied here builds the pilot, and conflating them is exactly the confusion the slogan invites. The central skill is the check, not the prompt Practitioner accounts converge on a single point: the hard, valuable part of a loop is designing the check that decides when the work is done, not writing a better instruction.6 A loop with nothing to push back is an agent agreeing with itself. This is why the definition puts verification at the center of gravity: the loop earns its keep by trading blind trust for reproducible evidence, and by the moment at which it returns control to the human. The golden rule: a loop only when feedback changes the next action A loop specification is justified over a bare scheduled prompt only when the result of one turn changes the next action.7 If a fixed task runs on a fixed cadence and nothing about the last run informs the next, that is a scheduled one-shot, not a loop. The value of a loop is iteration with embedded verification, so the first design question is always whether genuine feedback exists",
+      "source": "loop.pdf",
+      "source_type": "true_data",
+      "score": 0.6620855,
+      "rerank_score": 0.6101693511009216,
+      "url": null,
+      "grader_score": null,
+      "grader_relevant": null,
+      "grader_reason": ""
+    },
+    {
+      "id": "063985a0-119c-5a23-acf7-900cd8527d08",
+      "document_id": "23b038dd8383e3d47638322b",
+      "chunk_id": 37,
+      "total_chunks": 55,
+      "content": "dentials in test or staging, and a tight budget cap.17 These are not optional extras for an autonomous loop; they are the price of leavi When not to use a loop A loop is the wrong tool when the next action does not change with new feedback (do it one-shot, perhaps scheduled), when the goal is pure taste with no reproducible check, when the work is ambiguous greenfield construction where the right direction is unknown, or when the cost of looping does not pay for itself. Naming these cases is part of the discipline, not a retreat from it. Limitations This is a position paper anchored in a descriptive corpus study, not a controlled experiment. The fifty-loop coding is our own qualitative reading of a single public catalogue; a different coder might assign some loops differently, the corpus is not a random sample of all loops in the wild, and ambiguous entries were inferred from text. The aggregate percentages describe this corpus, not the population of all loop specifications, and we draw no causal conclusion from them. The design principles are grounded in cited behaviour of related systems, but those systems mostly study the internal agent cycle, so transferring their lessons to the external loop is an argued analogy, not a measured result. We have deliberately fabricated no usage data, including for the sandeco-loop skill, which we release as an accompanying artifact rather than an evaluated system. Future work The clearest next step is the empirical study this paper sets up",
+      "source": "loop.pdf",
+      "source_type": "true_data",
+      "score": 0.6929228,
+      "rerank_score": 0.2874162793159485,
+      "url": null,
+      "grader_score": null,
+      "grader_relevant": null,
+      "grader_reason": ""
+    }
+  ],
+  "web_sources": [],
+  "generation_documents": [
+    {
+      "id": "d50d3204-2cc3-5a95-933f-7b6fa09d6c40",
+      "document_id": "23b038dd8383e3d47638322b",
+      "chunk_id": 3,
+      "total_chunks": 55,
+      "content": "i.com/blog/loop-engineering/. 2Loop Library (Fo what a corpus of real loops actually looks like, and which of the practitioner claims survive contact with the scientific literature. The first task is to fix the object of study, because the word “loop” carries at least three meanings. An ordinary programming loop is plain control flow. The internal cycle of an agent, the model running tools in a while over a stop condition, is the perceive-act-observe machinery that frameworks from ReAct [50] onward formalized; it is part of the harness and it exists whether or not anyone designs it. Neither of these is what the new practice means. The loop specification is a third thing: an external, bounded, reusable artifact, a trigger plus a goal plus a verification step plus a stopping rule plus a memory, that a human designs and hands to a harness such as Claude Code or Codex so the agent finds the work, does it, checks its own result, and knows when to stop or call for help. The harness supplies the engine; loop engineering writes the pilot. We situate the practice as a new layer in a progression (Figure 1).3 Prompt engineering asked how to ask. Context engineering asked what the agent knows and remembers. Harness engineering asked what environment, tools and limits the agent has. Loop engineering asks what system one builds so the agent finds, runs, verifies and remembers the work without a human in the middle of each step. Each layer subsumes the previous one rather than discarding it",
+      "source": "loop.pdf",
+      "source_type": "true_data",
+      "score": 0.7108673,
+      "rerank_score": 0.889462947845459,
+      "url": null,
+      "grader_score": 0.94,
+      "grader_relevant": true,
+      "grader_reason": "Explicitly defines loop engineering as an external, bounded artifact with trigger, goal, verification, stopping rule, and memory, directly addressing the query's focus on definition and design.",
+      "evidence_type": "CONTENT",
+      "evidence_score": 1.0,
+      "reference_dominated": false,
+      "evidence_reason": "Academic content with inline citations.",
+      "evidence_metrics": {
+        "citation_count": 1,
+        "corr_count": 0,
+        "proceedings_count": 0,
+        "pages_count": 0,
+        "doi_count": 0,
+        "arxiv_count": 0,
+        "year_count": 0,
+        "reference_entry_count": 1,
+        "strong_reference_signals": 0
+      }
+    },
+    {
+      "id": "77523bd3-617e-516d-9599-db671097fced",
+      "document_id": "23b038dd8383e3d47638322b",
+      "chunk_id": 12,
+      "total_chunks": 55,
+      "content": "-shot, not a loop. The value of a loop is iteration with embedded verification, so the first design question is always whether genuine feedback exists The operational anatomy: five pieces plus memory Concretely, a real loop system assembles five reusable pieces and an external memory.8 Scheduled automations discover and triage the work (the scheduled trigger made concrete); 6A. Osmani, “Loop Engineering,” https://addyosmani.com/blog/loop-engineering/; S. Willison, “Design- ing agentic loops,” https://simonwillison.net/2025/Sep/30/designing-agentic-loops/. 7This triage criterion crystallised in community discussion of the practice; see the threads summarised around the Loop Library release. 8This operational anatomy follows A. Osmani, “Loop Engineering,” https://addyosmani.com/blog/ loop-engineering/. 5",
+      "source": "loop.pdf",
+      "source_type": "true_data",
+      "score": 0.69628316,
+      "rerank_score": 0.9955810904502869,
+      "url": null,
+      "grader_score": 0.92,
+      "grader_relevant": true,
+      "grader_reason": "Provides a concrete definition of a loop system, emphasizing iteration, embedded verification, and feedback—core concepts asked for in the query.",
+      "evidence_type": "CONTENT",
+      "evidence_score": 1.0,
+      "reference_dominated": false,
+      "evidence_reason": "Normal explanatory content.",
+      "evidence_metrics": {
+        "citation_count": 0,
+        "corr_count": 0,
+        "proceedings_count": 0,
+        "pages_count": 0,
+        "doi_count": 0,
+        "arxiv_count": 0,
+        "year_count": 1,
+        "reference_entry_count": 0,
+        "strong_reference_signals": 0
+      }
+    },
+    {
+      "id": "a86dd799-c7e4-5097-b6c8-f398c57d4b6d",
+      "document_id": "23b038dd8383e3d47638322b",
+      "chunk_id": 11,
+      "total_chunks": 55,
+      "content": "he senses apart is not pedantry: most Figure 2: The anatomy of a loop specification. A trigger starts the agent; the agent executes by calling proven skills; a goal and verification decide whether the work is done; the result is logged and state persists in memory. The loop repeats until it reaches a named terminal state, held in check by a budget ceiling and a no-progress detector. academic lineage in Section 2 builds the engine, whereas the practice studied here builds the pilot, and conflating them is exactly the confusion the slogan invites. The central skill is the check, not the prompt Practitioner accounts converge on a single point: the hard, valuable part of a loop is designing the check that decides when the work is done, not writing a better instruction.6 A loop with nothing to push back is an agent agreeing with itself. This is why the definition puts verification at the center of gravity: the loop earns its keep by trading blind trust for reproducible evidence, and by the moment at which it returns control to the human. The golden rule: a loop only when feedback changes the next action A loop specification is justified over a bare scheduled prompt only when the result of one turn changes the next action.7 If a fixed task runs on a fixed cadence and nothing about the last run informs the next, that is a scheduled one-shot, not a loop. The value of a loop is iteration with embedded verification, so the first design question is always whether genuine feedback exists",
+      "source": "loop.pdf",
+      "source_type": "true_data",
+      "score": 0.6620855,
+      "rerank_score": 0.6101693511009216,
+      "url": null,
+      "grader_score": 0.9,
+      "grader_relevant": true,
+      "grader_reason": "Details the anatomy of a loop specification, highlighting verification and feedback loops, which aligns closely with the requested definition and design aspects.",
+      "evidence_type": "CONTENT",
+      "evidence_score": 1.0,
+      "reference_dominated": false,
+      "evidence_reason": "Normal explanatory content.",
+      "evidence_metrics": {
+        "citation_count": 0,
+        "corr_count": 0,
+        "proceedings_count": 0,
+        "pages_count": 0,
+        "doi_count": 0,
+        "arxiv_count": 0,
+        "year_count": 0,
+        "reference_entry_count": 0,
+        "strong_reference_signals": 0
+      }
+    },
+    {
+      "id": "41d41060-0f6b-5301-bd0d-f97dd467c833",
+      "document_id": "23b038dd8383e3d47638322b",
+      "chunk_id": 2,
+      "total_chunks": 55,
+      "content": "ry step and instead design the loop that prompts it. Practitioners building these tools stated the shift bluntly, from “I don’t prompt Claude anymore. I have loops running that prompt Claude” to the sharper imperative, circulated to several million viewers in a day, that one should no longer be prompting coding agents but designing the loops that prompt them.1 Around the same time, a public catalogue of reusable loops, the Loop Library, turned the slogan into concrete artifacts.2 The claim is striking and the practice is real, but the concept arrived through threads, talks and blog posts rather than through any reviewable account. That gap motivates this paper. We ask what exactly is being built, how it relates to the loops that already exist inside an agent, 1Quoted in The New Stack, “Loop Engineering,” https://thenewstack.io/loop-engineering/, and in A. Osmani, “Loop Engineering,” https://addyosmani.com/blog/loop-engineering/. 2Loop Library (Forward Future), https://signals.forwardfuture.ai/loop-library/. 1 arXiv:2607.00038v1 [cs.SE] 28 Jun 2026",
+      "source": "loop.pdf",
+      "source_type": "true_data",
+      "score": 0.6474683,
+      "rerank_score": 0.7456080913543701,
+      "url": null,
+      "grader_score": 0.68,
+      "grader_relevant": true,
+      "grader_reason": "Describes the emergence of loop engineering practice and mentions the Loop Library, offering contextual background but limited direct definition.",
+      "evidence_type": "CONTENT",
+      "evidence_score": 1.0,
+      "reference_dominated": false,
+      "evidence_reason": "Normal explanatory content.",
+      "evidence_metrics": {
+        "citation_count": 0,
+        "corr_count": 0,
+        "proceedings_count": 0,
+        "pages_count": 0,
+        "doi_count": 0,
+        "arxiv_count": 1,
+        "year_count": 1,
+        "reference_entry_count": 0,
+        "strong_reference_signals": 1
+      }
+    },
+    {
+      "id": "063985a0-119c-5a23-acf7-900cd8527d08",
+      "document_id": "23b038dd8383e3d47638322b",
+      "chunk_id": 37,
+      "total_chunks": 55,
+      "content": "dentials in test or staging, and a tight budget cap.17 These are not optional extras for an autonomous loop; they are the price of leavi When not to use a loop A loop is the wrong tool when the next action does not change with new feedback (do it one-shot, perhaps scheduled), when the goal is pure taste with no reproducible check, when the work is ambiguous greenfield construction where the right direction is unknown, or when the cost of looping does not pay for itself. Naming these cases is part of the discipline, not a retreat from it. Limitations This is a position paper anchored in a descriptive corpus study, not a controlled experiment. The fifty-loop coding is our own qualitative reading of a single public catalogue; a different coder might assign some loops differently, the corpus is not a random sample of all loops in the wild, and ambiguous entries were inferred from text. The aggregate percentages describe this corpus, not the population of all loop specifications, and we draw no causal conclusion from them. The design principles are grounded in cited behaviour of related systems, but those systems mostly study the internal agent cycle, so transferring their lessons to the external loop is an argued analogy, not a measured result. We have deliberately fabricated no usage data, including for the sandeco-loop skill, which we release as an accompanying artifact rather than an evaluated system. Future work The clearest next step is the empirical study this paper sets up",
+      "source": "loop.pdf",
+      "source_type": "true_data",
+      "score": 0.6929228,
+      "rerank_score": 0.2874162793159485,
+      "url": null,
+      "grader_score": 0.62,
+      "grader_relevant": true,
+      "grader_reason": "Discusses limitations and cases where loops are unsuitable, providing partial insight into loop engineering considerations but less about core definition.",
+      "evidence_type": "CONTENT",
+      "evidence_score": 1.0,
+      "reference_dominated": false,
+      "evidence_reason": "Normal explanatory content.",
+      "evidence_metrics": {
+        "citation_count": 0,
+        "corr_count": 0,
+        "proceedings_count": 0,
+        "pages_count": 0,
+        "doi_count": 0,
+        "arxiv_count": 0,
+        "year_count": 0,
+        "reference_entry_count": 0,
+        "strong_reference_signals": 0
+      }
+    }
+  ],
+  "graded_documents": [
+    {
+      "id": "d50d3204-2cc3-5a95-933f-7b6fa09d6c40",
+      "document_id": "23b038dd8383e3d47638322b",
+      "chunk_id": 3,
+      "total_chunks": 55,
+      "content": "i.com/blog/loop-engineering/. 2Loop Library (Fo what a corpus of real loops actually looks like, and which of the practitioner claims survive contact with the scientific literature. The first task is to fix the object of study, because the word “loop” carries at least three meanings. An ordinary programming loop is plain control flow. The internal cycle of an agent, the model running tools in a while over a stop condition, is the perceive-act-observe machinery that frameworks from ReAct [50] onward formalized; it is part of the harness and it exists whether or not anyone designs it. Neither of these is what the new practice means. The loop specification is a third thing: an external, bounded, reusable artifact, a trigger plus a goal plus a verification step plus a stopping rule plus a memory, that a human designs and hands to a harness such as Claude Code or Codex so the agent finds the work, does it, checks its own result, and knows when to stop or call for help. The harness supplies the engine; loop engineering writes the pilot. We situate the practice as a new layer in a progression (Figure 1).3 Prompt engineering asked how to ask. Context engineering asked what the agent knows and remembers. Harness engineering asked what environment, tools and limits the agent has. Loop engineering asks what system one builds so the agent finds, runs, verifies and remembers the work without a human in the middle of each step. Each layer subsumes the previous one rather than discarding it",
+      "source": "loop.pdf",
+      "source_type": "true_data",
+      "score": 0.7108673,
+      "rerank_score": 0.889462947845459,
+      "url": null,
+      "grader_score": 0.94,
+      "grader_relevant": true,
+      "grader_reason": "Explicitly defines loop engineering as an external, bounded artifact with trigger, goal, verification, stopping rule, and memory, directly addressing the query's focus on definition and design.",
+      "evidence_type": "CONTENT",
+      "evidence_score": 1.0,
+      "reference_dominated": false,
+      "evidence_reason": "Academic content with inline citations.",
+      "evidence_metrics": {
+        "citation_count": 1,
+        "corr_count": 0,
+        "proceedings_count": 0,
+        "pages_count": 0,
+        "doi_count": 0,
+        "arxiv_count": 0,
+        "year_count": 0,
+        "reference_entry_count": 1,
+        "strong_reference_signals": 0
+      }
+    },
+    {
+      "id": "77523bd3-617e-516d-9599-db671097fced",
+      "document_id": "23b038dd8383e3d47638322b",
+      "chunk_id": 12,
+      "total_chunks": 55,
+      "content": "-shot, not a loop. The value of a loop is iteration with embedded verification, so the first design question is always whether genuine feedback exists The operational anatomy: five pieces plus memory Concretely, a real loop system assembles five reusable pieces and an external memory.8 Scheduled automations discover and triage the work (the scheduled trigger made concrete); 6A. Osmani, “Loop Engineering,” https://addyosmani.com/blog/loop-engineering/; S. Willison, “Design- ing agentic loops,” https://simonwillison.net/2025/Sep/30/designing-agentic-loops/. 7This triage criterion crystallised in community discussion of the practice; see the threads summarised around the Loop Library release. 8This operational anatomy follows A. Osmani, “Loop Engineering,” https://addyosmani.com/blog/ loop-engineering/. 5",
+      "source": "loop.pdf",
+      "source_type": "true_data",
+      "score": 0.69628316,
+      "rerank_score": 0.9955810904502869,
+      "url": null,
+      "grader_score": 0.92,
+      "grader_relevant": true,
+      "grader_reason": "Provides a concrete definition of a loop system, emphasizing iteration, embedded verification, and feedback—core concepts asked for in the query.",
+      "evidence_type": "CONTENT",
+      "evidence_score": 1.0,
+      "reference_dominated": false,
+      "evidence_reason": "Normal explanatory content.",
+      "evidence_metrics": {
+        "citation_count": 0,
+        "corr_count": 0,
+        "proceedings_count": 0,
+        "pages_count": 0,
+        "doi_count": 0,
+        "arxiv_count": 0,
+        "year_count": 1,
+        "reference_entry_count": 0,
+        "strong_reference_signals": 0
+      }
+    },
+    {
+      "id": "a86dd799-c7e4-5097-b6c8-f398c57d4b6d",
+      "document_id": "23b038dd8383e3d47638322b",
+      "chunk_id": 11,
+      "total_chunks": 55,
+      "content": "he senses apart is not pedantry: most Figure 2: The anatomy of a loop specification. A trigger starts the agent; the agent executes by calling proven skills; a goal and verification decide whether the work is done; the result is logged and state persists in memory. The loop repeats until it reaches a named terminal state, held in check by a budget ceiling and a no-progress detector. academic lineage in Section 2 builds the engine, whereas the practice studied here builds the pilot, and conflating them is exactly the confusion the slogan invites. The central skill is the check, not the prompt Practitioner accounts converge on a single point: the hard, valuable part of a loop is designing the check that decides when the work is done, not writing a better instruction.6 A loop with nothing to push back is an agent agreeing with itself. This is why the definition puts verification at the center of gravity: the loop earns its keep by trading blind trust for reproducible evidence, and by the moment at which it returns control to the human. The golden rule: a loop only when feedback changes the next action A loop specification is justified over a bare scheduled prompt only when the result of one turn changes the next action.7 If a fixed task runs on a fixed cadence and nothing about the last run informs the next, that is a scheduled one-shot, not a loop. The value of a loop is iteration with embedded verification, so the first design question is always whether genuine feedback exists",
+      "source": "loop.pdf",
+      "source_type": "true_data",
+      "score": 0.6620855,
+      "rerank_score": 0.6101693511009216,
+      "url": null,
+      "grader_score": 0.9,
+      "grader_relevant": true,
+      "grader_reason": "Details the anatomy of a loop specification, highlighting verification and feedback loops, which aligns closely with the requested definition and design aspects.",
+      "evidence_type": "CONTENT",
+      "evidence_score": 1.0,
+      "reference_dominated": false,
+      "evidence_reason": "Normal explanatory content.",
+      "evidence_metrics": {
+        "citation_count": 0,
+        "corr_count": 0,
+        "proceedings_count": 0,
+        "pages_count": 0,
+        "doi_count": 0,
+        "arxiv_count": 0,
+        "year_count": 0,
+        "reference_entry_count": 0,
+        "strong_reference_signals": 0
+      }
+    },
+    {
+      "id": "41d41060-0f6b-5301-bd0d-f97dd467c833",
+      "document_id": "23b038dd8383e3d47638322b",
+      "chunk_id": 2,
+      "total_chunks": 55,
+      "content": "ry step and instead design the loop that prompts it. Practitioners building these tools stated the shift bluntly, from “I don’t prompt Claude anymore. I have loops running that prompt Claude” to the sharper imperative, circulated to several million viewers in a day, that one should no longer be prompting coding agents but designing the loops that prompt them.1 Around the same time, a public catalogue of reusable loops, the Loop Library, turned the slogan into concrete artifacts.2 The claim is striking and the practice is real, but the concept arrived through threads, talks and blog posts rather than through any reviewable account. That gap motivates this paper. We ask what exactly is being built, how it relates to the loops that already exist inside an agent, 1Quoted in The New Stack, “Loop Engineering,” https://thenewstack.io/loop-engineering/, and in A. Osmani, “Loop Engineering,” https://addyosmani.com/blog/loop-engineering/. 2Loop Library (Forward Future), https://signals.forwardfuture.ai/loop-library/. 1 arXiv:2607.00038v1 [cs.SE] 28 Jun 2026",
+      "source": "loop.pdf",
+      "source_type": "true_data",
+      "score": 0.6474683,
+      "rerank_score": 0.7456080913543701,
+      "url": null,
+      "grader_score": 0.68,
+      "grader_relevant": true,
+      "grader_reason": "Describes the emergence of loop engineering practice and mentions the Loop Library, offering contextual background but limited direct definition.",
+      "evidence_type": "CONTENT",
+      "evidence_score": 1.0,
+      "reference_dominated": false,
+      "evidence_reason": "Normal explanatory content.",
+      "evidence_metrics": {
+        "citation_count": 0,
+        "corr_count": 0,
+        "proceedings_count": 0,
+        "pages_count": 0,
+        "doi_count": 0,
+        "arxiv_count": 1,
+        "year_count": 1,
+        "reference_entry_count": 0,
+        "strong_reference_signals": 1
+      }
+    },
+    {
+      "id": "063985a0-119c-5a23-acf7-900cd8527d08",
+      "document_id": "23b038dd8383e3d47638322b",
+      "chunk_id": 37,
+      "total_chunks": 55,
+      "content": "dentials in test or staging, and a tight budget cap.17 These are not optional extras for an autonomous loop; they are the price of leavi When not to use a loop A loop is the wrong tool when the next action does not change with new feedback (do it one-shot, perhaps scheduled), when the goal is pure taste with no reproducible check, when the work is ambiguous greenfield construction where the right direction is unknown, or when the cost of looping does not pay for itself. Naming these cases is part of the discipline, not a retreat from it. Limitations This is a position paper anchored in a descriptive corpus study, not a controlled experiment. The fifty-loop coding is our own qualitative reading of a single public catalogue; a different coder might assign some loops differently, the corpus is not a random sample of all loops in the wild, and ambiguous entries were inferred from text. The aggregate percentages describe this corpus, not the population of all loop specifications, and we draw no causal conclusion from them. The design principles are grounded in cited behaviour of related systems, but those systems mostly study the internal agent cycle, so transferring their lessons to the external loop is an argued analogy, not a measured result. We have deliberately fabricated no usage data, including for the sandeco-loop skill, which we release as an accompanying artifact rather than an evaluated system. Future work The clearest next step is the empirical study this paper sets up",
+      "source": "loop.pdf",
+      "source_type": "true_data",
+      "score": 0.6929228,
+      "rerank_score": 0.2874162793159485,
+      "url": null,
+      "grader_score": 0.62,
+      "grader_relevant": true,
+      "grader_reason": "Discusses limitations and cases where loops are unsuitable, providing partial insight into loop engineering considerations but less about core definition.",
+      "evidence_type": "CONTENT",
+      "evidence_score": 1.0,
+      "reference_dominated": false,
+      "evidence_reason": "Normal explanatory content.",
+      "evidence_metrics": {
+        "citation_count": 0,
+        "corr_count": 0,
+        "proceedings_count": 0,
+        "pages_count": 0,
+        "doi_count": 0,
+        "arxiv_count": 0,
+        "year_count": 0,
+        "reference_entry_count": 0,
+        "strong_reference_signals": 0
+      }
+    }
+  ],
+  "grader_status": "success",
+  "grading_mode": "graded",
+  "grader_error_type": null,
+  "citations": {
+    "chunk_1": {
+      "citation_id": "chunk_1",
+      "point_id": "d50d3204-2cc3-5a95-933f-7b6fa09d6c40",
+      "document_id": "23b038dd8383e3d47638322b",
+      "chunk_id": 3,
+      "total_chunks": 55,
+      "source": "loop.pdf",
+      "source_type": "true_data",
+      "url": null,
+      "text": "i.com/blog/loop-engineering/. 2Loop Library (Fo what a corpus of real loops actually looks like, and which of the practitioner claims survive contact with the scientific literature. The first task is to fix the object of study, because the word “loop” carries at least three meanings. An ordinary programming loop is plain control flow. The internal cycle of an agent, the model running tools in a while over a stop condition, is the perceive-act-observe machinery that frameworks from ReAct [50] onward formalized; it is part of the harness and it exists whether or not anyone designs it. Neither of these is what the new practice means. The loop specification is a third thing: an external, bounded, reusable artifact, a trigger plus a goal plus a verification step plus a stopping rule plus a memory, that a human designs and hands to a harness such as Claude Code or Codex so the agent finds the work, does it, checks its own result, and knows when to stop or call for help. The harness supplies the engine; loop engineering writes the pilot. We situate the practice as a new layer in a progression (Figure 1).3 Prompt engineering asked how to ask. Context engineering asked what the agent knows and remembers. Harness engineering asked what environment, tools and limits the agent has. Loop engineering asks what system one builds so the agent finds, runs, verifies and remembers the work without a human in the middle of each step. Each layer subsumes the previous one rather than discarding it",
+      "evidence": "i.com/blog/loop-engineering/. 2Loop Library (Fo what a corpus of real loops actually looks like, and which of the practitioner claims survive contact with the scientific literature. The first task is to fix the object of study, because the word “loop” carries at least three meanings. An ordinary programming loop is plain control flow. The internal cycle of an agent, the model running tools in a while over a stop condition, is the perceive-act-observe machinery that frameworks from ReAct [50] onward formalized; it is part of the harness and it exists whether or not anyone designs it. Neither of these is what the new practice means. The loop specification is a third thing: an external, bounded, reusable artifact, a trigger plus a goal plus a verification step plus a stopping rule plus a memory, that a human designs and hands to a harness such as Claude Code or Codex so the agent finds the work, does it, checks its own result, and knows when to stop or call for help. The harness supplies the engine; loop engineering writes the pilot. We situate the practice as a new layer in a progression (Figure 1).3 Prompt engineering asked how to ask. Context engineering asked what the agent knows and remembers. Harness engineering asked what environment, tools and limits the agent has. Loop engineering asks what system one builds so the agent finds, runs, verifies and remembers the work without a human in the middle of each step. Each layer subsumes the previous one rather than discarding it",
+      "metadata": {}
+    },
+    "chunk_2": {
+      "citation_id": "chunk_2",
+      "point_id": "77523bd3-617e-516d-9599-db671097fced",
+      "document_id": "23b038dd8383e3d47638322b",
+      "chunk_id": 12,
+      "total_chunks": 55,
+      "source": "loop.pdf",
+      "source_type": "true_data",
+      "url": null,
+      "text": "-shot, not a loop. The value of a loop is iteration with embedded verification, so the first design question is always whether genuine feedback exists The operational anatomy: five pieces plus memory Concretely, a real loop system assembles five reusable pieces and an external memory.8 Scheduled automations discover and triage the work (the scheduled trigger made concrete); 6A. Osmani, “Loop Engineering,” https://addyosmani.com/blog/loop-engineering/; S. Willison, “Design- ing agentic loops,” https://simonwillison.net/2025/Sep/30/designing-agentic-loops/. 7This triage criterion crystallised in community discussion of the practice; see the threads summarised around the Loop Library release. 8This operational anatomy follows A. Osmani, “Loop Engineering,” https://addyosmani.com/blog/ loop-engineering/. 5",
+      "evidence": "-shot, not a loop. The value of a loop is iteration with embedded verification, so the first design question is always whether genuine feedback exists The operational anatomy: five pieces plus memory Concretely, a real loop system assembles five reusable pieces and an external memory.8 Scheduled automations discover and triage the work (the scheduled trigger made concrete); 6A. Osmani, “Loop Engineering,” https://addyosmani.com/blog/loop-engineering/; S. Willison, “Design- ing agentic loops,” https://simonwillison.net/2025/Sep/30/designing-agentic-loops/. 7This triage criterion crystallised in community discussion of the practice; see the threads summarised around the Loop Library release. 8This operational anatomy follows A. Osmani, “Loop Engineering,” https://addyosmani.com/blog/ loop-engineering/. 5",
+      "metadata": {}
+    },
+    "chunk_3": {
+      "citation_id": "chunk_3",
+      "point_id": "a86dd799-c7e4-5097-b6c8-f398c57d4b6d",
+      "document_id": "23b038dd8383e3d47638322b",
+      "chunk_id": 11,
+      "total_chunks": 55,
+      "source": "loop.pdf",
+      "source_type": "true_data",
+      "url": null,
+      "text": "he senses apart is not pedantry: most Figure 2: The anatomy of a loop specification. A trigger starts the agent; the agent executes by calling proven skills; a goal and verification decide whether the work is done; the result is logged and state persists in memory. The loop repeats until it reaches a named terminal state, held in check by a budget ceiling and a no-progress detector. academic lineage in Section 2 builds the engine, whereas the practice studied here builds the pilot, and conflating them is exactly the confusion the slogan invites. The central skill is the check, not the prompt Practitioner accounts converge on a single point: the hard, valuable part of a loop is designing the check that decides when the work is done, not writing a better instruction.6 A loop with nothing to push back is an agent agreeing with itself. This is why the definition puts verification at the center of gravity: the loop earns its keep by trading blind trust for reproducible evidence, and by the moment at which it returns control to the human. The golden rule: a loop only when feedback changes the next action A loop specification is justified over a bare scheduled prompt only when the result of one turn changes the next action.7 If a fixed task runs on a fixed cadence and nothing about the last run informs the next, that is a scheduled one-shot, not a loop. The value of a loop is iteration with embedded verification, so the first design question is always whether genuine feedback exists",
+      "evidence": "he senses apart is not pedantry: most Figure 2: The anatomy of a loop specification. A trigger starts the agent; the agent executes by calling proven skills; a goal and verification decide whether the work is done; the result is logged and state persists in memory. The loop repeats until it reaches a named terminal state, held in check by a budget ceiling and a no-progress detector. academic lineage in Section 2 builds the engine, whereas the practice studied here builds the pilot, and conflating them is exactly the confusion the slogan invites. The central skill is the check, not the prompt Practitioner accounts converge on a single point: the hard, valuable part of a loop is designing the check that decides when the work is done, not writing a better instruction.6 A loop with nothing to push back is an agent agreeing with itself. This is why the definition puts verification at the center of gravity: the loop earns its keep by trading blind trust for reproducible evidence, and by the moment at which it returns control to the human. The golden rule: a loop only when feedback changes the next action A loop specification is justified over a bare scheduled prompt only when the result of one turn changes the next action.7 If a fixed task runs on a fixed cadence and nothing about the last run informs the next, that is a scheduled one-shot, not a loop. The value of a loop is iteration with embedded verification, so the first design question is always whether genuine feedback exists",
+      "metadata": {}
+    },
+    "chunk_4": {
+      "citation_id": "chunk_4",
+      "point_id": "41d41060-0f6b-5301-bd0d-f97dd467c833",
+      "document_id": "23b038dd8383e3d47638322b",
+      "chunk_id": 2,
+      "total_chunks": 55,
+      "source": "loop.pdf",
+      "source_type": "true_data",
+      "url": null,
+      "text": "ry step and instead design the loop that prompts it. Practitioners building these tools stated the shift bluntly, from “I don’t prompt Claude anymore. I have loops running that prompt Claude” to the sharper imperative, circulated to several million viewers in a day, that one should no longer be prompting coding agents but designing the loops that prompt them.1 Around the same time, a public catalogue of reusable loops, the Loop Library, turned the slogan into concrete artifacts.2 The claim is striking and the practice is real, but the concept arrived through threads, talks and blog posts rather than through any reviewable account. That gap motivates this paper. We ask what exactly is being built, how it relates to the loops that already exist inside an agent, 1Quoted in The New Stack, “Loop Engineering,” https://thenewstack.io/loop-engineering/, and in A. Osmani, “Loop Engineering,” https://addyosmani.com/blog/loop-engineering/. 2Loop Library (Forward Future), https://signals.forwardfuture.ai/loop-library/. 1 arXiv:2607.00038v1 [cs.SE] 28 Jun 2026",
+      "evidence": "ry step and instead design the loop that prompts it. Practitioners building these tools stated the shift bluntly, from “I don’t prompt Claude anymore. I have loops running that prompt Claude” to the sharper imperative, circulated to several million viewers in a day, that one should no longer be prompting coding agents but designing the loops that prompt them.1 Around the same time, a public catalogue of reusable loops, the Loop Library, turned the slogan into concrete artifacts.2 The claim is striking and the practice is real, but the concept arrived through threads, talks and blog posts rather than through any reviewable account. That gap motivates this paper. We ask what exactly is being built, how it relates to the loops that already exist inside an agent, 1Quoted in The New Stack, “Loop Engineering,” https://thenewstack.io/loop-engineering/, and in A. Osmani, “Loop Engineering,” https://addyosmani.com/blog/loop-engineering/. 2Loop Library (Forward Future), https://signals.forwardfuture.ai/loop-library/. 1 arXiv:2607.00038v1 [cs.SE] 28 Jun 2026",
+      "metadata": {}
+    },
+    "chunk_5": {
+      "citation_id": "chunk_5",
+      "point_id": "063985a0-119c-5a23-acf7-900cd8527d08",
+      "document_id": "23b038dd8383e3d47638322b",
+      "chunk_id": 37,
+      "total_chunks": 55,
+      "source": "loop.pdf",
+      "source_type": "true_data",
+      "url": null,
+      "text": "dentials in test or staging, and a tight budget cap.17 These are not optional extras for an autonomous loop; they are the price of leavi When not to use a loop A loop is the wrong tool when the next action does not change with new feedback (do it one-shot, perhaps scheduled), when the goal is pure taste with no reproducible check, when the work is ambiguous greenfield construction where the right direction is unknown, or when the cost of looping does not pay for itself. Naming these cases is part of the discipline, not a retreat from it. Limitations This is a position paper anchored in a descriptive corpus study, not a controlled experiment. The fifty-loop coding is our own qualitative reading of a single public catalogue; a different coder might assign some loops differently, the corpus is not a random sample of all loops in the wild, and ambiguous entries were inferred from text. The aggregate percentages describe this corpus, not the population of all loop specifications, and we draw no causal conclusion from them. The design principles are grounded in cited behaviour of related systems, but those systems mostly study the internal agent cycle, so transferring their lessons to the external loop is an argued analogy, not a measured result. We have deliberately fabricated no usage data, including for the sandeco-loop skill, which we release as an accompanying artifact rather than an evaluated system. Future work The clearest next step is the empirical study this paper sets up",
+      "evidence": "dentials in test or staging, and a tight budget cap.17 These are not optional extras for an autonomous loop; they are the price of leavi When not to use a loop A loop is the wrong tool when the next action does not change with new feedback (do it one-shot, perhaps scheduled), when the goal is pure taste with no reproducible check, when the work is ambiguous greenfield construction where the right direction is unknown, or when the cost of looping does not pay for itself. Naming these cases is part of the discipline, not a retreat from it. Limitations This is a position paper anchored in a descriptive corpus study, not a controlled experiment. The fifty-loop coding is our own qualitative reading of a single public catalogue; a different coder might assign some loops differently, the corpus is not a random sample of all loops in the wild, and ambiguous entries were inferred from text. The aggregate percentages describe this corpus, not the population of all loop specifications, and we draw no causal conclusion from them. The design principles are grounded in cited behaviour of related systems, but those systems mostly study the internal agent cycle, so transferring their lessons to the external loop is an argued analogy, not a measured result. We have deliberately fabricated no usage data, including for the sandeco-loop skill, which we release as an accompanying artifact rather than an evaluated system. Future work The clearest next step is the empirical study this paper sets up",
+      "metadata": {}
+    }
+  },
+  "citation_provenance": {
+    "chunk_1": {
+      "citation_id": "chunk_1",
+      "point_id": "d50d3204-2cc3-5a95-933f-7b6fa09d6c40",
+      "document_id": "23b038dd8383e3d47638322b",
+      "chunk_id": 3,
+      "total_chunks": 55,
+      "source": "loop.pdf",
+      "source_type": "true_data",
+      "url": null,
+      "text": "i.com/blog/loop-engineering/. 2Loop Library (Fo what a corpus of real loops actually looks like, and which of the practitioner claims survive contact with the scientific literature. The first task is to fix the object of study, because the word “loop” carries at least three meanings. An ordinary programming loop is plain control flow. The internal cycle of an agent, the model running tools in a while over a stop condition, is the perceive-act-observe machinery that frameworks from ReAct [50] onward formalized; it is part of the harness and it exists whether or not anyone designs it. Neither of these is what the new practice means. The loop specification is a third thing: an external, bounded, reusable artifact, a trigger plus a goal plus a verification step plus a stopping rule plus a memory, that a human designs and hands to a harness such as Claude Code or Codex so the agent finds the work, does it, checks its own result, and knows when to stop or call for help. The harness supplies the engine; loop engineering writes the pilot. We situate the practice as a new layer in a progression (Figure 1).3 Prompt engineering asked how to ask. Context engineering asked what the agent knows and remembers. Harness engineering asked what environment, tools and limits the agent has. Loop engineering asks what system one builds so the agent finds, runs, verifies and remembers the work without a human in the middle of each step. Each layer subsumes the previous one rather than discarding it",
+      "evidence": "i.com/blog/loop-engineering/. 2Loop Library (Fo what a corpus of real loops actually looks like, and which of the practitioner claims survive contact with the scientific literature. The first task is to fix the object of study, because the word “loop” carries at least three meanings. An ordinary programming loop is plain control flow. The internal cycle of an agent, the model running tools in a while over a stop condition, is the perceive-act-observe machinery that frameworks from ReAct [50] onward formalized; it is part of the harness and it exists whether or not anyone designs it. Neither of these is what the new practice means. The loop specification is a third thing: an external, bounded, reusable artifact, a trigger plus a goal plus a verification step plus a stopping rule plus a memory, that a human designs and hands to a harness such as Claude Code or Codex so the agent finds the work, does it, checks its own result, and knows when to stop or call for help. The harness supplies the engine; loop engineering writes the pilot. We situate the practice as a new layer in a progression (Figure 1).3 Prompt engineering asked how to ask. Context engineering asked what the agent knows and remembers. Harness engineering asked what environment, tools and limits the agent has. Loop engineering asks what system one builds so the agent finds, runs, verifies and remembers the work without a human in the middle of each step. Each layer subsumes the previous one rather than discarding it",
+      "metadata": {}
+    },
+    "chunk_2": {
+      "citation_id": "chunk_2",
+      "point_id": "77523bd3-617e-516d-9599-db671097fced",
+      "document_id": "23b038dd8383e3d47638322b",
+      "chunk_id": 12,
+      "total_chunks": 55,
+      "source": "loop.pdf",
+      "source_type": "true_data",
+      "url": null,
+      "text": "-shot, not a loop. The value of a loop is iteration with embedded verification, so the first design question is always whether genuine feedback exists The operational anatomy: five pieces plus memory Concretely, a real loop system assembles five reusable pieces and an external memory.8 Scheduled automations discover and triage the work (the scheduled trigger made concrete); 6A. Osmani, “Loop Engineering,” https://addyosmani.com/blog/loop-engineering/; S. Willison, “Design- ing agentic loops,” https://simonwillison.net/2025/Sep/30/designing-agentic-loops/. 7This triage criterion crystallised in community discussion of the practice; see the threads summarised around the Loop Library release. 8This operational anatomy follows A. Osmani, “Loop Engineering,” https://addyosmani.com/blog/ loop-engineering/. 5",
+      "evidence": "-shot, not a loop. The value of a loop is iteration with embedded verification, so the first design question is always whether genuine feedback exists The operational anatomy: five pieces plus memory Concretely, a real loop system assembles five reusable pieces and an external memory.8 Scheduled automations discover and triage the work (the scheduled trigger made concrete); 6A. Osmani, “Loop Engineering,” https://addyosmani.com/blog/loop-engineering/; S. Willison, “Design- ing agentic loops,” https://simonwillison.net/2025/Sep/30/designing-agentic-loops/. 7This triage criterion crystallised in community discussion of the practice; see the threads summarised around the Loop Library release. 8This operational anatomy follows A. Osmani, “Loop Engineering,” https://addyosmani.com/blog/ loop-engineering/. 5",
+      "metadata": {}
+    },
+    "chunk_3": {
+      "citation_id": "chunk_3",
+      "point_id": "a86dd799-c7e4-5097-b6c8-f398c57d4b6d",
+      "document_id": "23b038dd8383e3d47638322b",
+      "chunk_id": 11,
+      "total_chunks": 55,
+      "source": "loop.pdf",
+      "source_type": "true_data",
+      "url": null,
+      "text": "he senses apart is not pedantry: most Figure 2: The anatomy of a loop specification. A trigger starts the agent; the agent executes by calling proven skills; a goal and verification decide whether the work is done; the result is logged and state persists in memory. The loop repeats until it reaches a named terminal state, held in check by a budget ceiling and a no-progress detector. academic lineage in Section 2 builds the engine, whereas the practice studied here builds the pilot, and conflating them is exactly the confusion the slogan invites. The central skill is the check, not the prompt Practitioner accounts converge on a single point: the hard, valuable part of a loop is designing the check that decides when the work is done, not writing a better instruction.6 A loop with nothing to push back is an agent agreeing with itself. This is why the definition puts verification at the center of gravity: the loop earns its keep by trading blind trust for reproducible evidence, and by the moment at which it returns control to the human. The golden rule: a loop only when feedback changes the next action A loop specification is justified over a bare scheduled prompt only when the result of one turn changes the next action.7 If a fixed task runs on a fixed cadence and nothing about the last run informs the next, that is a scheduled one-shot, not a loop. The value of a loop is iteration with embedded verification, so the first design question is always whether genuine feedback exists",
+      "evidence": "he senses apart is not pedantry: most Figure 2: The anatomy of a loop specification. A trigger starts the agent; the agent executes by calling proven skills; a goal and verification decide whether the work is done; the result is logged and state persists in memory. The loop repeats until it reaches a named terminal state, held in check by a budget ceiling and a no-progress detector. academic lineage in Section 2 builds the engine, whereas the practice studied here builds the pilot, and conflating them is exactly the confusion the slogan invites. The central skill is the check, not the prompt Practitioner accounts converge on a single point: the hard, valuable part of a loop is designing the check that decides when the work is done, not writing a better instruction.6 A loop with nothing to push back is an agent agreeing with itself. This is why the definition puts verification at the center of gravity: the loop earns its keep by trading blind trust for reproducible evidence, and by the moment at which it returns control to the human. The golden rule: a loop only when feedback changes the next action A loop specification is justified over a bare scheduled prompt only when the result of one turn changes the next action.7 If a fixed task runs on a fixed cadence and nothing about the last run informs the next, that is a scheduled one-shot, not a loop. The value of a loop is iteration with embedded verification, so the first design question is always whether genuine feedback exists",
+      "metadata": {}
+    },
+    "chunk_4": {
+      "citation_id": "chunk_4",
+      "point_id": "41d41060-0f6b-5301-bd0d-f97dd467c833",
+      "document_id": "23b038dd8383e3d47638322b",
+      "chunk_id": 2,
+      "total_chunks": 55,
+      "source": "loop.pdf",
+      "source_type": "true_data",
+      "url": null,
+      "text": "ry step and instead design the loop that prompts it. Practitioners building these tools stated the shift bluntly, from “I don’t prompt Claude anymore. I have loops running that prompt Claude” to the sharper imperative, circulated to several million viewers in a day, that one should no longer be prompting coding agents but designing the loops that prompt them.1 Around the same time, a public catalogue of reusable loops, the Loop Library, turned the slogan into concrete artifacts.2 The claim is striking and the practice is real, but the concept arrived through threads, talks and blog posts rather than through any reviewable account. That gap motivates this paper. We ask what exactly is being built, how it relates to the loops that already exist inside an agent, 1Quoted in The New Stack, “Loop Engineering,” https://thenewstack.io/loop-engineering/, and in A. Osmani, “Loop Engineering,” https://addyosmani.com/blog/loop-engineering/. 2Loop Library (Forward Future), https://signals.forwardfuture.ai/loop-library/. 1 arXiv:2607.00038v1 [cs.SE] 28 Jun 2026",
+      "evidence": "ry step and instead design the loop that prompts it. Practitioners building these tools stated the shift bluntly, from “I don’t prompt Claude anymore. I have loops running that prompt Claude” to the sharper imperative, circulated to several million viewers in a day, that one should no longer be prompting coding agents but designing the loops that prompt them.1 Around the same time, a public catalogue of reusable loops, the Loop Library, turned the slogan into concrete artifacts.2 The claim is striking and the practice is real, but the concept arrived through threads, talks and blog posts rather than through any reviewable account. That gap motivates this paper. We ask what exactly is being built, how it relates to the loops that already exist inside an agent, 1Quoted in The New Stack, “Loop Engineering,” https://thenewstack.io/loop-engineering/, and in A. Osmani, “Loop Engineering,” https://addyosmani.com/blog/loop-engineering/. 2Loop Library (Forward Future), https://signals.forwardfuture.ai/loop-library/. 1 arXiv:2607.00038v1 [cs.SE] 28 Jun 2026",
+      "metadata": {}
+    },
+    "chunk_5": {
+      "citation_id": "chunk_5",
+      "point_id": "063985a0-119c-5a23-acf7-900cd8527d08",
+      "document_id": "23b038dd8383e3d47638322b",
+      "chunk_id": 37,
+      "total_chunks": 55,
+      "source": "loop.pdf",
+      "source_type": "true_data",
+      "url": null,
+      "text": "dentials in test or staging, and a tight budget cap.17 These are not optional extras for an autonomous loop; they are the price of leavi When not to use a loop A loop is the wrong tool when the next action does not change with new feedback (do it one-shot, perhaps scheduled), when the goal is pure taste with no reproducible check, when the work is ambiguous greenfield construction where the right direction is unknown, or when the cost of looping does not pay for itself. Naming these cases is part of the discipline, not a retreat from it. Limitations This is a position paper anchored in a descriptive corpus study, not a controlled experiment. The fifty-loop coding is our own qualitative reading of a single public catalogue; a different coder might assign some loops differently, the corpus is not a random sample of all loops in the wild, and ambiguous entries were inferred from text. The aggregate percentages describe this corpus, not the population of all loop specifications, and we draw no causal conclusion from them. The design principles are grounded in cited behaviour of related systems, but those systems mostly study the internal agent cycle, so transferring their lessons to the external loop is an argued analogy, not a measured result. We have deliberately fabricated no usage data, including for the sandeco-loop skill, which we release as an accompanying artifact rather than an evaluated system. Future work The clearest next step is the empirical study this paper sets up",
+      "evidence": "dentials in test or staging, and a tight budget cap.17 These are not optional extras for an autonomous loop; they are the price of leavi When not to use a loop A loop is the wrong tool when the next action does not change with new feedback (do it one-shot, perhaps scheduled), when the goal is pure taste with no reproducible check, when the work is ambiguous greenfield construction where the right direction is unknown, or when the cost of looping does not pay for itself. Naming these cases is part of the discipline, not a retreat from it. Limitations This is a position paper anchored in a descriptive corpus study, not a controlled experiment. The fifty-loop coding is our own qualitative reading of a single public catalogue; a different coder might assign some loops differently, the corpus is not a random sample of all loops in the wild, and ambiguous entries were inferred from text. The aggregate percentages describe this corpus, not the population of all loop specifications, and we draw no causal conclusion from them. The design principles are grounded in cited behaviour of related systems, but those systems mostly study the internal agent cycle, so transferring their lessons to the external loop is an argued analogy, not a measured result. We have deliberately fabricated no usage data, including for the sandeco-loop skill, which we release as an accompanying artifact rather than an evaluated system. Future work The clearest next step is the empirical study this paper sets up",
+      "metadata": {}
+    }
+  },
+  "search_query": "loop engineering definition feedback loop design iterative development control loop optimization",
+  "retrieval_used": true,
+  "web_search_used": false,
+  "should_search_web": false,
+  "context_quality": "strong",
+  "context_reason": "5 relevant internal documents are available for generation.",
+  "citation_valid": true,
+  "is_grounded": true,
+  "claims": [
+    {
+      "claim": "Loop engineering creates an external, bounded, reusable loop specification that a human designs and hands to an agent harness, enabling the agent to find, run, verify, and remember work without a human in each step .",
+      "score": 0.9662,
+      "supported": true,
+      "citations": [
+        "chunk_1"
+      ],
+      "atomic_claims": [
+        {
+          "claim": "Loop engineering creates an external, bounded, reusable loop specification that a human designs and hands to an agent harness, enabling the agent to find, run, verify, and remember work without a human in each step .",
+          "score": 0.9662,
+          "supported": true,
+          "best_evidence_unit": "i.com/blog/loop-engineering/. 2Loop Library (Fo what a corpus of real loops actually looks like, and which of the practitioner claims survive contact with the scientific literature. The first task is to fix the object of study, because the word \"loop\" carries at least three meanings. An ordinary programming loop is plain control flow. The internal cycle of an agent, the model running tools in a while over a stop condition, is the perceive-act-observe machinery that frameworks from ReAct [50] onward formalized; it is part of the harness and it exists whether or not anyone designs it. Neither of these is what the new practice means. The loop specification is a third thing: an external, bounded, reusable artifact, a trigger plus a goal plus a verification step plus a stopping rule plus a memory, that a human designs and hands to a harness such as Claude Code or Codex so the agent finds the work, does it, checks its own result, and knows when to stop or call for help. The harness supplies the engine; loop engineering writes the pilot. We situate the practice as a new layer in a progression (Figure 1).3 Prompt engineering asked how to ask. Context engineering asked what the agent knows and remembers. Harness engineering asked what environment, tools and limits the agent has. Loop engineering asks what system one builds so the agent finds, runs, verifies and remembers the work without a human in the middle of each step. Each layer subsumes the previous one rather than discarding it",
+          "best_citation": "chunk_1",
+          "citations": [
+            "chunk_1"
+          ],
+          "support_method": "entailment",
+          "evidence_provenance": {
+            "citation_id": "chunk_1",
+            "document_id": "23b038dd8383e3d47638322b",
+            "chunk_id": 3,
+            "point_id": "d50d3204-2cc3-5a95-933f-7b6fa09d6c40",
+            "canonical_evidence_id": "23b038dd8383e3d47638322b::3"
+          },
+          "parent_claim": "Loop engineering creates an external, bounded, reusable loop specification that a human designs and hands to an agent harness, enabling the agent to find, run, verify, and remember work without a human in each step ."
+        }
+      ],
+      "cited_chunk_id": "chunk_1",
+      "cited_chunk_ids": [
+        "23b038dd8383e3d47638322b::3"
+      ],
+      "cited_chunk_key": "23b038dd8383e3d47638322b::3"
+    },
+    {
+      "claim": "A loop specification assembles five reusable pieces and an external memory .",
+      "score": 0.9218,
+      "supported": true,
+      "citations": [
+        "chunk_2"
+      ],
+      "atomic_claims": [
+        {
+          "claim": "A loop specification assembles five reusable pieces and an external memory .",
+          "score": 0.9218,
+          "supported": true,
+          "best_evidence_unit": "The value of a loop is iteration with embedded verification, so the first design question is always whether genuine feedback exists The operational anatomy: five pieces plus memory Concretely, a real loop system assembles five reusable pieces and an external memory.8 Scheduled automations discover and triage the work (the scheduled trigger made concrete); 6A.",
+          "best_citation": "chunk_2",
+          "citations": [
+            "chunk_2"
+          ],
+          "support_method": "entailment",
+          "evidence_provenance": {
+            "citation_id": "chunk_2",
+            "document_id": "23b038dd8383e3d47638322b",
+            "chunk_id": 12,
+            "point_id": "77523bd3-617e-516d-9599-db671097fced",
+            "canonical_evidence_id": "23b038dd8383e3d47638322b::12"
+          },
+          "parent_claim": "A loop specification assembles five reusable pieces and an external memory ."
+        }
+      ],
+      "cited_chunk_id": "chunk_2",
+      "cited_chunk_ids": [
+        "23b038dd8383e3d47638322b::12"
+      ],
+      "cited_chunk_key": "23b038dd8383e3d47638322b::12"
+    },
+    {
+      "claim": "The trigger starts the agent; the goal and verification decide whether the work is done; the result is logged and persisted in memory; the loop repeats until a terminal state, which is governed by a budget ceiling or a no‑progress detector .",
+      "score": 0.938,
+      "supported": true,
+      "citations": [
+        "chunk_3"
+      ],
+      "atomic_claims": [
+        {
+          "claim": "The trigger starts the agent",
+          "score": 0.938,
+          "supported": true,
+          "best_evidence_unit": "A trigger starts the agent; the agent executes by calling proven skills; a goal and verification decide whether the work is done; the result is logged and state persists in memory.",
+          "best_citation": "chunk_3",
+          "citations": [
+            "chunk_3"
+          ],
+          "support_method": "entailment",
+          "evidence_provenance": {
+            "citation_id": "chunk_3",
+            "document_id": "23b038dd8383e3d47638322b",
+            "chunk_id": 11,
+            "point_id": "a86dd799-c7e4-5097-b6c8-f398c57d4b6d",
+            "canonical_evidence_id": "23b038dd8383e3d47638322b::11"
+          },
+          "parent_claim": "The trigger starts the agent; the goal and verification decide whether the work is done; the result is logged and persisted in memory; the loop repeats until a terminal state, which is governed by a budget ceiling or a no‑progress detector ."
+        },
+        {
+          "claim": "the goal and verification decide whether the work is done",
+          "score": 0.9575,
+          "supported": true,
+          "best_evidence_unit": "A trigger starts the agent; the agent executes by calling proven skills; a goal and verification decide whether the work is done; the result is logged and state persists in memory.",
+          "best_citation": "chunk_3",
+          "citations": [
+            "chunk_3"
+          ],
+          "support_method": "entailment",
+          "evidence_provenance": {
+            "citation_id": "chunk_3",
+            "document_id": "23b038dd8383e3d47638322b",
+            "chunk_id": 11,
+            "point_id": "a86dd799-c7e4-5097-b6c8-f398c57d4b6d",
+            "canonical_evidence_id": "23b038dd8383e3d47638322b::11"
+          },
+          "parent_claim": "The trigger starts the agent; the goal and verification decide whether the work is done; the result is logged and persisted in memory; the loop repeats until a terminal state, which is governed by a budget ceiling or a no‑progress detector ."
+        },
+        {
+          "claim": "the result is logged and persisted in memory",
+          "score": 0.9642,
+          "supported": true,
+          "best_evidence_unit": "A trigger starts the agent; the agent executes by calling proven skills; a goal and verification decide whether the work is done; the result is logged and state persists in memory.",
+          "best_citation": "chunk_3",
+          "citations": [
+            "chunk_3"
+          ],
+          "support_method": "entailment",
+          "evidence_provenance": {
+            "citation_id": "chunk_3",
+            "document_id": "23b038dd8383e3d47638322b",
+            "chunk_id": 11,
+            "point_id": "a86dd799-c7e4-5097-b6c8-f398c57d4b6d",
+            "canonical_evidence_id": "23b038dd8383e3d47638322b::11"
+          },
+          "parent_claim": "The trigger starts the agent; the goal and verification decide whether the work is done; the result is logged and persisted in memory; the loop repeats until a terminal state, which is governed by a budget ceiling or a no‑progress detector ."
+        },
+        {
+          "claim": "the loop repeats until a terminal state, which is governed by a budget ceiling or a no‑progress detector .",
+          "score": 0.9611,
+          "supported": true,
+          "best_evidence_unit": "The loop repeats until it reaches a named terminal state, held in check by a budget ceiling and a no-progress detector. academic lineage in Section 2 builds the engine, whereas the practice studied here builds the pilot, and conflating them is exactly the confusion the slogan invites.",
+          "best_citation": "chunk_3",
+          "citations": [
+            "chunk_3"
+          ],
+          "support_method": "entailment",
+          "evidence_provenance": {
+            "citation_id": "chunk_3",
+            "document_id": "23b038dd8383e3d47638322b",
+            "chunk_id": 11,
+            "point_id": "a86dd799-c7e4-5097-b6c8-f398c57d4b6d",
+            "canonical_evidence_id": "23b038dd8383e3d47638322b::11"
+          },
+          "parent_claim": "The trigger starts the agent; the goal and verification decide whether the work is done; the result is logged and persisted in memory; the loop repeats until a terminal state, which is governed by a budget ceiling or a no‑progress detector ."
+        }
+      ],
+      "cited_chunk_id": "chunk_3",
+      "cited_chunk_ids": [
+        "23b038dd8383e3d47638322b::11"
+      ],
+      "cited_chunk_key": "23b038dd8383e3d47638322b::11"
+    },
+    {
+      "claim": "A loop is only a loop when feedback from one iteration changes the next action .",
+      "score": 0.9437,
+      "supported": true,
+      "citations": [
+        "chunk_3"
+      ],
+      "atomic_claims": [
+        {
+          "claim": "A loop is only a loop when feedback from one iteration changes the next action .",
+          "score": 0.9437,
+          "supported": true,
+          "best_evidence_unit": "This is why the definition puts verification at the center of gravity: the loop earns its keep by trading blind trust for reproducible evidence, and by the moment at which it returns control to the human. The golden rule: a loop only when feedback changes the next action A loop specification is justified over a bare scheduled prompt only when the result of one turn changes the next action.7 If a fixed task runs on a fixed cadence and nothing about the last run informs the next, that is a scheduled one-shot, not a loop. The value of a loop is iteration with embedded verification, so the first design question is always whether genuine feedback exists",
+          "best_citation": "chunk_3",
+          "citations": [
+            "chunk_3"
+          ],
+          "support_method": "entailment",
+          "evidence_provenance": {
+            "citation_id": "chunk_3",
+            "document_id": "23b038dd8383e3d47638322b",
+            "chunk_id": 11,
+            "point_id": "a86dd799-c7e4-5097-b6c8-f398c57d4b6d",
+            "canonical_evidence_id": "23b038dd8383e3d47638322b::11"
+          },
+          "parent_claim": "A loop is only a loop when feedback from one iteration changes the next action ."
+        }
+      ],
+      "cited_chunk_id": "chunk_3",
+      "cited_chunk_ids": [
+        "23b038dd8383e3d47638322b::11"
+      ],
+      "cited_chunk_key": "23b038dd8383e3d47638322b::11"
+    },
+    {
+      "claim": "Practitioners have shifted from prompting agents directly to designing loops that prompt them, and a public Loop Library provides reusable loop artifacts .",
+      "score": 0.8187,
+      "supported": true,
+      "citations": [
+        "chunk_4"
+      ],
+      "atomic_claims": [
+        {
+          "claim": "Practitioners have shifted from prompting agents directly to designing loops that prompt them,",
+          "score": 0.8187,
+          "supported": true,
+          "best_evidence_unit": "ry step and instead design the loop that prompts it. Practitioners building these tools stated the shift bluntly, from \"I don't prompt Claude anymore. I have loops running that prompt Claude\" to the sharper imperative, circulated to several million viewers in a day, that one should no longer be prompting coding agents but designing the loops that prompt them.1 Around the same time, a public catalogue of reusable loops, the Loop Library, turned the slogan into concrete artifacts.2 The claim is striking and the practice is real, but the concept arrived through threads, talks and blog posts rather than through any reviewable account.",
+          "best_citation": "chunk_4",
+          "citations": [
+            "chunk_4"
+          ],
+          "support_method": "entailment",
+          "evidence_provenance": {
+            "citation_id": "chunk_4",
+            "document_id": "23b038dd8383e3d47638322b",
+            "chunk_id": 2,
+            "point_id": "41d41060-0f6b-5301-bd0d-f97dd467c833",
+            "canonical_evidence_id": "23b038dd8383e3d47638322b::2"
+          },
+          "parent_claim": "Practitioners have shifted from prompting agents directly to designing loops that prompt them, and a public Loop Library provides reusable loop artifacts ."
+        },
+        {
+          "claim": "a public Loop Library provides reusable loop artifacts .",
+          "score": 0.9661,
+          "supported": true,
+          "best_evidence_unit": "I have loops running that prompt Claude\" to the sharper imperative, circulated to several million viewers in a day, that one should no longer be prompting coding agents but designing the loops that prompt them.1 Around the same time, a public catalogue of reusable loops, the Loop Library, turned the slogan into concrete artifacts.2 The claim is striking and the practice is real, but the concept arrived through threads, talks and blog posts rather than through any reviewable account.",
+          "best_citation": "chunk_4",
+          "citations": [
+            "chunk_4"
+          ],
+          "support_method": "entailment",
+          "evidence_provenance": {
+            "citation_id": "chunk_4",
+            "document_id": "23b038dd8383e3d47638322b",
+            "chunk_id": 2,
+            "point_id": "41d41060-0f6b-5301-bd0d-f97dd467c833",
+            "canonical_evidence_id": "23b038dd8383e3d47638322b::2"
+          },
+          "parent_claim": "Practitioners have shifted from prompting agents directly to designing loops that prompt them, and a public Loop Library provides reusable loop artifacts ."
+        }
+      ],
+      "cited_chunk_id": "chunk_4",
+      "cited_chunk_ids": [
+        "23b038dd8383e3d47638322b::2"
+      ],
+      "cited_chunk_key": "23b038dd8383e3d47638322b::2"
+    },
+    {
+      "claim": "A loop is inappropriate when the next action does not change with new feedback .",
+      "score": 0.9852,
+      "supported": true,
+      "citations": [
+        "chunk_5"
+      ],
+      "atomic_claims": [
+        {
+          "claim": "A loop is inappropriate when the next action does not change with new feedback .",
+          "score": 0.9852,
+          "supported": true,
+          "best_evidence_unit": "dentials in test or staging, and a tight budget cap.17 These are not optional extras for an autonomous loop; they are the price of leavi When not to use a loop A loop is the wrong tool when the next action does not change with new feedback (do it one-shot, perhaps scheduled), when the goal is pure taste with no reproducible check, when the work is ambiguous greenfield construction where the right direction is unknown, or when the cost of looping does not pay for itself.",
+          "best_citation": "chunk_5",
+          "citations": [
+            "chunk_5"
+          ],
+          "support_method": "entailment",
+          "evidence_provenance": {
+            "citation_id": "chunk_5",
+            "document_id": "23b038dd8383e3d47638322b",
+            "chunk_id": 37,
+            "point_id": "063985a0-119c-5a23-acf7-900cd8527d08",
+            "canonical_evidence_id": "23b038dd8383e3d47638322b::37"
+          },
+          "parent_claim": "A loop is inappropriate when the next action does not change with new feedback ."
+        }
+      ],
+      "cited_chunk_id": "chunk_5",
+      "cited_chunk_ids": [
+        "23b038dd8383e3d47638322b::37"
+      ],
+      "cited_chunk_key": "23b038dd8383e3d47638322b::37"
+    }
+  ],
+  "grounding_scores": [
+    {
+      "claim": "Loop engineering creates an external, bounded, reusable loop specification that a human designs and hands to an agent harness, enabling the agent to find, run, verify, and remember work without a human in each step .",
+      "score": 0.9662,
+      "supported": true,
+      "citations": [
+        "chunk_1"
+      ],
+      "atomic_claims": [
+        {
+          "claim": "Loop engineering creates an external, bounded, reusable loop specification that a human designs and hands to an agent harness, enabling the agent to find, run, verify, and remember work without a human in each step .",
+          "score": 0.9662,
+          "supported": true,
+          "best_evidence_unit": "i.com/blog/loop-engineering/. 2Loop Library (Fo what a corpus of real loops actually looks like, and which of the practitioner claims survive contact with the scientific literature. The first task is to fix the object of study, because the word \"loop\" carries at least three meanings. An ordinary programming loop is plain control flow. The internal cycle of an agent, the model running tools in a while over a stop condition, is the perceive-act-observe machinery that frameworks from ReAct [50] onward formalized; it is part of the harness and it exists whether or not anyone designs it. Neither of these is what the new practice means. The loop specification is a third thing: an external, bounded, reusable artifact, a trigger plus a goal plus a verification step plus a stopping rule plus a memory, that a human designs and hands to a harness such as Claude Code or Codex so the agent finds the work, does it, checks its own result, and knows when to stop or call for help. The harness supplies the engine; loop engineering writes the pilot. We situate the practice as a new layer in a progression (Figure 1).3 Prompt engineering asked how to ask. Context engineering asked what the agent knows and remembers. Harness engineering asked what environment, tools and limits the agent has. Loop engineering asks what system one builds so the agent finds, runs, verifies and remembers the work without a human in the middle of each step. Each layer subsumes the previous one rather than discarding it",
+          "best_citation": "chunk_1",
+          "citations": [
+            "chunk_1"
+          ],
+          "support_method": "entailment",
+          "evidence_provenance": {
+            "citation_id": "chunk_1",
+            "document_id": "23b038dd8383e3d47638322b",
+            "chunk_id": 3,
+            "point_id": "d50d3204-2cc3-5a95-933f-7b6fa09d6c40",
+            "canonical_evidence_id": "23b038dd8383e3d47638322b::3"
+          },
+          "parent_claim": "Loop engineering creates an external, bounded, reusable loop specification that a human designs and hands to an agent harness, enabling the agent to find, run, verify, and remember work without a human in each step ."
+        }
+      ]
+    },
+    {
+      "claim": "A loop specification assembles five reusable pieces and an external memory .",
+      "score": 0.9218,
+      "supported": true,
+      "citations": [
+        "chunk_2"
+      ],
+      "atomic_claims": [
+        {
+          "claim": "A loop specification assembles five reusable pieces and an external memory .",
+          "score": 0.9218,
+          "supported": true,
+          "best_evidence_unit": "The value of a loop is iteration with embedded verification, so the first design question is always whether genuine feedback exists The operational anatomy: five pieces plus memory Concretely, a real loop system assembles five reusable pieces and an external memory.8 Scheduled automations discover and triage the work (the scheduled trigger made concrete); 6A.",
+          "best_citation": "chunk_2",
+          "citations": [
+            "chunk_2"
+          ],
+          "support_method": "entailment",
+          "evidence_provenance": {
+            "citation_id": "chunk_2",
+            "document_id": "23b038dd8383e3d47638322b",
+            "chunk_id": 12,
+            "point_id": "77523bd3-617e-516d-9599-db671097fced",
+            "canonical_evidence_id": "23b038dd8383e3d47638322b::12"
+          },
+          "parent_claim": "A loop specification assembles five reusable pieces and an external memory ."
+        }
+      ]
+    },
+    {
+      "claim": "The trigger starts the agent; the goal and verification decide whether the work is done; the result is logged and persisted in memory; the loop repeats until a terminal state, which is governed by a budget ceiling or a no‑progress detector .",
+      "score": 0.938,
+      "supported": true,
+      "citations": [
+        "chunk_3"
+      ],
+      "atomic_claims": [
+        {
+          "claim": "The trigger starts the agent",
+          "score": 0.938,
+          "supported": true,
+          "best_evidence_unit": "A trigger starts the agent; the agent executes by calling proven skills; a goal and verification decide whether the work is done; the result is logged and state persists in memory.",
+          "best_citation": "chunk_3",
+          "citations": [
+            "chunk_3"
+          ],
+          "support_method": "entailment",
+          "evidence_provenance": {
+            "citation_id": "chunk_3",
+            "document_id": "23b038dd8383e3d47638322b",
+            "chunk_id": 11,
+            "point_id": "a86dd799-c7e4-5097-b6c8-f398c57d4b6d",
+            "canonical_evidence_id": "23b038dd8383e3d47638322b::11"
+          },
+          "parent_claim": "The trigger starts the agent; the goal and verification decide whether the work is done; the result is logged and persisted in memory; the loop repeats until a terminal state, which is governed by a budget ceiling or a no‑progress detector ."
+        },
+        {
+          "claim": "the goal and verification decide whether the work is done",
+          "score": 0.9575,
+          "supported": true,
+          "best_evidence_unit": "A trigger starts the agent; the agent executes by calling proven skills; a goal and verification decide whether the work is done; the result is logged and state persists in memory.",
+          "best_citation": "chunk_3",
+          "citations": [
+            "chunk_3"
+          ],
+          "support_method": "entailment",
+          "evidence_provenance": {
+            "citation_id": "chunk_3",
+            "document_id": "23b038dd8383e3d47638322b",
+            "chunk_id": 11,
+            "point_id": "a86dd799-c7e4-5097-b6c8-f398c57d4b6d",
+            "canonical_evidence_id": "23b038dd8383e3d47638322b::11"
+          },
+          "parent_claim": "The trigger starts the agent; the goal and verification decide whether the work is done; the result is logged and persisted in memory; the loop repeats until a terminal state, which is governed by a budget ceiling or a no‑progress detector ."
+        },
+        {
+          "claim": "the result is logged and persisted in memory",
+          "score": 0.9642,
+          "supported": true,
+          "best_evidence_unit": "A trigger starts the agent; the agent executes by calling proven skills; a goal and verification decide whether the work is done; the result is logged and state persists in memory.",
+          "best_citation": "chunk_3",
+          "citations": [
+            "chunk_3"
+          ],
+          "support_method": "entailment",
+          "evidence_provenance": {
+            "citation_id": "chunk_3",
+            "document_id": "23b038dd8383e3d47638322b",
+            "chunk_id": 11,
+            "point_id": "a86dd799-c7e4-5097-b6c8-f398c57d4b6d",
+            "canonical_evidence_id": "23b038dd8383e3d47638322b::11"
+          },
+          "parent_claim": "The trigger starts the agent; the goal and verification decide whether the work is done; the result is logged and persisted in memory; the loop repeats until a terminal state, which is governed by a budget ceiling or a no‑progress detector ."
+        },
+        {
+          "claim": "the loop repeats until a terminal state, which is governed by a budget ceiling or a no‑progress detector .",
+          "score": 0.9611,
+          "supported": true,
+          "best_evidence_unit": "The loop repeats until it reaches a named terminal state, held in check by a budget ceiling and a no-progress detector. academic lineage in Section 2 builds the engine, whereas the practice studied here builds the pilot, and conflating them is exactly the confusion the slogan invites.",
+          "best_citation": "chunk_3",
+          "citations": [
+            "chunk_3"
+          ],
+          "support_method": "entailment",
+          "evidence_provenance": {
+            "citation_id": "chunk_3",
+            "document_id": "23b038dd8383e3d47638322b",
+            "chunk_id": 11,
+            "point_id": "a86dd799-c7e4-5097-b6c8-f398c57d4b6d",
+            "canonical_evidence_id": "23b038dd8383e3d47638322b::11"
+          },
+          "parent_claim": "The trigger starts the agent; the goal and verification decide whether the work is done; the result is logged and persisted in memory; the loop repeats until a terminal state, which is governed by a budget ceiling or a no‑progress detector ."
+        }
+      ]
+    },
+    {
+      "claim": "A loop is only a loop when feedback from one iteration changes the next action .",
+      "score": 0.9437,
+      "supported": true,
+      "citations": [
+        "chunk_3"
+      ],
+      "atomic_claims": [
+        {
+          "claim": "A loop is only a loop when feedback from one iteration changes the next action .",
+          "score": 0.9437,
+          "supported": true,
+          "best_evidence_unit": "This is why the definition puts verification at the center of gravity: the loop earns its keep by trading blind trust for reproducible evidence, and by the moment at which it returns control to the human. The golden rule: a loop only when feedback changes the next action A loop specification is justified over a bare scheduled prompt only when the result of one turn changes the next action.7 If a fixed task runs on a fixed cadence and nothing about the last run informs the next, that is a scheduled one-shot, not a loop. The value of a loop is iteration with embedded verification, so the first design question is always whether genuine feedback exists",
+          "best_citation": "chunk_3",
+          "citations": [
+            "chunk_3"
+          ],
+          "support_method": "entailment",
+          "evidence_provenance": {
+            "citation_id": "chunk_3",
+            "document_id": "23b038dd8383e3d47638322b",
+            "chunk_id": 11,
+            "point_id": "a86dd799-c7e4-5097-b6c8-f398c57d4b6d",
+            "canonical_evidence_id": "23b038dd8383e3d47638322b::11"
+          },
+          "parent_claim": "A loop is only a loop when feedback from one iteration changes the next action ."
+        }
+      ]
+    },
+    {
+      "claim": "Practitioners have shifted from prompting agents directly to designing loops that prompt them, and a public Loop Library provides reusable loop artifacts .",
+      "score": 0.8187,
+      "supported": true,
+      "citations": [
+        "chunk_4"
+      ],
+      "atomic_claims": [
+        {
+          "claim": "Practitioners have shifted from prompting agents directly to designing loops that prompt them,",
+          "score": 0.8187,
+          "supported": true,
+          "best_evidence_unit": "ry step and instead design the loop that prompts it. Practitioners building these tools stated the shift bluntly, from \"I don't prompt Claude anymore. I have loops running that prompt Claude\" to the sharper imperative, circulated to several million viewers in a day, that one should no longer be prompting coding agents but designing the loops that prompt them.1 Around the same time, a public catalogue of reusable loops, the Loop Library, turned the slogan into concrete artifacts.2 The claim is striking and the practice is real, but the concept arrived through threads, talks and blog posts rather than through any reviewable account.",
+          "best_citation": "chunk_4",
+          "citations": [
+            "chunk_4"
+          ],
+          "support_method": "entailment",
+          "evidence_provenance": {
+            "citation_id": "chunk_4",
+            "document_id": "23b038dd8383e3d47638322b",
+            "chunk_id": 2,
+            "point_id": "41d41060-0f6b-5301-bd0d-f97dd467c833",
+            "canonical_evidence_id": "23b038dd8383e3d47638322b::2"
+          },
+          "parent_claim": "Practitioners have shifted from prompting agents directly to designing loops that prompt them, and a public Loop Library provides reusable loop artifacts ."
+        },
+        {
+          "claim": "a public Loop Library provides reusable loop artifacts .",
+          "score": 0.9661,
+          "supported": true,
+          "best_evidence_unit": "I have loops running that prompt Claude\" to the sharper imperative, circulated to several million viewers in a day, that one should no longer be prompting coding agents but designing the loops that prompt them.1 Around the same time, a public catalogue of reusable loops, the Loop Library, turned the slogan into concrete artifacts.2 The claim is striking and the practice is real, but the concept arrived through threads, talks and blog posts rather than through any reviewable account.",
+          "best_citation": "chunk_4",
+          "citations": [
+            "chunk_4"
+          ],
+          "support_method": "entailment",
+          "evidence_provenance": {
+            "citation_id": "chunk_4",
+            "document_id": "23b038dd8383e3d47638322b",
+            "chunk_id": 2,
+            "point_id": "41d41060-0f6b-5301-bd0d-f97dd467c833",
+            "canonical_evidence_id": "23b038dd8383e3d47638322b::2"
+          },
+          "parent_claim": "Practitioners have shifted from prompting agents directly to designing loops that prompt them, and a public Loop Library provides reusable loop artifacts ."
+        }
+      ]
+    },
+    {
+      "claim": "A loop is inappropriate when the next action does not change with new feedback .",
+      "score": 0.9852,
+      "supported": true,
+      "citations": [
+        "chunk_5"
+      ],
+      "atomic_claims": [
+        {
+          "claim": "A loop is inappropriate when the next action does not change with new feedback .",
+          "score": 0.9852,
+          "supported": true,
+          "best_evidence_unit": "dentials in test or staging, and a tight budget cap.17 These are not optional extras for an autonomous loop; they are the price of leavi When not to use a loop A loop is the wrong tool when the next action does not change with new feedback (do it one-shot, perhaps scheduled), when the goal is pure taste with no reproducible check, when the work is ambiguous greenfield construction where the right direction is unknown, or when the cost of looping does not pay for itself.",
+          "best_citation": "chunk_5",
+          "citations": [
+            "chunk_5"
+          ],
+          "support_method": "entailment",
+          "evidence_provenance": {
+            "citation_id": "chunk_5",
+            "document_id": "23b038dd8383e3d47638322b",
+            "chunk_id": 37,
+            "point_id": "063985a0-119c-5a23-acf7-900cd8527d08",
+            "canonical_evidence_id": "23b038dd8383e3d47638322b::37"
+          },
+          "parent_claim": "A loop is inappropriate when the next action does not change with new feedback ."
+        }
+      ]
+    }
+  ],
+  "grounding_details": {
+    "atomic_claims": [
+      {
+        "claim": "Loop engineering creates an external, bounded, reusable loop specification that a human designs and hands to an agent harness, enabling the agent to find, run, verify, and remember work without a human in each step .",
+        "score": 0.9662,
+        "supported": true,
+        "best_evidence_unit": "i.com/blog/loop-engineering/. 2Loop Library (Fo what a corpus of real loops actually looks like, and which of the practitioner claims survive contact with the scientific literature. The first task is to fix the object of study, because the word \"loop\" carries at least three meanings. An ordinary programming loop is plain control flow. The internal cycle of an agent, the model running tools in a while over a stop condition, is the perceive-act-observe machinery that frameworks from ReAct [50] onward formalized; it is part of the harness and it exists whether or not anyone designs it. Neither of these is what the new practice means. The loop specification is a third thing: an external, bounded, reusable artifact, a trigger plus a goal plus a verification step plus a stopping rule plus a memory, that a human designs and hands to a harness such as Claude Code or Codex so the agent finds the work, does it, checks its own result, and knows when to stop or call for help. The harness supplies the engine; loop engineering writes the pilot. We situate the practice as a new layer in a progression (Figure 1).3 Prompt engineering asked how to ask. Context engineering asked what the agent knows and remembers. Harness engineering asked what environment, tools and limits the agent has. Loop engineering asks what system one builds so the agent finds, runs, verifies and remembers the work without a human in the middle of each step. Each layer subsumes the previous one rather than discarding it",
+        "best_citation": "chunk_1",
+        "citations": [
+          "chunk_1"
+        ],
+        "support_method": "entailment",
+        "evidence_provenance": {
+          "citation_id": "chunk_1",
+          "document_id": "23b038dd8383e3d47638322b",
+          "chunk_id": 3,
+          "point_id": "d50d3204-2cc3-5a95-933f-7b6fa09d6c40",
+          "canonical_evidence_id": "23b038dd8383e3d47638322b::3"
+        },
+        "parent_claim": "Loop engineering creates an external, bounded, reusable loop specification that a human designs and hands to an agent harness, enabling the agent to find, run, verify, and remember work without a human in each step ."
+      },
+      {
+        "claim": "A loop specification assembles five reusable pieces and an external memory .",
+        "score": 0.9218,
+        "supported": true,
+        "best_evidence_unit": "The value of a loop is iteration with embedded verification, so the first design question is always whether genuine feedback exists The operational anatomy: five pieces plus memory Concretely, a real loop system assembles five reusable pieces and an external memory.8 Scheduled automations discover and triage the work (the scheduled trigger made concrete); 6A.",
+        "best_citation": "chunk_2",
+        "citations": [
+          "chunk_2"
+        ],
+        "support_method": "entailment",
+        "evidence_provenance": {
+          "citation_id": "chunk_2",
+          "document_id": "23b038dd8383e3d47638322b",
+          "chunk_id": 12,
+          "point_id": "77523bd3-617e-516d-9599-db671097fced",
+          "canonical_evidence_id": "23b038dd8383e3d47638322b::12"
+        },
+        "parent_claim": "A loop specification assembles five reusable pieces and an external memory ."
+      },
+      {
+        "claim": "The trigger starts the agent",
+        "score": 0.938,
+        "supported": true,
+        "best_evidence_unit": "A trigger starts the agent; the agent executes by calling proven skills; a goal and verification decide whether the work is done; the result is logged and state persists in memory.",
+        "best_citation": "chunk_3",
+        "citations": [
+          "chunk_3"
+        ],
+        "support_method": "entailment",
+        "evidence_provenance": {
+          "citation_id": "chunk_3",
+          "document_id": "23b038dd8383e3d47638322b",
+          "chunk_id": 11,
+          "point_id": "a86dd799-c7e4-5097-b6c8-f398c57d4b6d",
+          "canonical_evidence_id": "23b038dd8383e3d47638322b::11"
+        },
+        "parent_claim": "The trigger starts the agent; the goal and verification decide whether the work is done; the result is logged and persisted in memory; the loop repeats until a terminal state, which is governed by a budget ceiling or a no‑progress detector ."
+      },
+      {
+        "claim": "the goal and verification decide whether the work is done",
+        "score": 0.9575,
+        "supported": true,
+        "best_evidence_unit": "A trigger starts the agent; the agent executes by calling proven skills; a goal and verification decide whether the work is done; the result is logged and state persists in memory.",
+        "best_citation": "chunk_3",
+        "citations": [
+          "chunk_3"
+        ],
+        "support_method": "entailment",
+        "evidence_provenance": {
+          "citation_id": "chunk_3",
+          "document_id": "23b038dd8383e3d47638322b",
+          "chunk_id": 11,
+          "point_id": "a86dd799-c7e4-5097-b6c8-f398c57d4b6d",
+          "canonical_evidence_id": "23b038dd8383e3d47638322b::11"
+        },
+        "parent_claim": "The trigger starts the agent; the goal and verification decide whether the work is done; the result is logged and persisted in memory; the loop repeats until a terminal state, which is governed by a budget ceiling or a no‑progress detector ."
+      },
+      {
+        "claim": "the result is logged and persisted in memory",
+        "score": 0.9642,
+        "supported": true,
+        "best_evidence_unit": "A trigger starts the agent; the agent executes by calling proven skills; a goal and verification decide whether the work is done; the result is logged and state persists in memory.",
+        "best_citation": "chunk_3",
+        "citations": [
+          "chunk_3"
+        ],
+        "support_method": "entailment",
+        "evidence_provenance": {
+          "citation_id": "chunk_3",
+          "document_id": "23b038dd8383e3d47638322b",
+          "chunk_id": 11,
+          "point_id": "a86dd799-c7e4-5097-b6c8-f398c57d4b6d",
+          "canonical_evidence_id": "23b038dd8383e3d47638322b::11"
+        },
+        "parent_claim": "The trigger starts the agent; the goal and verification decide whether the work is done; the result is logged and persisted in memory; the loop repeats until a terminal state, which is governed by a budget ceiling or a no‑progress detector ."
+      },
+      {
+        "claim": "the loop repeats until a terminal state, which is governed by a budget ceiling or a no‑progress detector .",
+        "score": 0.9611,
+        "supported": true,
+        "best_evidence_unit": "The loop repeats until it reaches a named terminal state, held in check by a budget ceiling and a no-progress detector. academic lineage in Section 2 builds the engine, whereas the practice studied here builds the pilot, and conflating them is exactly the confusion the slogan invites.",
+        "best_citation": "chunk_3",
+        "citations": [
+          "chunk_3"
+        ],
+        "support_method": "entailment",
+        "evidence_provenance": {
+          "citation_id": "chunk_3",
+          "document_id": "23b038dd8383e3d47638322b",
+          "chunk_id": 11,
+          "point_id": "a86dd799-c7e4-5097-b6c8-f398c57d4b6d",
+          "canonical_evidence_id": "23b038dd8383e3d47638322b::11"
+        },
+        "parent_claim": "The trigger starts the agent; the goal and verification decide whether the work is done; the result is logged and persisted in memory; the loop repeats until a terminal state, which is governed by a budget ceiling or a no‑progress detector ."
+      },
+      {
+        "claim": "A loop is only a loop when feedback from one iteration changes the next action .",
+        "score": 0.9437,
+        "supported": true,
+        "best_evidence_unit": "This is why the definition puts verification at the center of gravity: the loop earns its keep by trading blind trust for reproducible evidence, and by the moment at which it returns control to the human. The golden rule: a loop only when feedback changes the next action A loop specification is justified over a bare scheduled prompt only when the result of one turn changes the next action.7 If a fixed task runs on a fixed cadence and nothing about the last run informs the next, that is a scheduled one-shot, not a loop. The value of a loop is iteration with embedded verification, so the first design question is always whether genuine feedback exists",
+        "best_citation": "chunk_3",
+        "citations": [
+          "chunk_3"
+        ],
+        "support_method": "entailment",
+        "evidence_provenance": {
+          "citation_id": "chunk_3",
+          "document_id": "23b038dd8383e3d47638322b",
+          "chunk_id": 11,
+          "point_id": "a86dd799-c7e4-5097-b6c8-f398c57d4b6d",
+          "canonical_evidence_id": "23b038dd8383e3d47638322b::11"
+        },
+        "parent_claim": "A loop is only a loop when feedback from one iteration changes the next action ."
+      },
+      {
+        "claim": "Practitioners have shifted from prompting agents directly to designing loops that prompt them,",
+        "score": 0.8187,
+        "supported": true,
+        "best_evidence_unit": "ry step and instead design the loop that prompts it. Practitioners building these tools stated the shift bluntly, from \"I don't prompt Claude anymore. I have loops running that prompt Claude\" to the sharper imperative, circulated to several million viewers in a day, that one should no longer be prompting coding agents but designing the loops that prompt them.1 Around the same time, a public catalogue of reusable loops, the Loop Library, turned the slogan into concrete artifacts.2 The claim is striking and the practice is real, but the concept arrived through threads, talks and blog posts rather than through any reviewable account.",
+        "best_citation": "chunk_4",
+        "citations": [
+          "chunk_4"
+        ],
+        "support_method": "entailment",
+        "evidence_provenance": {
+          "citation_id": "chunk_4",
+          "document_id": "23b038dd8383e3d47638322b",
+          "chunk_id": 2,
+          "point_id": "41d41060-0f6b-5301-bd0d-f97dd467c833",
+          "canonical_evidence_id": "23b038dd8383e3d47638322b::2"
+        },
+        "parent_claim": "Practitioners have shifted from prompting agents directly to designing loops that prompt them, and a public Loop Library provides reusable loop artifacts ."
+      },
+      {
+        "claim": "a public Loop Library provides reusable loop artifacts .",
+        "score": 0.9661,
+        "supported": true,
+        "best_evidence_unit": "I have loops running that prompt Claude\" to the sharper imperative, circulated to several million viewers in a day, that one should no longer be prompting coding agents but designing the loops that prompt them.1 Around the same time, a public catalogue of reusable loops, the Loop Library, turned the slogan into concrete artifacts.2 The claim is striking and the practice is real, but the concept arrived through threads, talks and blog posts rather than through any reviewable account.",
+        "best_citation": "chunk_4",
+        "citations": [
+          "chunk_4"
+        ],
+        "support_method": "entailment",
+        "evidence_provenance": {
+          "citation_id": "chunk_4",
+          "document_id": "23b038dd8383e3d47638322b",
+          "chunk_id": 2,
+          "point_id": "41d41060-0f6b-5301-bd0d-f97dd467c833",
+          "canonical_evidence_id": "23b038dd8383e3d47638322b::2"
+        },
+        "parent_claim": "Practitioners have shifted from prompting agents directly to designing loops that prompt them, and a public Loop Library provides reusable loop artifacts ."
+      },
+      {
+        "claim": "A loop is inappropriate when the next action does not change with new feedback .",
+        "score": 0.9852,
+        "supported": true,
+        "best_evidence_unit": "dentials in test or staging, and a tight budget cap.17 These are not optional extras for an autonomous loop; they are the price of leavi When not to use a loop A loop is the wrong tool when the next action does not change with new feedback (do it one-shot, perhaps scheduled), when the goal is pure taste with no reproducible check, when the work is ambiguous greenfield construction where the right direction is unknown, or when the cost of looping does not pay for itself.",
+        "best_citation": "chunk_5",
+        "citations": [
+          "chunk_5"
+        ],
+        "support_method": "entailment",
+        "evidence_provenance": {
+          "citation_id": "chunk_5",
+          "document_id": "23b038dd8383e3d47638322b",
+          "chunk_id": 37,
+          "point_id": "063985a0-119c-5a23-acf7-900cd8527d08",
+          "canonical_evidence_id": "23b038dd8383e3d47638322b::37"
+        },
+        "parent_claim": "A loop is inappropriate when the next action does not change with new feedback ."
+      }
+    ],
+    "claims": [
+      {
+        "claim": "Loop engineering creates an external, bounded, reusable loop specification that a human designs and hands to an agent harness, enabling the agent to find, run, verify, and remember work without a human in each step .",
+        "score": 0.9662,
+        "supported": true,
+        "citations": [
+          "chunk_1"
+        ],
+        "atomic_claims": [
+          {
+            "claim": "Loop engineering creates an external, bounded, reusable loop specification that a human designs and hands to an agent harness, enabling the agent to find, run, verify, and remember work without a human in each step .",
+            "score": 0.9662,
+            "supported": true,
+            "best_evidence_unit": "i.com/blog/loop-engineering/. 2Loop Library (Fo what a corpus of real loops actually looks like, and which of the practitioner claims survive contact with the scientific literature. The first task is to fix the object of study, because the word \"loop\" carries at least three meanings. An ordinary programming loop is plain control flow. The internal cycle of an agent, the model running tools in a while over a stop condition, is the perceive-act-observe machinery that frameworks from ReAct [50] onward formalized; it is part of the harness and it exists whether or not anyone designs it. Neither of these is what the new practice means. The loop specification is a third thing: an external, bounded, reusable artifact, a trigger plus a goal plus a verification step plus a stopping rule plus a memory, that a human designs and hands to a harness such as Claude Code or Codex so the agent finds the work, does it, checks its own result, and knows when to stop or call for help. The harness supplies the engine; loop engineering writes the pilot. We situate the practice as a new layer in a progression (Figure 1).3 Prompt engineering asked how to ask. Context engineering asked what the agent knows and remembers. Harness engineering asked what environment, tools and limits the agent has. Loop engineering asks what system one builds so the agent finds, runs, verifies and remembers the work without a human in the middle of each step. Each layer subsumes the previous one rather than discarding it",
+            "best_citation": "chunk_1",
+            "citations": [
+              "chunk_1"
+            ],
+            "support_method": "entailment",
+            "evidence_provenance": {
+              "citation_id": "chunk_1",
+              "document_id": "23b038dd8383e3d47638322b",
+              "chunk_id": 3,
+              "point_id": "d50d3204-2cc3-5a95-933f-7b6fa09d6c40",
+              "canonical_evidence_id": "23b038dd8383e3d47638322b::3"
+            },
+            "parent_claim": "Loop engineering creates an external, bounded, reusable loop specification that a human designs and hands to an agent harness, enabling the agent to find, run, verify, and remember work without a human in each step ."
+          }
+        ]
+      },
+      {
+        "claim": "A loop specification assembles five reusable pieces and an external memory .",
+        "score": 0.9218,
+        "supported": true,
+        "citations": [
+          "chunk_2"
+        ],
+        "atomic_claims": [
+          {
+            "claim": "A loop specification assembles five reusable pieces and an external memory .",
+            "score": 0.9218,
+            "supported": true,
+            "best_evidence_unit": "The value of a loop is iteration with embedded verification, so the first design question is always whether genuine feedback exists The operational anatomy: five pieces plus memory Concretely, a real loop system assembles five reusable pieces and an external memory.8 Scheduled automations discover and triage the work (the scheduled trigger made concrete); 6A.",
+            "best_citation": "chunk_2",
+            "citations": [
+              "chunk_2"
+            ],
+            "support_method": "entailment",
+            "evidence_provenance": {
+              "citation_id": "chunk_2",
+              "document_id": "23b038dd8383e3d47638322b",
+              "chunk_id": 12,
+              "point_id": "77523bd3-617e-516d-9599-db671097fced",
+              "canonical_evidence_id": "23b038dd8383e3d47638322b::12"
+            },
+            "parent_claim": "A loop specification assembles five reusable pieces and an external memory ."
+          }
+        ]
+      },
+      {
+        "claim": "The trigger starts the agent; the goal and verification decide whether the work is done; the result is logged and persisted in memory; the loop repeats until a terminal state, which is governed by a budget ceiling or a no‑progress detector .",
+        "score": 0.938,
+        "supported": true,
+        "citations": [
+          "chunk_3"
+        ],
+        "atomic_claims": [
+          {
+            "claim": "The trigger starts the agent",
+            "score": 0.938,
+            "supported": true,
+            "best_evidence_unit": "A trigger starts the agent; the agent executes by calling proven skills; a goal and verification decide whether the work is done; the result is logged and state persists in memory.",
+            "best_citation": "chunk_3",
+            "citations": [
+              "chunk_3"
+            ],
+            "support_method": "entailment",
+            "evidence_provenance": {
+              "citation_id": "chunk_3",
+              "document_id": "23b038dd8383e3d47638322b",
+              "chunk_id": 11,
+              "point_id": "a86dd799-c7e4-5097-b6c8-f398c57d4b6d",
+              "canonical_evidence_id": "23b038dd8383e3d47638322b::11"
+            },
+            "parent_claim": "The trigger starts the agent; the goal and verification decide whether the work is done; the result is logged and persisted in memory; the loop repeats until a terminal state, which is governed by a budget ceiling or a no‑progress detector ."
+          },
+          {
+            "claim": "the goal and verification decide whether the work is done",
+            "score": 0.9575,
+            "supported": true,
+            "best_evidence_unit": "A trigger starts the agent; the agent executes by calling proven skills; a goal and verification decide whether the work is done; the result is logged and state persists in memory.",
+            "best_citation": "chunk_3",
+            "citations": [
+              "chunk_3"
+            ],
+            "support_method": "entailment",
+            "evidence_provenance": {
+              "citation_id": "chunk_3",
+              "document_id": "23b038dd8383e3d47638322b",
+              "chunk_id": 11,
+              "point_id": "a86dd799-c7e4-5097-b6c8-f398c57d4b6d",
+              "canonical_evidence_id": "23b038dd8383e3d47638322b::11"
+            },
+            "parent_claim": "The trigger starts the agent; the goal and verification decide whether the work is done; the result is logged and persisted in memory; the loop repeats until a terminal state, which is governed by a budget ceiling or a no‑progress detector ."
+          },
+          {
+            "claim": "the result is logged and persisted in memory",
+            "score": 0.9642,
+            "supported": true,
+            "best_evidence_unit": "A trigger starts the agent; the agent executes by calling proven skills; a goal and verification decide whether the work is done; the result is logged and state persists in memory.",
+            "best_citation": "chunk_3",
+            "citations": [
+              "chunk_3"
+            ],
+            "support_method": "entailment",
+            "evidence_provenance": {
+              "citation_id": "chunk_3",
+              "document_id": "23b038dd8383e3d47638322b",
+              "chunk_id": 11,
+              "point_id": "a86dd799-c7e4-5097-b6c8-f398c57d4b6d",
+              "canonical_evidence_id": "23b038dd8383e3d47638322b::11"
+            },
+            "parent_claim": "The trigger starts the agent; the goal and verification decide whether the work is done; the result is logged and persisted in memory; the loop repeats until a terminal state, which is governed by a budget ceiling or a no‑progress detector ."
+          },
+          {
+            "claim": "the loop repeats until a terminal state, which is governed by a budget ceiling or a no‑progress detector .",
+            "score": 0.9611,
+            "supported": true,
+            "best_evidence_unit": "The loop repeats until it reaches a named terminal state, held in check by a budget ceiling and a no-progress detector. academic lineage in Section 2 builds the engine, whereas the practice studied here builds the pilot, and conflating them is exactly the confusion the slogan invites.",
+            "best_citation": "chunk_3",
+            "citations": [
+              "chunk_3"
+            ],
+            "support_method": "entailment",
+            "evidence_provenance": {
+              "citation_id": "chunk_3",
+              "document_id": "23b038dd8383e3d47638322b",
+              "chunk_id": 11,
+              "point_id": "a86dd799-c7e4-5097-b6c8-f398c57d4b6d",
+              "canonical_evidence_id": "23b038dd8383e3d47638322b::11"
+            },
+            "parent_claim": "The trigger starts the agent; the goal and verification decide whether the work is done; the result is logged and persisted in memory; the loop repeats until a terminal state, which is governed by a budget ceiling or a no‑progress detector ."
+          }
+        ]
+      },
+      {
+        "claim": "A loop is only a loop when feedback from one iteration changes the next action .",
+        "score": 0.9437,
+        "supported": true,
+        "citations": [
+          "chunk_3"
+        ],
+        "atomic_claims": [
+          {
+            "claim": "A loop is only a loop when feedback from one iteration changes the next action .",
+            "score": 0.9437,
+            "supported": true,
+            "best_evidence_unit": "This is why the definition puts verification at the center of gravity: the loop earns its keep by trading blind trust for reproducible evidence, and by the moment at which it returns control to the human. The golden rule: a loop only when feedback changes the next action A loop specification is justified over a bare scheduled prompt only when the result of one turn changes the next action.7 If a fixed task runs on a fixed cadence and nothing about the last run informs the next, that is a scheduled one-shot, not a loop. The value of a loop is iteration with embedded verification, so the first design question is always whether genuine feedback exists",
+            "best_citation": "chunk_3",
+            "citations": [
+              "chunk_3"
+            ],
+            "support_method": "entailment",
+            "evidence_provenance": {
+              "citation_id": "chunk_3",
+              "document_id": "23b038dd8383e3d47638322b",
+              "chunk_id": 11,
+              "point_id": "a86dd799-c7e4-5097-b6c8-f398c57d4b6d",
+              "canonical_evidence_id": "23b038dd8383e3d47638322b::11"
+            },
+            "parent_claim": "A loop is only a loop when feedback from one iteration changes the next action ."
+          }
+        ]
+      },
+      {
+        "claim": "Practitioners have shifted from prompting agents directly to designing loops that prompt them, and a public Loop Library provides reusable loop artifacts .",
+        "score": 0.8187,
+        "supported": true,
+        "citations": [
+          "chunk_4"
+        ],
+        "atomic_claims": [
+          {
+            "claim": "Practitioners have shifted from prompting agents directly to designing loops that prompt them,",
+            "score": 0.8187,
+            "supported": true,
+            "best_evidence_unit": "ry step and instead design the loop that prompts it. Practitioners building these tools stated the shift bluntly, from \"I don't prompt Claude anymore. I have loops running that prompt Claude\" to the sharper imperative, circulated to several million viewers in a day, that one should no longer be prompting coding agents but designing the loops that prompt them.1 Around the same time, a public catalogue of reusable loops, the Loop Library, turned the slogan into concrete artifacts.2 The claim is striking and the practice is real, but the concept arrived through threads, talks and blog posts rather than through any reviewable account.",
+            "best_citation": "chunk_4",
+            "citations": [
+              "chunk_4"
+            ],
+            "support_method": "entailment",
+            "evidence_provenance": {
+              "citation_id": "chunk_4",
+              "document_id": "23b038dd8383e3d47638322b",
+              "chunk_id": 2,
+              "point_id": "41d41060-0f6b-5301-bd0d-f97dd467c833",
+              "canonical_evidence_id": "23b038dd8383e3d47638322b::2"
+            },
+            "parent_claim": "Practitioners have shifted from prompting agents directly to designing loops that prompt them, and a public Loop Library provides reusable loop artifacts ."
+          },
+          {
+            "claim": "a public Loop Library provides reusable loop artifacts .",
+            "score": 0.9661,
+            "supported": true,
+            "best_evidence_unit": "I have loops running that prompt Claude\" to the sharper imperative, circulated to several million viewers in a day, that one should no longer be prompting coding agents but designing the loops that prompt them.1 Around the same time, a public catalogue of reusable loops, the Loop Library, turned the slogan into concrete artifacts.2 The claim is striking and the practice is real, but the concept arrived through threads, talks and blog posts rather than through any reviewable account.",
+            "best_citation": "chunk_4",
+            "citations": [
+              "chunk_4"
+            ],
+            "support_method": "entailment",
+            "evidence_provenance": {
+              "citation_id": "chunk_4",
+              "document_id": "23b038dd8383e3d47638322b",
+              "chunk_id": 2,
+              "point_id": "41d41060-0f6b-5301-bd0d-f97dd467c833",
+              "canonical_evidence_id": "23b038dd8383e3d47638322b::2"
+            },
+            "parent_claim": "Practitioners have shifted from prompting agents directly to designing loops that prompt them, and a public Loop Library provides reusable loop artifacts ."
+          }
+        ]
+      },
+      {
+        "claim": "A loop is inappropriate when the next action does not change with new feedback .",
+        "score": 0.9852,
+        "supported": true,
+        "citations": [
+          "chunk_5"
+        ],
+        "atomic_claims": [
+          {
+            "claim": "A loop is inappropriate when the next action does not change with new feedback .",
+            "score": 0.9852,
+            "supported": true,
+            "best_evidence_unit": "dentials in test or staging, and a tight budget cap.17 These are not optional extras for an autonomous loop; they are the price of leavi When not to use a loop A loop is the wrong tool when the next action does not change with new feedback (do it one-shot, perhaps scheduled), when the goal is pure taste with no reproducible check, when the work is ambiguous greenfield construction where the right direction is unknown, or when the cost of looping does not pay for itself.",
+            "best_citation": "chunk_5",
+            "citations": [
+              "chunk_5"
+            ],
+            "support_method": "entailment",
+            "evidence_provenance": {
+              "citation_id": "chunk_5",
+              "document_id": "23b038dd8383e3d47638322b",
+              "chunk_id": 37,
+              "point_id": "063985a0-119c-5a23-acf7-900cd8527d08",
+              "canonical_evidence_id": "23b038dd8383e3d47638322b::37"
+            },
+            "parent_claim": "A loop is inappropriate when the next action does not change with new feedback ."
+          }
+        ]
+      }
+    ],
+    "unsupported_claims": [],
+    "uncited_claims": [],
+    "invalid_citations": [],
+    "entailment_threshold": 0.5,
+    "claim_count": 6,
+    "atomic_claim_count": 10,
+    "unsupported_atomic_count": 0,
+    "available_citation_count": 10,
+    "citation_consistency": {
+      "passed": true,
+      "claims_checked": 10,
+      "citations_checked": 10,
+      "violation_count": 0,
+      "violations": [],
+      "results": [
+        {
+          "claim": "Loop engineering creates an external, bounded, reusable loop specification that a human designs and hands to an agent harness, enabling the agent to find, run, verify, and remember work without a human in each step .",
+          "citation": "chunk_1",
+          "score": 0.9662,
+          "supported": true,
+          "support_method": "entailment",
+          "best_evidence_unit": "i.com/blog/loop-engineering/. 2Loop Library (Fo what a corpus of real loops actually looks like, and which of the practitioner claims survive contact with the scientific literature. The first task is to fix the object of study, because the word \"loop\" carries at least three meanings. An ordinary programming loop is plain control flow. The internal cycle of an agent, the model running tools in a while over a stop condition, is the perceive-act-observe machinery that frameworks from ReAct [50] onward formalized; it is part of the harness and it exists whether or not anyone designs it. Neither of these is what the new practice means. The loop specification is a third thing: an external, bounded, reusable artifact, a trigger plus a goal plus a verification step plus a stopping rule plus a memory, that a human designs and hands to a harness such as Claude Code or Codex so the agent finds the work, does it, checks its own result, and knows when to stop or call for help. The harness supplies the engine; loop engineering writes the pilot. We situate the practice as a new layer in a progression (Figure 1).3 Prompt engineering asked how to ask. Context engineering asked what the agent knows and remembers. Harness engineering asked what environment, tools and limits the agent has. Loop engineering asks what system one builds so the agent finds, runs, verifies and remembers the work without a human in the middle of each step. Each layer subsumes the previous one rather than discarding it"
+        },
+        {
+          "claim": "A loop specification assembles five reusable pieces and an external memory .",
+          "citation": "chunk_2",
+          "score": 0.9218,
+          "supported": true,
+          "support_method": "entailment",
+          "best_evidence_unit": "The value of a loop is iteration with embedded verification, so the first design question is always whether genuine feedback exists The operational anatomy: five pieces plus memory Concretely, a real loop system assembles five reusable pieces and an external memory.8 Scheduled automations discover and triage the work (the scheduled trigger made concrete); 6A."
+        },
+        {
+          "claim": "The trigger starts the agent",
+          "citation": "chunk_3",
+          "score": 0.938,
+          "supported": true,
+          "support_method": "entailment",
+          "best_evidence_unit": "A trigger starts the agent; the agent executes by calling proven skills; a goal and verification decide whether the work is done; the result is logged and state persists in memory."
+        },
+        {
+          "claim": "the goal and verification decide whether the work is done",
+          "citation": "chunk_3",
+          "score": 0.9575,
+          "supported": true,
+          "support_method": "entailment",
+          "best_evidence_unit": "A trigger starts the agent; the agent executes by calling proven skills; a goal and verification decide whether the work is done; the result is logged and state persists in memory."
+        },
+        {
+          "claim": "the result is logged and persisted in memory",
+          "citation": "chunk_3",
+          "score": 0.9642,
+          "supported": true,
+          "support_method": "entailment",
+          "best_evidence_unit": "A trigger starts the agent; the agent executes by calling proven skills; a goal and verification decide whether the work is done; the result is logged and state persists in memory."
+        },
+        {
+          "claim": "the loop repeats until a terminal state, which is governed by a budget ceiling or a no‑progress detector .",
+          "citation": "chunk_3",
+          "score": 0.9611,
+          "supported": true,
+          "support_method": "entailment",
+          "best_evidence_unit": "The loop repeats until it reaches a named terminal state, held in check by a budget ceiling and a no-progress detector. academic lineage in Section 2 builds the engine, whereas the practice studied here builds the pilot, and conflating them is exactly the confusion the slogan invites."
+        },
+        {
+          "claim": "A loop is only a loop when feedback from one iteration changes the next action .",
+          "citation": "chunk_3",
+          "score": 0.9437,
+          "supported": true,
+          "support_method": "entailment",
+          "best_evidence_unit": "This is why the definition puts verification at the center of gravity: the loop earns its keep by trading blind trust for reproducible evidence, and by the moment at which it returns control to the human. The golden rule: a loop only when feedback changes the next action A loop specification is justified over a bare scheduled prompt only when the result of one turn changes the next action.7 If a fixed task runs on a fixed cadence and nothing about the last run informs the next, that is a scheduled one-shot, not a loop. The value of a loop is iteration with embedded verification, so the first design question is always whether genuine feedback exists"
+        },
+        {
+          "claim": "Practitioners have shifted from prompting agents directly to designing loops that prompt them,",
+          "citation": "chunk_4",
+          "score": 0.8187,
+          "supported": true,
+          "support_method": "entailment",
+          "best_evidence_unit": "ry step and instead design the loop that prompts it. Practitioners building these tools stated the shift bluntly, from \"I don't prompt Claude anymore. I have loops running that prompt Claude\" to the sharper imperative, circulated to several million viewers in a day, that one should no longer be prompting coding agents but designing the loops that prompt them.1 Around the same time, a public catalogue of reusable loops, the Loop Library, turned the slogan into concrete artifacts.2 The claim is striking and the practice is real, but the concept arrived through threads, talks and blog posts rather than through any reviewable account."
+        },
+        {
+          "claim": "a public Loop Library provides reusable loop artifacts .",
+          "citation": "chunk_4",
+          "score": 0.9661,
+          "supported": true,
+          "support_method": "entailment",
+          "best_evidence_unit": "I have loops running that prompt Claude\" to the sharper imperative, circulated to several million viewers in a day, that one should no longer be prompting coding agents but designing the loops that prompt them.1 Around the same time, a public catalogue of reusable loops, the Loop Library, turned the slogan into concrete artifacts.2 The claim is striking and the practice is real, but the concept arrived through threads, talks and blog posts rather than through any reviewable account."
+        },
+        {
+          "claim": "A loop is inappropriate when the next action does not change with new feedback .",
+          "citation": "chunk_5",
+          "score": 0.9852,
+          "supported": true,
+          "support_method": "entailment",
+          "best_evidence_unit": "dentials in test or staging, and a tight budget cap.17 These are not optional extras for an autonomous loop; they are the price of leavi When not to use a loop A loop is the wrong tool when the next action does not change with new feedback (do it one-shot, perhaps scheduled), when the goal is pure taste with no reproducible check, when the work is ambiguous greenfield construction where the right direction is unknown, or when the cost of looping does not pay for itself."
+        }
+      ]
+    },
+    "evidence_window": {
+      "radius": 1,
+      "large_radius": 2,
+      "max_candidates": 8,
+      "fallback_candidates": 3,
+      "minimum_lexical_overlap": 1
+    }
+  },
+  "grounding_feedback": [
+    "All substantive claims passed strict grounding validation."
+  ],
+  "answer_supported": true,
+  "answer_useful": true,
+  "support_score": 0.8187,
+  "usefulness_score": 0.96,
+  "validation_passed": true,
+  "revision_count": 1,
+  "retrieval_rewrite_count": 0,
+  "web_rewrite_count": 0,
+  "support_retry_count": 0,
+  "max_revisions": 2,
+  "retrieval_latency_ms": 1638.6065,
+  "rerank_latency_ms": null,
+  "grader_latency_ms": null,
+  "generation_latency_ms": 591.73,
+  "grounding_ms": 2136.6,
+  "hhem_call_count": 10,
+  "hhem_total_ms": 1935.46,
+  "latency_ms": 27619.5
+}

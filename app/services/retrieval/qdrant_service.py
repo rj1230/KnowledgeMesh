@@ -48,7 +48,11 @@ from qdrant_client import QdrantClient
 from qdrant_client.http import models
 
 from app.config import settings
-from app.services.retrieval.embedding import embed_query
+from app.services.retrieval.embedding import (
+    CANONICAL_EMBEDDING_DIMENSION,
+    CANONICAL_EMBEDDING_MODEL,
+    embed_query,
+)
 
 
 logger = logging.getLogger("knowledgemesh")
@@ -197,8 +201,8 @@ def search_enterprise_knowledge(
 
             with logfire.span(
                 "Query embedding",
-                model="BAAI/bge-small-en-v1.5",
-                dimension=384,
+                model=CANONICAL_EMBEDDING_MODEL,
+                dimension=CANONICAL_EMBEDDING_DIMENSION,
             ):
                 query_vector = _retry(
                     embed_query,

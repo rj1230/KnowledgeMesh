@@ -1,0 +1,27 @@
+{
+  "probe_id": "inv_loop_001",
+  "question": "What five elements does the paper define as part of a loop specification for coding agents?",
+  "source_filename": "loop.pdf",
+  "original_relevant_chunks": [
+    {
+      "document_id": "a26a0a845b9004cd2b884c79",
+      "chunk_id": 0
+    }
+  ],
+  "candidate_live_document_id": "23b038dd8383e3d47638322b",
+  "proposed_minimal_live_chunk_ids": [
+    10
+  ],
+  "verified_live_references": [
+    {
+      "document_id": "23b038dd8383e3d47638322b",
+      "chunk_id": 10,
+      "point_id": "901c8fdf-d3ff-55ec-9934-4a74f07a8f87",
+      "source": "loop.pdf",
+      "evidence_role": "Explicit definition of all five loop-specification parts"
+    }
+  ],
+  "rationale": "Chunk 10 explicitly lists trigger, goal, execution, verification, and stopping rule.",
+  "review_status": "PROPOSED_MINIMAL_SET_REQUIRES_FINAL_REVIEW",
+  "original_dataset_modified": false
+}

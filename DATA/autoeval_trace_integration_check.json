@@ -1,0 +1,191 @@
+{
+  "question": "What information is available in the knowledge base?",
+  "answer": "I could not generate a grounded answer because no approved evidence was available.",
+  "candidate_answer": "I could not generate a grounded answer because no approved evidence was available.",
+  "answer_available": true,
+  "answer_source": "final_answer",
+  "status": "Generation blocked: no approved evidence.",
+  "validation_status": "validation_incomplete",
+  "thought_process": [
+    "Intent: Technical",
+    "Search Term: knowledge base contents information types documents metadata schema topics domains",
+    "Internal Dense Retrieval: 50/50 candidates",
+    "Internal Semantic Reranking: 50/50 scored",
+    "Internal Dense Recovery: top 20, threshold 0.68",
+    "Internal Evidence Selection: 0/5 documents",
+    "Retrieval Time: 1308 ms",
+    "Rerank Time: 511 ms",
+    "Document Grade: 0/0 relevant",
+    "Evidence Quality: no documents",
+    "Context Quality: empty",
+    "Context Quality: empty",
+    "Web Search Required: True",
+    "Web Search: attempted",
+    "Web Search: provider failed",
+    "Document Grade: 0/0 relevant",
+    "Evidence Quality: no documents",
+    "Context Quality: empty",
+    "Context Quality: empty",
+    "Web Search Required: True"
+  ],
+  "trajectory": {
+    "status": "failed",
+    "hop_count": 0,
+    "required_hops": 1,
+    "failure_taxonomy": [
+      "RETRIEVAL_FAILURE",
+      "GENERATION_FAILURE"
+    ],
+    "metrics": {
+      "hop_success_rate": 0.0,
+      "required_hop_completion": 0.0,
+      "retrieval_success_rate": 0.0,
+      "evidence_acquisition_rate": 0.0,
+      "web_fallback_rate": 0.0,
+      "citation_support_rate": 1.0,
+      "unsupported_claim_rate": 0.0,
+      "revision_rate": 0.0,
+      "revision_success_rate": 1.0,
+      "recovery_after_grounding_failure": 1.0,
+      "recovery_after_citation_failure": 1.0
+    },
+    "trace": [
+      {
+        "step": "planner",
+        "status": "technical",
+        "details": {
+          "route": "knowledge",
+          "retrieval_required": true,
+          "query": "knowledge base contents information types documents metadata schema topics domains"
+        }
+      },
+      {
+        "step": "private_retrieval",
+        "status": "empty",
+        "details": {
+          "candidate_count": 50,
+          "reranked_count": 50,
+          "selected_count": 0,
+          "query": "knowledge base contents information types documents metadata schema topics domains"
+        }
+      },
+      {
+        "step": "grader",
+        "status": "skipped",
+        "details": {
+          "document_count": 0,
+          "grading_mode": "no_documents",
+          "context_quality": "empty"
+        }
+      },
+      {
+        "step": "context_evaluator",
+        "status": "empty",
+        "details": {
+          "should_search_web": true,
+          "reason": "No internal documents were retrieved.",
+          "graded_documents": 0,
+          "generation_documents": 0
+        }
+      },
+      {
+        "step": "web_search",
+        "status": "failed",
+        "details": {
+          "attempted": true,
+          "used": false,
+          "source_count": 0,
+          "error_type": "ConnectionError"
+        }
+      },
+      {
+        "step": "grader",
+        "status": "skipped",
+        "details": {
+          "document_count": 0,
+          "grading_mode": "no_documents",
+          "context_quality": "empty"
+        }
+      },
+      {
+        "step": "context_evaluator",
+        "status": "empty",
+        "details": {
+          "should_search_web": true,
+          "reason": "No internal documents were retrieved.",
+          "graded_documents": 0,
+          "generation_documents": 0
+        }
+      },
+      {
+        "step": "responder",
+        "status": "blocked",
+        "details": {
+          "generation_evidence_count": 0,
+          "reason": "no_approved_evidence"
+        }
+      }
+    ]
+  },
+  "sources": [],
+  "private_sources": [],
+  "answer_sources": [],
+  "retrieved_private_sources": [],
+  "web_sources": [],
+  "generation_documents": [],
+  "graded_documents": [],
+  "grader_status": "skipped",
+  "grading_mode": "no_documents",
+  "grader_error_type": null,
+  "citations": {},
+  "citation_provenance": {},
+  "search_query": "knowledge base contents information types documents metadata schema topics domains",
+  "retrieval_used": true,
+  "web_search_used": false,
+  "should_search_web": true,
+  "context_quality": "empty",
+  "context_reason": "No internal documents were retrieved.",
+  "citation_valid": null,
+  "is_grounded": null,
+  "claims": [],
+  "grounding_scores": [],
+  "grounding_details": {
+    "atomic_claims": [],
+    "claims": [],
+    "unsupported_claims": [],
+    "uncited_claims": [],
+    "invalid_citations": [],
+    "entailment_threshold": null,
+    "claim_count": 0,
+    "atomic_claim_count": 0,
+    "unsupported_atomic_count": 0,
+    "available_citation_count": 0
+  },
+  "grounding_feedback": [],
+  "answer_supported": null,
+  "answer_useful": null,
+  "support_score": null,
+  "usefulness_score": null,
+  "validation_passed": false,
+  "revision_count": 0,
+  "answer_revision_count": 0,
+  "retrieval_rewrite_count": 0,
+  "web_rewrite_count": 0,
+  "support_retry_count": 0,
+  "max_revisions": 2,
+  "retrieval_latency_ms": 1308.2501,
+  "rerank_latency_ms": null,
+  "grader_latency_ms": null,
+  "generation_latency_ms": 10.59,
+  "grounding_ms": null,
+  "hhem_call_count": 0,
+  "hhem_total_ms": 0.0,
+  "request_hhem_call_count": 0,
+  "request_hhem_total_ms": 0.0,
+  "grounding_pass_count": 0,
+  "entailment_cache_hits": 0,
+  "entailment_cache_misses": 0,
+  "cache_entries_received": 0,
+  "cache_entries_returned": 0,
+  "latency_ms": 3560.22
+}

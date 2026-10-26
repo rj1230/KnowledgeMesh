@@ -876,7 +876,7 @@ def render_quality_summary(trace: dict) -> str:
         )
 
     if trace.get("support_score") is not None:
-        chips.append(_score_chip("Support", f"{float(trace['support_score']):.2f}"))
+        chips.append(_score_chip("Min entailment", f"{float(trace['support_score']):.2f}"))
 
     if trace.get("usefulness_score") is not None:
         chips.append(
@@ -1207,7 +1207,7 @@ def transcript_markdown(messages):
             ("Context reason", "context_reason"),
             ("Citation valid", "citation_valid"),
             ("Grounded", "is_grounded"),
-            ("Support score", "support_score"),
+            ("Minimum entailment", "support_score"),
             ("Usefulness score", "usefulness_score"),
             ("Query rewrites", "retrieval_rewrite_count"),
             ("Answer revisions", "revision_count"),

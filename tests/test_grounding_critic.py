@@ -105,9 +105,23 @@ def test_grounding_node_restores_serialized_entailment_cache(monkeypatch):
             ][:limit],
     )
 
-    # Stable profile values isolate this test from real HHEMv2 inference.
-    profile = {"call_count": 0, "total_ms": 0.0}
-    monkeypatch.setattr(entailment_tool, "get_hhem_profile", lambda: profile.copy())
+    # Controlled per-pass profiles isolate accumulation from real HHEMv2.
+    profiles = iter([
+        {"call_count": 2, "total_ms": 12.34},
+        {"call_count": 1, "total_ms": 5.67},
+        {"call_count": 3, "total_ms": 8.90},
+    ])
+
+    def fake_start_hhem_profile():
+        profile = next(profiles)
+        return object(), profile
+
+    monkeypatch.setattr(
+        entailment_tool,
+        "start_hhem_profile",
+        fake_start_hhem_profile,
+    )
+    monkeypatch.setattr(entailment_tool, "stop_hhem_profile", lambda token: None)
 
     initial_state = {
         "final_answer": f"{claim} [chunk_1]",
@@ -127,19 +141,47 @@ def test_grounding_node_restores_serialized_entailment_cache(monkeypatch):
     assert len(scorer_calls) == 1
     assert first["entailment_cache"]
     assert first["cache_entries_returned"] >= 1
+    assert first["hhem_call_count"] == 2
+    assert first["hhem_total_ms"] == 12.34
+    assert first["request_hhem_call_count"] == 2
+    assert first["request_hhem_total_ms"] == 12.34
+    assert first["grounding_pass_count"] == 1
+
+    # Simulate serialized cache keys containing Markdown and citation suffixes.
+    serialized_cache = [
+        {
+            **entry,
+            "claim": f"**{entry['claim']}** [chunk_1]",
+        }
+        for entry in first["entailment_cache"]
+    ]
 
     second = grounding_critic_node(
         {
             **initial_state,
-            "entailment_cache": first["entailment_cache"],
+            "entailment_cache": serialized_cache,
             "grounding_pass_count": first["grounding_pass_count"],
+            "request_hhem_call_count": first["request_hhem_call_count"],
+            "request_hhem_total_ms": first["request_hhem_total_ms"],
         }
     )
 
-    assert len(scorer_calls) == 1, "Second pass repeated an entailment score"
+    assert len(scorer_calls) == 1, (
+        "A normalized cached score was recomputed after serialized-key restoration"
+    )
     assert second["cache_entries_received"] >= 1
     assert second["entailment_cache_hits"] >= 1
     assert second["cache_entries_returned"] >= 1
+    assert second["hhem_call_count"] == 1
+    assert second["hhem_total_ms"] == 5.67
+    assert second["request_hhem_call_count"] == 3
+    assert second["request_hhem_total_ms"] == 18.01
+    assert second["grounding_pass_count"] == 2
+    assert all(
+        "[chunk_1]" not in entry["claim"]
+        and not entry["claim"].startswith("**")
+        for entry in second["entailment_cache"]
+    ), "Restored cache keys were not normalized"
 
     # Invalid restored scores must be rejected and recomputed.
     invalid_cache = [
@@ -390,3 +432,340 @@ def test_grounding_node_rejects_claim_when_source_company_mismatches_query(
     assert result["revision_prompt"], (
         "The unsupported claim should produce revision guidance."
     )
+
+
+def test_grounding_critic_restores_hhem_profile_after_exception(monkeypatch):
+    import pytest
+    import app.agents.nodes.grounding_critic as grounding
+    import app.tools.entailment_tool as entailment_tool
+
+    outer_token, outer_profile = entailment_tool.start_hhem_profile()
+
+    def fail_inside_node(state, profile):
+        raise RuntimeError("intentional profiling cleanup test")
+
+    try:
+        monkeypatch.setattr(
+            grounding,
+            "_grounding_critic_node_with_profile",
+            fail_inside_node,
+        )
+
+        with pytest.raises(
+            RuntimeError,
+            match="intentional profiling cleanup test",
+        ):
+            grounding.grounding_critic_node({})
+
+        assert entailment_tool._active_hhem_profile.get() is outer_profile
+    finally:
+        entailment_tool.stop_hhem_profile(outer_token)
+
+
+
+
+def test_atomic_validation_checks_secondary_citation_after_exact_match(
+    monkeypatch,
+):
+    import app.agents.nodes.grounding_critic as grounding
+
+    claim = "The platform ranks retrieved passages before generation."
+    secondary = (
+        "Before generation, the platform orders retrieved passages "
+        "according to relevance."
+    )
+    cache = {}
+    scored = []
+
+    def fake_scorer(*, premise, hypothesis):
+        scored.append(premise)
+        return 0.91 if premise == secondary else 0.05
+
+    monkeypatch.setattr(
+        grounding, "_get_entailment_scorer", lambda: fake_scorer
+    )
+
+    result = grounding._validate_atomic_claim(
+        claim=claim,
+        citations=["chunk_primary", "chunk_secondary"],
+        evidence_map={
+            "chunk_primary": [claim],
+            "chunk_secondary": [secondary],
+        },
+        entailment_cache=cache,
+    )
+
+    assert result["supported"] is True
+    assert result["best_citation"] == "chunk_primary"
+    assert secondary in scored, "Secondary evidence was not scored"
+    assert cache.get((claim, secondary)) == 0.91
+    assert len(scored) <= grounding.MAX_ATOMIC_SEMANTIC_BUDGET
+
+def test_citation_audit_accepts_independently_supporting_citation():
+    import app.agents.nodes.grounding_critic as grounding
+
+    claim = "The platform ranks retrieved passages before generation."
+    second_support = (
+        "Before generation, the platform orders retrieved passages "
+        "according to relevance."
+    )
+
+    result = grounding._audit_citation_consistency(
+        atomic_results=[
+            {
+                "claim": claim,
+                "source_citations": ["chunk_primary", "chunk_secondary"],
+                "citations": ["chunk_primary"],
+                "best_citation": "chunk_primary",
+                "score": 0.95,
+                "supported": True,
+                "support_method": "entailment",
+                "best_evidence_unit": claim,
+            }
+        ],
+        evidence_map={
+            "chunk_primary": [claim],
+            "chunk_secondary": [second_support],
+        },
+        entailment_cache={(claim, second_support): 0.91},
+    )
+
+    assert result["citations_checked"] == 2
+    assert result["passed"] is True, (
+        "An additional citation should not be rejected merely because "
+        "it was not selected as the single best citation."
+    )
+    assert result["violation_count"] == 0
+
+def test_citation_audit_flags_nonselected_available_citation():
+    import app.agents.nodes.grounding_critic as grounding
+
+    result = grounding._audit_citation_consistency(
+        atomic_results=[
+            {
+                "claim": "The platform ranks retrieved passages before generation.",
+                "citations": ["chunk_supporting", "chunk_unrelated"],
+                "best_citation": "chunk_supporting",
+                "score": 0.95,
+                "supported": True,
+                "support_method": "entailment",
+                "best_evidence_unit": (
+                    "The platform ranks retrieved passages before generation."
+                ),
+            }
+        ],
+        evidence_map={
+            "chunk_supporting": [
+                "The platform ranks retrieved passages before generation."
+            ],
+            "chunk_unrelated": [
+                "The platform stores user interface preferences."
+            ],
+        },
+    )
+
+    assert result["passed"] is False
+    assert result["violation_count"] == 1
+    assert result["violations"][0]["citation"] == "chunk_unrelated"
+    assert result["violations"][0]["support_method"] == "not_selected"
+
+
+def test_grounding_node_rejects_unrelated_available_citation(monkeypatch):
+    import app.agents.nodes.grounding_critic as grounding
+    import app.tools.entailment_tool as entailment_tool
+
+    claim = "The platform ranks retrieved passages before generation."
+    supporting_evidence = claim
+    unrelated_evidence = "The platform stores user interface preferences."
+
+    monkeypatch.setattr(
+        grounding,
+        "_validate_atomic_claim",
+        lambda claim, citations, evidence_map, entailment_cache=None: {
+            "claim": claim,
+            "score": 1.0,
+            "supported": True,
+            "best_evidence_unit": supporting_evidence,
+            "best_citation": "chunk_supporting",
+            "citations": ["chunk_supporting"],
+            "support_method": "deterministic_exact_match",
+        },
+    )
+    monkeypatch.setattr(
+        grounding,
+        "_split_compound_claim",
+        lambda text: [text],
+    )
+    monkeypatch.setattr(
+        entailment_tool,
+        "start_hhem_profile",
+        lambda: (object(), {"call_count": 0, "total_ms": 0.0}),
+    )
+    monkeypatch.setattr(
+        entailment_tool,
+        "stop_hhem_profile",
+        lambda token: None,
+    )
+
+    state = {
+        "final_answer": (
+            f"{claim} [chunk_supporting] [chunk_unrelated]"
+        ),
+        "citation_provenance": {
+            "chunk_supporting": {
+                "citation_id": "chunk_supporting",
+                "text": supporting_evidence,
+                "document_id": "doc_supporting",
+                "chunk_id": 1,
+            },
+            "chunk_unrelated": {
+                "citation_id": "chunk_unrelated",
+                "text": unrelated_evidence,
+                "document_id": "doc_unrelated",
+                "chunk_id": 2,
+            },
+        },
+        "evaluation_trace": [],
+    }
+
+    result = grounding.grounding_critic_node(state)
+
+    assert result["citation_consistency"]["passed"] is False, (
+        "The audit must inspect the citations actually present in the answer, "
+        "including available citations that do not support the claim."
+    )
+    assert result["is_grounded"] is False, (
+        "An answer containing an unrelated citation must not pass grounding."
+    )
+
+    # Diagnostics are stored inside the grounding trace event.
+    trace_events = result["evaluation_trace"]
+    grounding_event = next(
+        event
+        for event in reversed(trace_events)
+        if event.get("step") == "grounding_critic"
+    )
+    details = grounding_event["details"]
+
+    assert details["substantive_result_count"] > 0
+    assert details["unsupported_claim_count"] == 0
+    assert details["semantic_support_ok"] is True
+    assert details["citation_consistency_passed"] is False
+    assert details["citation_support_ok"] is False
+    assert details["answer_supported"] is False
+
+
+def test_discovery_support_repairs_to_valid_alternative_citation(monkeypatch):
+    import app.agents.nodes.grounding_critic as grounding
+
+    calls = []
+
+    def fake_discovery(**kwargs):
+        calls.append(kwargs)
+        return {
+            "score": 0.97,
+            "supported": True,
+            "best_evidence_unit": (
+                "The system supports the requested capability."
+            ),
+            "best_citation": "valid_alternative",
+            "support_method": "entailment",
+        }
+
+    monkeypatch.setattr(
+        grounding,
+        "_discover_supporting_evidence",
+        fake_discovery,
+    )
+
+    result = grounding._validate_atomic_claim(
+        "The system supports the requested capability.",
+        ["rejected_citation"],
+        {
+            "rejected_citation": ["Unrelated evidence."],
+            "valid_alternative": [
+                "The system supports the requested capability."
+            ],
+        },
+    )
+
+    assert calls, "Independent evidence discovery was not exercised"
+    assert calls[0]["excluded_citations"] == ["rejected_citation"]
+    assert result["supported"] is True
+    assert result["best_citation"] == "valid_alternative"
+    assert result["citations"] == ["valid_alternative"]
+    assert result["support_method"] == "entailment"
+
+def test_global_selector_preserves_citation_diversity_under_limit(monkeypatch):
+    import app.agents.nodes.grounding_critic as grounding
+
+    claim = "The system ranks evidence before generation."
+    evidence_map = {
+        "citation_a": [
+            "window_a1",
+            "window_a2",
+        ],
+        "citation_b": [
+            "window_b1",
+        ],
+        "citation_c": [
+            "window_c1",
+        ],
+    }
+
+    relevance = {
+        "window_a1": 0.99,
+        "window_a2": 0.98,
+        "window_b1": 0.80,
+        "window_c1": 0.70,
+    }
+
+    monkeypatch.setattr(
+        grounding,
+        "_window_relevance_score",
+        lambda claim, window: (relevance[window], 1, 1.0),
+    )
+
+    selected = grounding._select_global_entailment_candidates(
+        claim=claim,
+        evidence_map=evidence_map,
+        included_citations=["citation_a", "citation_b", "citation_c"],
+        limit=3,
+    )
+
+    selected_citations = [citation for citation, _ in selected]
+
+    assert len(selected) == 3
+    assert set(selected_citations) == {
+        "citation_a",
+        "citation_b",
+        "citation_c",
+    }
+    assert len(selected_citations) == len(set(selected_citations))
+
+def test_discovery_zero_budget_allows_deterministic_support(monkeypatch):
+    import app.agents.nodes.grounding_critic as grounding
+
+    claim = "KnowledgeMesh uses deterministic evidence matching."
+    evidence = "KnowledgeMesh uses deterministic evidence matching."
+
+    def forbidden_scorer():
+        raise AssertionError(
+            "HHEMv2 scorer must not be requested for zero-budget discovery."
+        )
+
+    monkeypatch.setattr(
+        grounding,
+        "_get_entailment_scorer",
+        forbidden_scorer,
+    )
+
+    result = grounding._discover_supporting_evidence(
+        claim=claim,
+        evidence_map={"chunk_exact": [evidence]},
+        semantic_budget=0,
+    )
+
+    assert result["supported"] is True
+    assert result["best_citation"] == "chunk_exact"
+    assert result["support_method"] == "deterministic_exact_match"

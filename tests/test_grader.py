@@ -209,9 +209,17 @@ def test_grade_documents_node_success(
 """
 
     documents = [
-        make_doc(0, evidence_type="CONTENT"),
+        make_doc(
+            0,
+            evidence_type="CONTENT",
+            content="The system failure policy defines how failures are handled.",
+        ),
         make_doc(1, evidence_type="NAVIGATION"),
-        make_doc(2, evidence_type="CONTENT"),
+        make_doc(
+            2,
+            evidence_type="CONTENT",
+            content="Failure policy for the system includes escalation steps.",
+        ),
     ]
 
     state = {

@@ -12,3 +12,12 @@ __pycache__/
 qdrant_storage/
 *.log
 .DS_Store
+*.bak
+*.bak-*
+*.before_*
+DATA/audit.db
+run.log
+*.bak_*
+scores_*.json
+scores_*.json
+*.log

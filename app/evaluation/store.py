@@ -90,10 +90,76 @@ def _sanitize_trajectory(trajectory: Any) -> dict[str, Any]:
         step, event_status = event.get("step", ""), event.get("status", "")
         if not isinstance(step, str) or not isinstance(event_status, str):
             raise ValueError("trace step and status must be strings")
-        safe_trace.append({
-            "step": step if step in SAFE_STEPS else "unknown",
-            "status": event_status if event_status in SAFE_STATUSES else "unknown",
-        })
+        safe_step = step if step in SAFE_STEPS else "unknown"
+        safe_event = {
+            "step": safe_step,
+            "status": (
+                event_status if event_status in SAFE_STATUSES else "unknown"
+            ),
+        }
+
+        # Only retain explicitly approved scalar diagnostics from grounding.
+        # Never persist raw claims, evidence, citations, or nested objects.
+        details = event.get("details")
+        if safe_step == "grounding_critic" and isinstance(details, dict):
+            safe_details: dict[str, bool | int | float] = {}
+
+            count_fields = (
+                "claim_count",
+                "atomic_claim_count",
+                "unsupported_atomic_count",
+                "substantive_result_count",
+                "unsupported_claim_count",
+                "citation_violation_count",
+                "citation_warning_count",
+                "uncited_claim_count",
+                "invalid_citation_count",
+                "hhem_call_count",
+            )
+            for name in count_fields:
+                value = details.get(name)
+                if (
+                    isinstance(value, int)
+                    and not isinstance(value, bool)
+                    and 0 <= value <= 100000
+                ):
+                    safe_details[name] = value
+
+            duration_fields = ("grounding_ms", "hhem_total_ms")
+            for name in duration_fields:
+                value = details.get(name)
+                if (
+                    isinstance(value, (int, float))
+                    and not isinstance(value, bool)
+                    and math.isfinite(value)
+                    and 0 <= value <= 1_000_000_000
+                ):
+                    safe_details[name] = value
+
+            score = details.get("support_score")
+            if (
+                isinstance(score, (int, float))
+                and not isinstance(score, bool)
+                and math.isfinite(score)
+                and 0 <= score <= 1
+            ):
+                safe_details["support_score"] = score
+
+            for name in (
+                "is_grounded",
+                "answer_supported",
+                "citation_consistency_passed",
+                "semantic_support_ok",
+                "citation_support_ok",
+            ):
+                value = details.get(name)
+                if isinstance(value, bool):
+                    safe_details[name] = value
+
+            if safe_details:
+                safe_event["details"] = safe_details
+
+        safe_trace.append(safe_event)
 
     return {
         "trajectory_status": status,

@@ -5,20 +5,20 @@ KnowledgeMesh Embedding Service
 Canonical embedding service for private RAG retrieval and ingestion.
 
 Current production embedding:
-    BAAI/bge-small-en-v1.5
+    BAAI/bge-base-en-v1.5
 
 Expected dimension:
-    384
+    768
 
 Important invariants:
     - No Gemini embedding fallback.
     - No BGE-M3 fallback.
     - The configured model must match the canonical model.
-    - The loaded embedding dimension must match 384.
+    - The loaded embedding dimension must match 768.
     - Query and document embeddings therefore remain compatible
-      with the existing Qdrant `enterprise_rag` collection.
+      with the configured BGE-base Qdrant collection.
 
-The Qdrant collection currently contains 384-dimensional vectors,
+The configured Qdrant collection currently contains 768-dimensional vectors,
 so changing this model/dimension requires an explicit collection
 migration and re-indexing. This module intentionally fails closed
 instead of silently changing embedding models.
@@ -26,8 +26,10 @@ instead of silently changing embedding models.
 
 from __future__ import annotations
 
+import math
 import os
 import time
+import threading
 from functools import lru_cache
 from typing import List, Optional
 
@@ -38,8 +40,8 @@ import logfire
 # Canonical embedding configuration
 # ============================================================
 
-CANONICAL_EMBEDDING_MODEL = "BAAI/bge-small-en-v1.5"
-CANONICAL_EMBEDDING_DIMENSION = 384
+CANONICAL_EMBEDDING_MODEL = "BAAI/bge-base-en-v1.5"
+CANONICAL_EMBEDDING_DIMENSION = 768
 
 # Read environment configuration.
 #
@@ -111,6 +113,7 @@ if EXPECTED_EMBEDDING_DIMENSION != CANONICAL_EMBEDDING_DIMENSION:
 
 _model = None
 _embedding_dimension: Optional[int] = None
+_model_initialization_lock = threading.Lock()
 
 
 def _load_model():
@@ -127,69 +130,86 @@ def _load_model():
     if _model is not None:
         return _model
 
-    try:
-        from sentence_transformers import SentenceTransformer
-    except ImportError as exc:
-        raise RuntimeError(
-            "sentence-transformers is required for the KnowledgeMesh "
-            "embedding service. Install it with:\n"
-            "uv pip install sentence-transformers"
-        ) from exc
+    # Prevent duplicate model loads when requests arrive concurrently.
+    with _model_initialization_lock:
+        if _model is not None:
+            return _model
 
-    logfire.info(
-        f"Loading embedding model: {CANONICAL_EMBEDDING_MODEL}"
-    )
+        try:
+            from sentence_transformers import SentenceTransformer
+        except ImportError as exc:
+            raise RuntimeError(
+                "sentence-transformers is required for the KnowledgeMesh "
+                "embedding service. Install it with:\n"
+                "uv pip install sentence-transformers"
+            ) from exc
 
-    model = SentenceTransformer(
-        CANONICAL_EMBEDDING_MODEL,
-        device=os.getenv("EMBEDDING_DEVICE") or None,
-    )
+        logfire.info(
+            f"Loading embedding model: {CANONICAL_EMBEDDING_MODEL}"
+        )
 
-    # SentenceTransformer exposes get_sentence_embedding_dimension().
-    detected_dimension = model.get_sentence_embedding_dimension()
+        model = SentenceTransformer(
+            CANONICAL_EMBEDDING_MODEL,
+            device=os.getenv("EMBEDDING_DEVICE") or None,
+        )
 
-    if detected_dimension is None:
-        raise RuntimeError(
-            "Unable to determine embedding dimension for "
+        # Prefer the current API, retaining compatibility with older versions.
+        dimension_getter = getattr(model, "get_embedding_dimension", None)
+        if not callable(dimension_getter):
+            dimension_getter = getattr(
+                model, "get_sentence_embedding_dimension", None
+            )
+
+        if not callable(dimension_getter):
+            raise RuntimeError(
+                "SentenceTransformer exposes no supported embedding "
+                "dimension method."
+            )
+
+        detected_dimension = dimension_getter()
+
+        if detected_dimension is None:
+            raise RuntimeError(
+                "Unable to determine embedding dimension for "
+                f"{CANONICAL_EMBEDDING_MODEL}"
+            )
+
+        detected_dimension = int(detected_dimension)
+
+        if detected_dimension != CANONICAL_EMBEDDING_DIMENSION:
+            raise RuntimeError(
+                "Loaded embedding model has an unexpected dimension.\n"
+                f"Model: {CANONICAL_EMBEDDING_MODEL}\n"
+                f"Expected: {CANONICAL_EMBEDDING_DIMENSION}\n"
+                f"Loaded: {detected_dimension}"
+            )
+
+        if detected_dimension != EXPECTED_EMBEDDING_DIMENSION:
+            raise RuntimeError(
+                "Loaded embedding dimension does not match configuration.\n"
+                f"Configured: {EXPECTED_EMBEDDING_DIMENSION}\n"
+                f"Loaded: {detected_dimension}"
+            )
+
+        _embedding_dimension = detected_dimension
+        _model = model
+
+        print(
+            f"🧠 Embedding model ready: "
             f"{CANONICAL_EMBEDDING_MODEL}"
         )
-
-    detected_dimension = int(detected_dimension)
-
-    if detected_dimension != CANONICAL_EMBEDDING_DIMENSION:
-        raise RuntimeError(
-            "Loaded embedding model has an unexpected dimension.\n"
-            f"Model: {CANONICAL_EMBEDDING_MODEL}\n"
-            f"Expected: {CANONICAL_EMBEDDING_DIMENSION}\n"
-            f"Loaded: {detected_dimension}"
+        print(
+            f"📐 Embedding dimension: "
+            f"{detected_dimension}"
         )
 
-    if detected_dimension != EXPECTED_EMBEDDING_DIMENSION:
-        raise RuntimeError(
-            "Loaded embedding dimension does not match configuration.\n"
-            f"Configured: {EXPECTED_EMBEDDING_DIMENSION}\n"
-            f"Loaded: {detected_dimension}"
+        logfire.info(
+            "Embedding model ready",
+            model=CANONICAL_EMBEDDING_MODEL,
+            dimension=detected_dimension,
         )
 
-    _model = model
-    _embedding_dimension = detected_dimension
-
-    print(
-        f"🧠 Embedding model ready: "
-        f"{CANONICAL_EMBEDDING_MODEL}"
-    )
-    print(
-        f"📐 Embedding dimension: "
-        f"{detected_dimension}"
-    )
-
-    logfire.info(
-        "Embedding model ready",
-        model=CANONICAL_EMBEDDING_MODEL,
-        dimension=detected_dimension,
-    )
-
-    return _model
+        return _model
 
 
 # ============================================================
@@ -216,13 +236,10 @@ def get_embedding_dim() -> int:
     actual loaded model rather than only configuration.
     """
 
-    global _embedding_dimension
+    _load_model()
 
-    if _embedding_dimension is None:
-        _load_model()
-
+    # The loader publishes the model only after setting its dimension.
     assert _embedding_dimension is not None
-
     return _embedding_dimension
 
 
@@ -238,6 +255,11 @@ def _validate_embedding(vector) -> List[float]:
     values = vector.tolist() if hasattr(vector, "tolist") else list(vector)
 
     values = [float(value) for value in values]
+
+    if not all(math.isfinite(value) for value in values):
+        raise RuntimeError(
+            "Embedding contains non-finite values."
+        )
 
     expected = CANONICAL_EMBEDDING_DIMENSION
 
@@ -260,7 +282,7 @@ def embed_query(query: str) -> List[float]:
     Generate one embedding for a query.
 
     Returns:
-        List[float] with exactly 384 values.
+        List[float] with exactly 768 values.
     """
 
     if not isinstance(query, str) or not query.strip():
@@ -303,7 +325,7 @@ def embed_documents(
             Number of attempts if model inference fails.
 
     Returns:
-        List of 384-dimensional embedding vectors.
+        List of 768-dimensional embedding vectors.
     """
 
     if not isinstance(texts, list):
