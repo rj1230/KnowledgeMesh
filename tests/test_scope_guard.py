@@ -1,3 +1,4 @@
+import pytest
 import app.guardrails.rails as rails
 
 
@@ -169,3 +170,45 @@ def test_guard_blocks_when_scope_classifier_is_unavailable(monkeypatch):
     assert response is not None
     assert "retry" in response.lower()
     assert "no retrieval" in response.lower()
+
+
+@pytest.fixture(autouse=True)
+def _classifier_path_by_default(monkeypatch):
+    # The fast path skips the classifier for technical wording, which would
+    # hide the classifier failure modes these tests exercise.
+    monkeypatch.setattr(rails, "FAST_PATH_TECHNICAL", False)
+
+
+class _MustNotBeCalled:
+    def invoke(self, *args, **kwargs):
+        raise AssertionError("classifier was called on the fast path")
+
+
+def test_fast_path_skips_classifier_for_technical_wording(monkeypatch):
+    monkeypatch.setattr(rails, "FAST_PATH_TECHNICAL", True)
+    monkeypatch.setattr(rails, "_check_topic_llm", _MustNotBeCalled())
+
+    assert rails._run_topic_classifier("How does RAG retrieval work?") == "TECHNICAL"
+
+
+def test_fast_path_off_still_uses_classifier(monkeypatch):
+    monkeypatch.setattr(rails, "FAST_PATH_TECHNICAL", False)
+    monkeypatch.setattr(rails, "_check_topic_llm", _MustNotBeCalled())
+
+    # The classifier raises, which must surface as UNAVAILABLE, not TECHNICAL.
+    assert rails._run_topic_classifier("How does RAG retrieval work?") == "UNAVAILABLE"
+
+
+def test_small_talk_is_answered_without_the_pipeline():
+    assert rails._small_talk_reply("hi") is not None
+    assert rails._small_talk_reply("Thanks!") is not None
+
+
+def test_small_talk_never_swallows_a_technical_question():
+    assert rails._small_talk_reply("hi, what is loop engineering?") is None
+    assert rails._small_talk_reply("help me understand RAG") is None
+
+
+def test_technical_hint_detection():
+    assert rails._looks_clearly_technical("What is loop engineering?")
+    assert not rails._looks_clearly_technical("What's the weather in Mumbai today?")

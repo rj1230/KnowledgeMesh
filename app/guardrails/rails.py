@@ -11,6 +11,10 @@
 #   - decide whether exact evidence exists
 #
 # Exact answerability belongs to LangGraph.
+#
+# This gate also answers plain small talk (greetings, thanks, "what can
+# you do") deterministically, so those messages get a friendly reply
+# instead of an out-of-scope refusal, with no LLM call.
 # ============================================================
 
 from __future__ import annotations
@@ -42,6 +46,12 @@ logger = logging.getLogger(__name__)
 _rails: LLMRails | None = None
 _check_topic_llm: ChatGroq | None = None
 _TOPIC_CLASSIFIER_DEADLINE_SECONDS = 12.0
+
+# Messages that obviously concern the knowledge base skip the scope-
+# classifier LLM call (about 1 to 2 seconds). The jailbreak check still
+# runs first, and LangGraph still decides whether evidence exists. Set to
+# False to send every request through the classifier.
+FAST_PATH_TECHNICAL = True
 
 
 # ============================================================
@@ -95,6 +105,111 @@ _JAILBREAK_RESPONSE = (
     "I can help with questions covered by the KnowledgeMesh "
     "technical knowledge base."
 )
+
+_SCOPE_HINT = (
+    "Ask me an AI, machine-learning, retrieval, LLM, agent, "
+    "infrastructure or software question, or about the documents "
+    "in the knowledge base."
+)
+
+_NON_TECHNICAL_RESPONSE = (
+    "I'm KnowledgeMesh, a technical knowledge assistant. This request "
+    "falls outside the configured technical knowledge scope, so I can't "
+    "provide a grounded answer for it. " + _SCOPE_HINT
+)
+
+
+# ============================================================
+# SMALL TALK (answered here, no LLM call, no retrieval)
+#
+# Each pattern must match the WHOLE message, so a technical question
+# that merely starts with "hi" or "help" is never treated as small talk.
+# ============================================================
+
+_SMALL_TALK: list[tuple[re.Pattern[str], str]] = [
+    (
+        re.compile(
+            r"^(?:hi|hello|hey|hiya|howdy|yo|greetings|"
+            r"good\s+(?:morning|afternoon|evening))"
+            r"(?:\s+(?:there|team|everyone|knowledgemesh))?[\s!.,?]*$",
+            re.IGNORECASE,
+        ),
+        "Hello! I'm KnowledgeMesh, a technical knowledge assistant. " + _SCOPE_HINT,
+    ),
+    (
+        re.compile(
+            r"^how\s+are\s+you(?:\s+doing)?(?:\s+today)?[\s!.,?]*$",
+            re.IGNORECASE,
+        ),
+        "I'm doing well, thanks for asking. " + _SCOPE_HINT,
+    ),
+    (
+        re.compile(
+            r"^(?:thanks|thank\s+you|thx|ty|cheers)"
+            r"(?:\s+(?:a\s+lot|so\s+much|very\s+much))?[\s!.,]*$",
+            re.IGNORECASE,
+        ),
+        "You're welcome! Ask me another question whenever you like.",
+    ),
+    (
+        re.compile(
+            r"^(?:bye|goodbye|see\s+you|see\s+ya|cya|good\s*night)[\s!.,]*$",
+            re.IGNORECASE,
+        ),
+        "Goodbye! Come back any time you have a technical question.",
+    ),
+    (
+        re.compile(
+            r"^(?:who\s+are\s+you|what\s+are\s+you|what\s+do\s+you\s+do|"
+            r"what\s+can\s+you\s+do|how\s+can\s+you\s+help(?:\s+me)?|help)"
+            r"[\s!.,?]*$",
+            re.IGNORECASE,
+        ),
+        "I'm KnowledgeMesh, a technical knowledge assistant. I answer "
+        "questions from the documents in the knowledge base, cite the "
+        "passage behind every claim, and tell you when the documents "
+        "don't contain an answer. " + _SCOPE_HINT,
+    ),
+]
+
+
+def _small_talk_reply(message: str) -> str | None:
+    """Return a canned reply for plain small talk, otherwise None."""
+
+    normalized = " ".join(message.split())
+
+    for pattern, reply in _SMALL_TALK:
+        if pattern.match(normalized):
+            return reply
+
+    return None
+
+
+# ============================================================
+# TECHNICAL FAST PATH (skips the scope-classifier LLM call)
+#
+# Deliberately limited to strong, unambiguous terms. Anything else still
+# goes to the classifier, and LangGraph still decides whether evidence
+# exists, so a false positive costs only a retrieval.
+# ============================================================
+
+_TECHNICAL_HINTS = re.compile(
+    r"\b(?:"
+    r"llms?|rag|retrieval|embeddings?|vector|transformers?|attention|"
+    r"agentic|agents?|harness|loop\s+(?:engineering|specification)|"
+    r"prompt(?:s|ing)?|fine-?tun\w*|hallucinat\w+|grounding|"
+    r"neural|machine\s+learning|deep\s+learning|"
+    r"api|sdk|kubernetes|docker|database|latency|infrastructure|"
+    r"algorithm|architecture|framework|pipeline|"
+    r"according\s+to\s+the\s+\w+(?:\s+\w+)?\s+(?:paper|survey|report)|"
+    r"documentation|knowledge\s+base"
+    r")\b",
+    re.IGNORECASE,
+)
+
+
+def _looks_clearly_technical(message: str) -> bool:
+    return bool(_TECHNICAL_HINTS.search(message or ""))
 
 
 # ============================================================
@@ -282,9 +397,7 @@ async def check_topic(
     # --------------------------------------------------------
 
     if _check_topic_llm is None:
-        logger.warning(
-            "TOPIC_DIAG: classifier_state=UNINITIALIZED result=UNAVAILABLE"
-        )
+        logger.warning("TOPIC_DIAG: classifier_state=UNINITIALIZED result=UNAVAILABLE")
         return "UNAVAILABLE"
 
     ctx = context or {}
@@ -511,12 +624,18 @@ def _run_topic_classifier(
         )
         return "NON_TECHNICAL"
 
+    # Clearly technical wording: skip the classifier LLM call.
+    if FAST_PATH_TECHNICAL and _looks_clearly_technical(user_message):
+        logger.info(
+            "TOPIC_DIAG: fast_path_technical query=%r",
+            user_message[:120],
+        )
+        return "TECHNICAL"
+
     try:
         logger.info("TOPIC_DIAG: invoking_classifier_sync")
 
-        response = _check_topic_llm.invoke(
-            _build_topic_classifier_prompt(user_message)
-        )
+        response = _check_topic_llm.invoke(_build_topic_classifier_prompt(user_message))
         answer = str(response.content).strip().upper()
 
         logger.info(
@@ -563,7 +682,9 @@ def guard(
     Returns:
 
         (True, response)
-            Request was blocked.
+            The gate answered the request itself (a jailbreak block,
+            an out-of-scope refusal, or a small-talk reply). No
+            retrieval or generation runs.
 
         (False, None)
             Request is allowed to continue into LangGraph.
@@ -604,6 +725,26 @@ def guard(
             )
 
         # ====================================================
+        # GATE A2 · SMALL TALK
+        #
+        # Greetings, thanks and "what can you do" get a friendly
+        # reply instead of an out-of-scope refusal. No LLM call.
+        # ====================================================
+
+        small_talk = _small_talk_reply(message)
+
+        if small_talk is not None:
+            logger.info(
+                "TOPIC_DIAG: small_talk_reply query=%r",
+                message[:120],
+            )
+
+            return (
+                True,
+                small_talk,
+            )
+
+        # ====================================================
         # GATE B · BROAD KNOWLEDGE SCOPE
         # ====================================================
 
@@ -633,16 +774,6 @@ def guard(
         # ----------------------------------------------------
 
         if scope == "NON_TECHNICAL":
-            response = (
-                "I'm KnowledgeMesh, a KnowledgeMesh technical "
-                "knowledge assistant. This request falls outside "
-                "the configured technical knowledge scope, so I "
-                "can't provide a grounded answer for it. Please "
-                "ask an AI, machine-learning, retrieval, LLM, "
-                "agent, infrastructure, software, or other "
-                "technical knowledge question."
-            )
-
             logger.info(
                 "TOPIC_DIAG: PRE_RAG_BLOCK scope=NON_TECHNICAL query=%r",
                 message[:120],
@@ -650,7 +781,7 @@ def guard(
 
             return (
                 True,
-                response,
+                _NON_TECHNICAL_RESPONSE,
             )
 
         # ====================================================
