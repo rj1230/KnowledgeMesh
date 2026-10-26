@@ -20,3 +20,4 @@ run.log
 *.bak_*
 scores_*.json
 scores_*.json
+*.log
