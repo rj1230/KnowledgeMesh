@@ -1,13 +1,3 @@
-[theme]
-base = "dark"
-primaryColor = "#8ea2ff"
-backgroundColor = "#0f1218"
-secondaryBackgroundColor = "#171b23"
-textColor = "#e8ebf1"
-font = "sans serif"
+[server]
+fileWatcherType = "none"
 
-[client]
-toolbarMode = "minimal"
-
-[browser]
-gatherUsageStats = false
