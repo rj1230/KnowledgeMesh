@@ -514,10 +514,14 @@ def _infer_prompts(model: Any, prompts: Sequence[str]) -> list[float]:
     inference_ms = round((perf_counter() - inference_started) * 1000, 2)
 
     logger.info(
-        "HHEMv2 batch inference: pairs=%s tokenize_ms=%s inference_ms=%s",
+        "HHEMv2 batch inference: pairs=%s tokenize_ms=%s inference_ms=%s "
+        "thread=%s torch_threads=%s shape=%s",
         len(prompts),
         tokenize_ms,
         inference_ms,
+        threading.current_thread().name,
+        torch.get_num_threads(),
+        tuple(inputs["input_ids"].shape),
     )
 
     # Match the upstream HHEMv2 implementation:

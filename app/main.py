@@ -1662,7 +1662,9 @@ def query(
             "🛡️ Guardrails Check",
             thread_id=thread_id,
         ):
+            _guard_started = time.perf_counter()
             rail_fired, rail_response = guard(q)
+            logger.warning("TIMING guard_ms=%s", round((time.perf_counter() - _guard_started) * 1000, 2))
 
         if rail_fired:
             elapsed_ms = round(
@@ -1695,10 +1697,12 @@ def query(
             "🧠 LangGraph Agentic RAG Pipeline",
             thread_id=thread_id,
         ):
+            _graph_started = time.perf_counter()
             final_output = rag_agent.invoke(
                 initial_state,
                 config=config,
             )
+            logger.warning("TIMING graph_invoke_ms=%s", round((time.perf_counter() - _graph_started) * 1000, 2))
 
         if not isinstance(
             final_output,
@@ -2168,6 +2172,7 @@ def query(
         # failures must never change the API answer.
         # ====================================================
 
+        _persist_started = time.perf_counter()
         trajectory_status = final_output.get("trajectory_status")
 
         if isinstance(trajectory_status, str) and trajectory_status in (
@@ -2195,6 +2200,8 @@ def query(
                     "error_type=%s",
                     type(exc).__name__,
                 )
+
+        logger.warning("TIMING persist_ms=%s", round((time.perf_counter() - _persist_started) * 1000, 2))
 
         # ====================================================
         # API RESPONSE
