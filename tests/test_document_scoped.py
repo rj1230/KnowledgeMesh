@@ -89,3 +89,13 @@ def test_apply_pruned_answer_writes_the_pruned_text():
     assert result["final_answer"] == "Supported line."
     assert result["candidate_answer"] == "Supported line."
     assert result["answer_pruned"] is True
+
+
+def test_document_reference_detection():
+    from app.agents.nodes.context_evaluator_node import _is_document_scoped
+
+    assert _is_document_scoped("According to the loop paper, what is the stopping rule?")
+    assert _is_document_scoped("According to loop_engineering.pdf, what is the stopping rule?")
+    assert _is_document_scoped("In Q3-report.docx, what is the revenue?")
+    assert not _is_document_scoped("How does retrieval work in the file system?")
+    assert not _is_document_scoped("What is loop engineering?")
