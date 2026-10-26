@@ -1192,7 +1192,7 @@ def render_latency_panel(trace: dict) -> str:
     slow = bottleneck_key(trace)
     segments, legend, known = [], [], 0.0
 
-    for key in ("retrieval", "reranking", "grader", "responder", "critic"):
+    for key in ("retrieval", "reranking", "grader", "responder"):
         value = stage_latency_ms(trace, key)
 
         if not value:
@@ -1228,20 +1228,28 @@ def render_latency_panel(trace: dict) -> str:
         max(latency * 1000 - total, 0) if isinstance(latency, (int, float)) else None
     )
 
-    # The Critic segment above is the request-wide HHEM time. The single
-    # grounding pass is shown as a diagnostic only, so it is never counted twice.
-    grounding_ms = trace.get("grounding_ms")
+    # HHEM time is request-wide and overlaps the stages above, so it is shown
+    # as a diagnostic only and never added to the bar.
+    grounding_ms = safe_float(trace.get("grounding_ms"))
+    hhem_total = safe_float(trace.get("request_hhem_total_ms"))
     hhem_calls = trace.get("request_hhem_call_count")
 
-    grounding_detail = ""
-    if isinstance(grounding_ms, (int, float)) and grounding_ms >= 0:
-        grounding_detail = (
-            f'<div class="km-lat-note">Last grounding pass: '
-            f"{esc(format_ms(float(grounding_ms)))}"
-        )
+    parts = []
+
+    if grounding_ms is not None and grounding_ms >= 0:
+        parts.append(f"Last grounding pass: {esc(format_ms(grounding_ms))}")
+
+    if hhem_total is not None and hhem_total >= 0:
+        text = f"HHEM across request: {esc(format_ms(hhem_total))}"
+
         if isinstance(hhem_calls, int) and hhem_calls >= 0:
-            grounding_detail += f" &middot; {hhem_calls} HHEM calls in this request"
-        grounding_detail += "</div>"
+            text += f" ({hhem_calls} HHEM calls)"
+
+        parts.append(text)
+
+    grounding_detail = (
+        f'<div class="km-lat-note">{" &middot; ".join(parts)}</div>' if parts else ""
+    )
 
     note = ""
 
