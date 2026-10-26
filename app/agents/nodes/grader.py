@@ -72,6 +72,64 @@ MAX_GENERATION_DOCUMENTS = 5
 MAX_GRADER_DOCUMENT_CHARS = 2500
 
 
+# Minimum share of the query's key terms that the selected evidence must
+# contain for the context to count as "strong".
+MIN_QUERY_TERM_COVERAGE = 0.5
+MIN_QUERY_TERMS_FOR_COVERAGE = 3
+
+_DOT_LEADER_RE = re.compile(r"(?:\.\s?){6,}")
+
+_QUERY_STOPWORDS = {
+    "what", "which", "when", "where", "does", "about", "explain", "describe",
+    "tell", "give", "show", "list", "main", "this", "that", "these", "those",
+    "with", "from", "into", "have", "has", "how", "why", "are", "all", "the",
+    "and", "for", "can", "use", "used", "using", "between", "their", "there",
+}
+
+
+def _looks_like_table_of_contents(text: Any) -> bool:
+    """True for table-of-contents chunks (rows ending in dot leaders)."""
+
+    return len(_DOT_LEADER_RE.findall(str(text or ""))) >= 3
+
+
+def _reclassify_table_of_contents(documents):
+    """Mark table-of-contents chunks as NAVIGATION; return how many changed."""
+
+    changed = 0
+
+    for doc in documents:
+        if doc.get("evidence_type") == "NAVIGATION":
+            continue
+
+        if _looks_like_table_of_contents(doc.get("content")):
+            doc["evidence_type"] = "NAVIGATION"
+            changed += 1
+
+    return changed
+
+
+def _query_term_coverage(query: str, documents):
+    """Share of the query's key terms found in the documents (None if n/a)."""
+
+    words = re.findall(r"[a-z0-9]+", str(query or "").lower())
+    terms = [
+        word
+        for word in dict.fromkeys(words)
+        if len(word) > 3 and word not in _QUERY_STOPWORDS
+    ]
+
+    if len(terms) < MIN_QUERY_TERMS_FOR_COVERAGE or not documents:
+        return None
+
+    haystack = " ".join(str(doc.get("content", "")) for doc in documents).lower()
+
+    # 5-letter prefixes so "patterns"/"pattern" and "agentic"/"agent" match.
+    hits = sum(1 for term in terms if term[:5] in haystack)
+
+    return hits / len(terms)
+
+
 def _safe_bool(value: Any) -> bool:
     """Normalize LLM boolean-like values without treating 'false' as truthy."""
 
@@ -461,6 +519,14 @@ def grade_documents_node(state):
 
         graded_documents = rank_evidence(graded_documents)
 
+        toc_reclassified = _reclassify_table_of_contents(graded_documents)
+
+        if toc_reclassified:
+            print(
+                "🧪 TOC FILTER | reclassified_as_navigation="
+                f"{toc_reclassified}"
+            )
+
         content_count, reference_count, navigation_count = _evidence_counts(
             graded_documents
         )
@@ -504,6 +570,19 @@ def grade_documents_node(state):
             context_quality = "weak"
         else:
             context_quality = "empty"
+
+        term_coverage = _query_term_coverage(query, relevant_documents)
+
+        if (
+            context_quality == "strong"
+            and term_coverage is not None
+            and term_coverage < MIN_QUERY_TERM_COVERAGE
+        ):
+            print(
+                "🧪 COVERAGE CHECK | strong -> weak | "
+                f"query_term_coverage={term_coverage:.2f}"
+            )
+            context_quality = "weak"
 
         print(
             "🧪 GRADER FINAL | "

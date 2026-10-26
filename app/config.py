@@ -12,6 +12,19 @@ ROOT = Path(__file__).resolve().parent.parent
 
 
 # ============================================================
+# CANONICAL EMBEDDING CONFIGURATION
+# ============================================================
+#
+# KnowledgeMesh currently targets BGE-base for the new
+# embedding configuration. Qdrant migration is handled
+# separately; changing these values does NOT modify Qdrant.
+#
+
+CANONICAL_EMBEDDING_MODEL = "BAAI/bge-base-en-v1.5"
+CANONICAL_EMBEDDING_DIMENSION = 768
+
+
+# ============================================================
 # REQUIRED ENVIRONMENT
 # ============================================================
 
@@ -62,26 +75,24 @@ _validate_all_required()
 
 
 class Settings:
-
     # ========================================================
     # EMBEDDINGS
     # ========================================================
     #
-    # Canonical embedding configuration is enforced by
-    # app.services.retrieval.embedding.
+    # The embedding service and configuration must use the
+    # same canonical model and dimension.
     #
-    # Qdrant enterprise_rag currently contains 384-dimensional
-    # BGE-small vectors. These values are therefore kept aligned
-    # with the canonical embedding service.
+    # Qdrant migration is intentionally separate from this
+    # configuration change.
 
     embedding_model: str = os.getenv(
         "EMBEDDING_MODEL",
-        "BAAI/bge-small-en-v1.5",
+        CANONICAL_EMBEDDING_MODEL,
     )
 
     embedding_dimension: int = _require_int(
         "EMBEDDING_DIMENSION",
-        "384",
+        str(CANONICAL_EMBEDDING_DIMENSION),
     )
 
     # ========================================================
@@ -180,11 +191,7 @@ class Settings:
     def database_file(self) -> Path:
         p = Path(self.DATABASE_PATH)
 
-        return (
-            p
-            if p.is_absolute()
-            else ROOT / p
-        )
+        return p if p.is_absolute() else ROOT / p
 
     # ========================================================
     # OBSERVABILITY
@@ -218,27 +225,27 @@ class Settings:
         """
         Validate the deployment configuration against the
         canonical KnowledgeMesh embedding invariants.
+
+        This validates application configuration only.
+        It does not inspect, modify, recreate, or wipe Qdrant.
         """
 
-        expected_model = "BAAI/bge-small-en-v1.5"
-        expected_dimension = 384
-
-        if self.embedding_model != expected_model:
+        if self.embedding_model != CANONICAL_EMBEDDING_MODEL:
             raise ConfigError(
                 "Embedding configuration mismatch.\n"
-                f"Expected model: {expected_model}\n"
+                f"Expected model: {CANONICAL_EMBEDDING_MODEL}\n"
                 f"Configured model: {self.embedding_model}\n\n"
-                "The existing enterprise_rag Qdrant collection uses "
-                "the canonical BGE-small embedding model."
+                "Update EMBEDDING_MODEL to the canonical "
+                "KnowledgeMesh embedding model."
             )
 
-        if self.embedding_dimension != expected_dimension:
+        if self.embedding_dimension != CANONICAL_EMBEDDING_DIMENSION:
             raise ConfigError(
                 "Embedding dimension configuration mismatch.\n"
-                f"Expected dimension: {expected_dimension}\n"
+                f"Expected dimension: {CANONICAL_EMBEDDING_DIMENSION}\n"
                 f"Configured dimension: {self.embedding_dimension}\n\n"
-                "The existing enterprise_rag Qdrant collection uses "
-                f"{expected_dimension}-dimensional vectors."
+                "Update EMBEDDING_DIMENSION to the canonical "
+                "KnowledgeMesh embedding dimension."
             )
 
     # ========================================================
@@ -257,12 +264,8 @@ class Settings:
             "embedding_dimension": self.embedding_dimension,
             "qdrant_collection": self.QDRANT_COLLECTION,
             "groq_model": self.GROQ_MODEL,
-            "groq_fallback_configured": bool(
-                self.GROQ_FALLBACK_API_KEY
-            ),
-            "portkey_configured": bool(
-                self.PORTKEY_API_KEY
-            ),
+            "groq_fallback_configured": bool(self.GROQ_FALLBACK_API_KEY),
+            "portkey_configured": bool(self.PORTKEY_API_KEY),
             "top_k": self.TOP_K,
             "max_support_retries": self.MAX_SUPPORT_RETRIES,
             "max_retrieval_rewrites": self.MAX_RETRIEVAL_REWRITES,
@@ -284,21 +287,13 @@ settings.validate_embedding_dimension()
 # LANGCHAIN TRACING BRIDGE
 # ============================================================
 
-os.environ["LANGCHAIN_TRACING_V2"] = (
-    settings.LANGSMITH_TRACING
-)
+os.environ["LANGCHAIN_TRACING_V2"] = settings.LANGSMITH_TRACING
 
-os.environ["LANGCHAIN_API_KEY"] = (
-    settings.LANGSMITH_API_KEY
-)
+os.environ["LANGCHAIN_API_KEY"] = settings.LANGSMITH_API_KEY
 
-os.environ["LANGCHAIN_PROJECT"] = (
-    settings.LANGSMITH_PROJECT
-)
+os.environ["LANGCHAIN_PROJECT"] = settings.LANGSMITH_PROJECT
 
-os.environ["LANGCHAIN_ENDPOINT"] = (
-    settings.LANGSMITH_ENDPOINT
-)
+os.environ["LANGCHAIN_ENDPOINT"] = settings.LANGSMITH_ENDPOINT
 
 
 logger.info(

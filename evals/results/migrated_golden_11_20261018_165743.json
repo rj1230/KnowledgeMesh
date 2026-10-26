@@ -1,0 +1,1013 @@
+{
+  "retrieval": {
+    "total_cases": 11,
+    "successful_cases": 2,
+    "failed_cases": 9,
+    "metrics": {
+      "retrieval_recall_at_5": 1.0,
+      "retrieval_precision_at_5": 0.30000000000000004,
+      "retrieval_hit_at_5": 1.0,
+      "retrieval_document_hit_at_5": 1.0,
+      "retrieval_neighbor_hit_at_5": 1.0,
+      "ndcg_at_5": 0.8467132018086354,
+      "reciprocal_rank": 0.75,
+      "web_hit_at_5": null,
+      "web_reciprocal_rank": null,
+      "web_domain_precision_at_5": null,
+      "answer_relevancy": 0.38461538461538464,
+      "answer_point_coverage": 1.0,
+      "citation_precision": 1.0,
+      "citation_recall": 1.0,
+      "grounding_score": 1.0,
+      "unsupported_claim_rate": 0.0,
+      "retrieved_unknown_id_rate": 0.0,
+      "routing_accuracy": 1.0,
+      "web_decision_accuracy": 1.0,
+      "web_use_recall": null,
+      "unnecessary_web_rate": 0.0,
+      "correct_abstention_rate": null,
+      "false_abstention_rate": 0.0,
+      "final_gate_pass_rate": 1.0
+    },
+    "metrics_n": {
+      "retrieval_recall_at_5": 2,
+      "retrieval_precision_at_5": 2,
+      "retrieval_hit_at_5": 2,
+      "retrieval_document_hit_at_5": 2,
+      "retrieval_neighbor_hit_at_5": 2,
+      "ndcg_at_5": 2,
+      "reciprocal_rank": 2,
+      "web_hit_at_5": 0,
+      "web_reciprocal_rank": 0,
+      "web_domain_precision_at_5": 0,
+      "answer_relevancy": 2,
+      "answer_point_coverage": 2,
+      "citation_precision": 2,
+      "citation_recall": 2,
+      "grounding_score": 2,
+      "unsupported_claim_rate": 2,
+      "retrieved_unknown_id_rate": 2,
+      "routing_accuracy": 2,
+      "web_decision_accuracy": 2,
+      "web_use_recall": 0,
+      "unnecessary_web_rate": 2,
+      "correct_abstention_rate": 0,
+      "false_abstention_rate": 2,
+      "final_gate_pass_rate": 2
+    },
+    "quality_gate": {
+      "passed": false,
+      "checks": {
+        "retrieval_recall_at_5": {
+          "value": 1.0,
+          "threshold": 0.7,
+          "passed": true
+        },
+        "answer_relevancy": {
+          "value": 0.38461538461538464,
+          "threshold": 0.7,
+          "passed": false
+        },
+        "grounding_score": {
+          "value": 1.0,
+          "threshold": 0.9,
+          "passed": true
+        },
+        "citation_precision": {
+          "value": 1.0,
+          "threshold": 0.9,
+          "passed": true
+        },
+        "final_gate_pass_rate": {
+          "value": 1.0,
+          "threshold": 0.9,
+          "passed": true
+        },
+        "unsupported_claim_rate": {
+          "value": 0.0,
+          "threshold": 0.1,
+          "passed": true
+        },
+        "web_decision_accuracy": {
+          "value": 1.0,
+          "threshold": 0.8,
+          "passed": true
+        },
+        "correct_abstention_rate": {
+          "value": null,
+          "threshold": 0.8,
+          "passed": true,
+          "skipped": true
+        },
+        "false_abstention_rate": {
+          "value": 0.0,
+          "threshold": 0.1,
+          "passed": true
+        },
+        "attack_success_rate": {
+          "value": null,
+          "threshold": 0.0,
+          "passed": true,
+          "skipped": true
+        },
+        "leaked_sensitive_content": {
+          "value": null,
+          "threshold": 0.0,
+          "passed": true,
+          "skipped": true
+        },
+        "false_refusal": {
+          "value": null,
+          "threshold": 0.2,
+          "passed": true,
+          "skipped": true
+        },
+        "safety_correct": {
+          "value": null,
+          "threshold": 0.9,
+          "passed": true,
+          "skipped": true
+        }
+      }
+    },
+    "cases": [
+      {
+        "case_id": "gp001",
+        "category": "golden",
+        "question": "What is retrieval-augmented generation and what two types of memory does it combine?",
+        "answer": "Retrieval‑augmented generation (RAG) are models that combine a pre‑trained seq2seq transformer (parametric memory) with a dense vector index of Wikipedia accessed by a neural retriever (non‑parametric memory) [chunk_2][chunk_1]",
+        "metrics": {
+          "retrieval_recall_at_5": 1.0,
+          "retrieval_precision_at_5": 0.4,
+          "retrieval_hit_at_5": 1.0,
+          "retrieval_document_hit_at_5": 1.0,
+          "retrieval_neighbor_hit_at_5": 1.0,
+          "ndcg_at_5": 0.6934264036172708,
+          "reciprocal_rank": 0.5,
+          "web_hit_at_5": null,
+          "web_reciprocal_rank": null,
+          "web_domain_precision_at_5": null,
+          "routing_accuracy": 1.0,
+          "web_decision_accuracy": 1.0,
+          "web_use_recall": null,
+          "unnecessary_web_rate": 0.0,
+          "correct_abstention_rate": null,
+          "false_abstention_rate": 0.0,
+          "answer_relevancy": 0.46153846153846156,
+          "answer_point_coverage": 1.0,
+          "citation_precision": 1.0,
+          "citation_recall": 1.0,
+          "grounding_score": 1.0,
+          "unsupported_claim_rate": 0.0,
+          "retrieved_unknown_id_rate": 0.0
+        },
+        "retrieval": {
+          "retrieved_ids": [
+            "8f25ec73a5dcfeca772c16ff::4",
+            "8f25ec73a5dcfeca772c16ff::0",
+            "8f25ec73a5dcfeca772c16ff::1",
+            "8f25ec73a5dcfeca772c16ff::28",
+            "8f25ec73a5dcfeca772c16ff::3"
+          ],
+          "reranked_ids": [
+            "8f25ec73a5dcfeca772c16ff::4",
+            "8f25ec73a5dcfeca772c16ff::0",
+            "8f25ec73a5dcfeca772c16ff::1",
+            "8f25ec73a5dcfeca772c16ff::28",
+            "8f25ec73a5dcfeca772c16ff::3"
+          ],
+          "relevant_ids": [
+            "8f25ec73a5dcfeca772c16ff::0",
+            "8f25ec73a5dcfeca772c16ff::1"
+          ],
+          "web_urls": [],
+          "expected_urls": [],
+          "expected_domains": [],
+          "first_relevant_rank": 2,
+          "expected_route": "private",
+          "actual_route": "private",
+          "abstained": false,
+          "relevant_labels": [
+            "RAG.pdf#0",
+            "RAG.pdf#1"
+          ],
+          "retrieved_labels": [
+            "RAG.pdf#4",
+            "RAG.pdf#0",
+            "RAG.pdf#1",
+            "RAG.pdf#28",
+            "RAG.pdf#3"
+          ],
+          "unknown_retrieved_ids": []
+        },
+        "citations": {
+          "cited_ids": [
+            "chunk_1"
+          ],
+          "supported_ids": [
+            "chunk_1"
+          ],
+          "required_ids": []
+        },
+        "self_rag": {
+          "revision_count": 1,
+          "total_claims": 1,
+          "unsupported_claims": 0,
+          "final_gate_passed": true
+        },
+        "latency_ms": 52625.021700001525,
+        "error": null
+      },
+      {
+        "case_id": "gp002",
+        "category": "golden",
+        "question": "What are the main components of an LLM-based agent according to the survey?",
+        "answer": "- **Brain** – the core LLM that stores memories, knowledge, and performs information processing, decision‑making, reasoning, and planning [chunk_1]\n- **Perception module** – expands the agent’s sensory space from text‑only to multimodal inputs such as sound, visuals, touch, etc., allowing richer environmental understanding [chunk_1]\n- **Action module** – provides the ability to produce textual output, use tools, and execute embodied actions to interact with and affect the environment [chunk_1][chunk_3]",
+        "metrics": {
+          "retrieval_recall_at_5": 1.0,
+          "retrieval_precision_at_5": 0.2,
+          "retrieval_hit_at_5": 1.0,
+          "retrieval_document_hit_at_5": 1.0,
+          "retrieval_neighbor_hit_at_5": 1.0,
+          "ndcg_at_5": 1.0,
+          "reciprocal_rank": 1.0,
+          "web_hit_at_5": null,
+          "web_reciprocal_rank": null,
+          "web_domain_precision_at_5": null,
+          "routing_accuracy": 1.0,
+          "web_decision_accuracy": 1.0,
+          "web_use_recall": null,
+          "unnecessary_web_rate": 0.0,
+          "correct_abstention_rate": null,
+          "false_abstention_rate": 0.0,
+          "answer_relevancy": 0.3076923076923077,
+          "answer_point_coverage": 1.0,
+          "citation_precision": 1.0,
+          "citation_recall": 1.0,
+          "grounding_score": 1.0,
+          "unsupported_claim_rate": 0.0,
+          "retrieved_unknown_id_rate": 0.0
+        },
+        "retrieval": {
+          "retrieved_ids": [
+            "e65504ab611fa43ac5013829::11",
+            "e65504ab611fa43ac5013829::1",
+            "e65504ab611fa43ac5013829::43",
+            "e65504ab611fa43ac5013829::64",
+            "e65504ab611fa43ac5013829::75"
+          ],
+          "reranked_ids": [
+            "e65504ab611fa43ac5013829::11",
+            "e65504ab611fa43ac5013829::1",
+            "e65504ab611fa43ac5013829::43",
+            "e65504ab611fa43ac5013829::64",
+            "e65504ab611fa43ac5013829::75"
+          ],
+          "relevant_ids": [
+            "e65504ab611fa43ac5013829::11"
+          ],
+          "web_urls": [],
+          "expected_urls": [],
+          "expected_domains": [],
+          "first_relevant_rank": 1,
+          "expected_route": "private",
+          "actual_route": "private",
+          "abstained": false,
+          "relevant_labels": [
+            "LLM Based-learning.pdf#11"
+          ],
+          "retrieved_labels": [
+            "LLM Based-learning.pdf#11",
+            "LLM Based-learning.pdf#1",
+            "LLM Based-learning.pdf#43",
+            "LLM Based-learning.pdf#64",
+            "LLM Based-learning.pdf#75"
+          ],
+          "unknown_retrieved_ids": []
+        },
+        "citations": {
+          "cited_ids": [
+            "chunk_1"
+          ],
+          "supported_ids": [
+            "chunk_1"
+          ],
+          "required_ids": []
+        },
+        "self_rag": {
+          "revision_count": 0,
+          "total_claims": 3,
+          "unsupported_claims": 0,
+          "final_gate_passed": true
+        },
+        "latency_ms": 15870.835399997304,
+        "error": null
+      },
+      {
+        "case_id": "gp003",
+        "category": "golden",
+        "question": "What memory capabilities does AutoGPT provide?",
+        "answer": "",
+        "metrics": {
+          "retrieval_recall_at_5": 0.0,
+          "retrieval_precision_at_5": 0.0,
+          "retrieval_hit_at_5": 0.0,
+          "retrieval_document_hit_at_5": 0.0,
+          "retrieval_neighbor_hit_at_5": 0.0,
+          "ndcg_at_5": 0.0,
+          "reciprocal_rank": 0.0,
+          "web_hit_at_5": null,
+          "web_reciprocal_rank": null,
+          "web_domain_precision_at_5": null,
+          "routing_accuracy": 0.0,
+          "web_decision_accuracy": 1.0,
+          "web_use_recall": null,
+          "unnecessary_web_rate": 0.0,
+          "correct_abstention_rate": null,
+          "false_abstention_rate": 0.0,
+          "answer_relevancy": 0.0,
+          "answer_point_coverage": 0.0,
+          "citation_precision": 0.0,
+          "citation_recall": 1.0,
+          "grounding_score": null,
+          "unsupported_claim_rate": null,
+          "retrieved_unknown_id_rate": 0.0
+        },
+        "retrieval": {
+          "retrieved_ids": [],
+          "reranked_ids": [],
+          "relevant_ids": [
+            "e65504ab611fa43ac5013829::85"
+          ],
+          "web_urls": [],
+          "expected_urls": [],
+          "expected_domains": [],
+          "first_relevant_rank": null,
+          "expected_route": "private",
+          "actual_route": "none",
+          "abstained": false,
+          "relevant_labels": [
+            "LLM Based-learning.pdf#85"
+          ],
+          "retrieved_labels": [],
+          "unknown_retrieved_ids": []
+        },
+        "citations": {
+          "cited_ids": [],
+          "supported_ids": [],
+          "required_ids": []
+        },
+        "self_rag": {
+          "revision_count": 0,
+          "total_claims": null,
+          "unsupported_claims": null,
+          "final_gate_passed": false
+        },
+        "latency_ms": 38230.93899999731,
+        "error": "ReadError: [WinError 10054] An existing connection was forcibly closed by the remote host"
+      },
+      {
+        "case_id": "gp004",
+        "category": "golden",
+        "question": "What is the role of the brain in an LLM-based agent?",
+        "answer": "",
+        "metrics": {
+          "retrieval_recall_at_5": 0.0,
+          "retrieval_precision_at_5": 0.0,
+          "retrieval_hit_at_5": 0.0,
+          "retrieval_document_hit_at_5": 0.0,
+          "retrieval_neighbor_hit_at_5": 0.0,
+          "ndcg_at_5": 0.0,
+          "reciprocal_rank": 0.0,
+          "web_hit_at_5": null,
+          "web_reciprocal_rank": null,
+          "web_domain_precision_at_5": null,
+          "routing_accuracy": 0.0,
+          "web_decision_accuracy": 1.0,
+          "web_use_recall": null,
+          "unnecessary_web_rate": 0.0,
+          "correct_abstention_rate": null,
+          "false_abstention_rate": 0.0,
+          "answer_relevancy": 0.0,
+          "answer_point_coverage": 0.0,
+          "citation_precision": 0.0,
+          "citation_recall": 1.0,
+          "grounding_score": null,
+          "unsupported_claim_rate": null,
+          "retrieved_unknown_id_rate": 0.0
+        },
+        "retrieval": {
+          "retrieved_ids": [],
+          "reranked_ids": [],
+          "relevant_ids": [
+            "e65504ab611fa43ac5013829::11"
+          ],
+          "web_urls": [],
+          "expected_urls": [],
+          "expected_domains": [],
+          "first_relevant_rank": null,
+          "expected_route": "private",
+          "actual_route": "none",
+          "abstained": false,
+          "relevant_labels": [
+            "LLM Based-learning.pdf#11"
+          ],
+          "retrieved_labels": [],
+          "unknown_retrieved_ids": []
+        },
+        "citations": {
+          "cited_ids": [],
+          "supported_ids": [],
+          "required_ids": []
+        },
+        "self_rag": {
+          "revision_count": 0,
+          "total_claims": null,
+          "unsupported_claims": null,
+          "final_gate_passed": false
+        },
+        "latency_ms": 2129.5205999995233,
+        "error": "ConnectError: [WinError 10061] No connection could be made because the target machine actively refused it"
+      },
+      {
+        "case_id": "gp005",
+        "category": "golden",
+        "question": "How does the RAG retriever obtain documents for a query?",
+        "answer": "",
+        "metrics": {
+          "retrieval_recall_at_5": 0.0,
+          "retrieval_precision_at_5": 0.0,
+          "retrieval_hit_at_5": 0.0,
+          "retrieval_document_hit_at_5": 0.0,
+          "retrieval_neighbor_hit_at_5": 0.0,
+          "ndcg_at_5": 0.0,
+          "reciprocal_rank": 0.0,
+          "web_hit_at_5": null,
+          "web_reciprocal_rank": null,
+          "web_domain_precision_at_5": null,
+          "routing_accuracy": 0.0,
+          "web_decision_accuracy": 1.0,
+          "web_use_recall": null,
+          "unnecessary_web_rate": 0.0,
+          "correct_abstention_rate": null,
+          "false_abstention_rate": 0.0,
+          "answer_relevancy": 0.0,
+          "answer_point_coverage": 0.0,
+          "citation_precision": 0.0,
+          "citation_recall": 1.0,
+          "grounding_score": null,
+          "unsupported_claim_rate": null,
+          "retrieved_unknown_id_rate": 0.0
+        },
+        "retrieval": {
+          "retrieved_ids": [],
+          "reranked_ids": [],
+          "relevant_ids": [
+            "8f25ec73a5dcfeca772c16ff::3",
+            "8f25ec73a5dcfeca772c16ff::4",
+            "8f25ec73a5dcfeca772c16ff::8"
+          ],
+          "web_urls": [],
+          "expected_urls": [],
+          "expected_domains": [],
+          "first_relevant_rank": null,
+          "expected_route": "private",
+          "actual_route": "none",
+          "abstained": false,
+          "relevant_labels": [
+            "RAG.pdf#3",
+            "RAG.pdf#4",
+            "RAG.pdf#8"
+          ],
+          "retrieved_labels": [],
+          "unknown_retrieved_ids": []
+        },
+        "citations": {
+          "cited_ids": [],
+          "supported_ids": [],
+          "required_ids": []
+        },
+        "self_rag": {
+          "revision_count": 0,
+          "total_claims": null,
+          "unsupported_claims": null,
+          "final_gate_passed": false
+        },
+        "latency_ms": 2104.0227000012237,
+        "error": "ConnectError: [WinError 10061] No connection could be made because the target machine actively refused it"
+      },
+      {
+        "case_id": "gp006",
+        "category": "golden",
+        "question": "What BLEU score did the Transformer achieve on the WMT 2014 English-to-French translation task, and how long did it take to train?",
+        "answer": "",
+        "metrics": {
+          "retrieval_recall_at_5": 0.0,
+          "retrieval_precision_at_5": 0.0,
+          "retrieval_hit_at_5": 0.0,
+          "retrieval_document_hit_at_5": 0.0,
+          "retrieval_neighbor_hit_at_5": 0.0,
+          "ndcg_at_5": 0.0,
+          "reciprocal_rank": 0.0,
+          "web_hit_at_5": null,
+          "web_reciprocal_rank": null,
+          "web_domain_precision_at_5": null,
+          "routing_accuracy": 0.0,
+          "web_decision_accuracy": 1.0,
+          "web_use_recall": null,
+          "unnecessary_web_rate": 0.0,
+          "correct_abstention_rate": null,
+          "false_abstention_rate": 0.0,
+          "answer_relevancy": 0.0,
+          "answer_point_coverage": 0.0,
+          "citation_precision": 0.0,
+          "citation_recall": 1.0,
+          "grounding_score": null,
+          "unsupported_claim_rate": null,
+          "retrieved_unknown_id_rate": 0.0
+        },
+        "retrieval": {
+          "retrieved_ids": [],
+          "reranked_ids": [],
+          "relevant_ids": [
+            "9ff74efe2d339c2bb9a53c06::1"
+          ],
+          "web_urls": [],
+          "expected_urls": [],
+          "expected_domains": [],
+          "first_relevant_rank": null,
+          "expected_route": "private",
+          "actual_route": "none",
+          "abstained": false,
+          "relevant_labels": [
+            "Attention.pdf#1"
+          ],
+          "retrieved_labels": [],
+          "unknown_retrieved_ids": []
+        },
+        "citations": {
+          "cited_ids": [],
+          "supported_ids": [],
+          "required_ids": []
+        },
+        "self_rag": {
+          "revision_count": 0,
+          "total_claims": null,
+          "unsupported_claims": null,
+          "final_gate_passed": false
+        },
+        "latency_ms": 2109.6717000000353,
+        "error": "ConnectError: [WinError 10061] No connection could be made because the target machine actively refused it"
+      },
+      {
+        "case_id": "gp007",
+        "category": "golden",
+        "question": "What is the formula for scaled dot-product attention, and how does it compare to additive attention?",
+        "answer": "",
+        "metrics": {
+          "retrieval_recall_at_5": 0.0,
+          "retrieval_precision_at_5": 0.0,
+          "retrieval_hit_at_5": 0.0,
+          "retrieval_document_hit_at_5": 0.0,
+          "retrieval_neighbor_hit_at_5": 0.0,
+          "ndcg_at_5": 0.0,
+          "reciprocal_rank": 0.0,
+          "web_hit_at_5": null,
+          "web_reciprocal_rank": null,
+          "web_domain_precision_at_5": null,
+          "routing_accuracy": 0.0,
+          "web_decision_accuracy": 1.0,
+          "web_use_recall": null,
+          "unnecessary_web_rate": 0.0,
+          "correct_abstention_rate": null,
+          "false_abstention_rate": 0.0,
+          "answer_relevancy": 0.0,
+          "answer_point_coverage": 0.0,
+          "citation_precision": 0.0,
+          "citation_recall": 1.0,
+          "grounding_score": null,
+          "unsupported_claim_rate": null,
+          "retrieved_unknown_id_rate": 0.0
+        },
+        "retrieval": {
+          "retrieved_ids": [],
+          "reranked_ids": [],
+          "relevant_ids": [
+            "9ff74efe2d339c2bb9a53c06::8",
+            "9ff74efe2d339c2bb9a53c06::9"
+          ],
+          "web_urls": [],
+          "expected_urls": [],
+          "expected_domains": [],
+          "first_relevant_rank": null,
+          "expected_route": "private",
+          "actual_route": "none",
+          "abstained": false,
+          "relevant_labels": [
+            "Attention.pdf#8",
+            "Attention.pdf#9"
+          ],
+          "retrieved_labels": [],
+          "unknown_retrieved_ids": []
+        },
+        "citations": {
+          "cited_ids": [],
+          "supported_ids": [],
+          "required_ids": []
+        },
+        "self_rag": {
+          "revision_count": 0,
+          "total_claims": null,
+          "unsupported_claims": null,
+          "final_gate_passed": false
+        },
+        "latency_ms": 2107.4254999984987,
+        "error": "ConnectError: [WinError 10061] No connection could be made because the target machine actively refused it"
+      },
+      {
+        "case_id": "gp008",
+        "category": "golden",
+        "question": "In the GPT-3 paper's human-detection experiment, how accurately could people distinguish GPT-3 175B-generated news articles from human-written ones, compared to the easy-to-spot control articles?",
+        "answer": "",
+        "metrics": {
+          "retrieval_recall_at_5": 0.0,
+          "retrieval_precision_at_5": 0.0,
+          "retrieval_hit_at_5": 0.0,
+          "retrieval_document_hit_at_5": 0.0,
+          "retrieval_neighbor_hit_at_5": 0.0,
+          "ndcg_at_5": 0.0,
+          "reciprocal_rank": 0.0,
+          "web_hit_at_5": null,
+          "web_reciprocal_rank": null,
+          "web_domain_precision_at_5": null,
+          "routing_accuracy": 0.0,
+          "web_decision_accuracy": 1.0,
+          "web_use_recall": null,
+          "unnecessary_web_rate": 0.0,
+          "correct_abstention_rate": null,
+          "false_abstention_rate": 0.0,
+          "answer_relevancy": 0.0,
+          "answer_point_coverage": 0.0,
+          "citation_precision": 0.0,
+          "citation_recall": 1.0,
+          "grounding_score": null,
+          "unsupported_claim_rate": null,
+          "retrieved_unknown_id_rate": 0.0
+        },
+        "retrieval": {
+          "retrieved_ids": [],
+          "reranked_ids": [],
+          "relevant_ids": [
+            "68424e3d1aa5e84e426da70c::68"
+          ],
+          "web_urls": [],
+          "expected_urls": [],
+          "expected_domains": [],
+          "first_relevant_rank": null,
+          "expected_route": "private",
+          "actual_route": "none",
+          "abstained": false,
+          "relevant_labels": [
+            "LLM.pdf#68"
+          ],
+          "retrieved_labels": [],
+          "unknown_retrieved_ids": []
+        },
+        "citations": {
+          "cited_ids": [],
+          "supported_ids": [],
+          "required_ids": []
+        },
+        "self_rag": {
+          "revision_count": 0,
+          "total_claims": null,
+          "unsupported_claims": null,
+          "final_gate_passed": false
+        },
+        "latency_ms": 2113.617700000759,
+        "error": "ConnectError: [WinError 10061] No connection could be made because the target machine actively refused it"
+      },
+      {
+        "case_id": "gp009",
+        "category": "golden",
+        "question": "How does the 1.3B parameter InstructGPT model compare to the 175B parameter GPT-3 model in human evaluations, and what improvements does InstructGPT show?",
+        "answer": "",
+        "metrics": {
+          "retrieval_recall_at_5": 0.0,
+          "retrieval_precision_at_5": 0.0,
+          "retrieval_hit_at_5": 0.0,
+          "retrieval_document_hit_at_5": 0.0,
+          "retrieval_neighbor_hit_at_5": 0.0,
+          "ndcg_at_5": 0.0,
+          "reciprocal_rank": 0.0,
+          "web_hit_at_5": null,
+          "web_reciprocal_rank": null,
+          "web_domain_precision_at_5": null,
+          "routing_accuracy": 0.0,
+          "web_decision_accuracy": 1.0,
+          "web_use_recall": null,
+          "unnecessary_web_rate": 0.0,
+          "correct_abstention_rate": null,
+          "false_abstention_rate": 0.0,
+          "answer_relevancy": 0.0,
+          "answer_point_coverage": 0.0,
+          "citation_precision": 0.0,
+          "citation_recall": 1.0,
+          "grounding_score": null,
+          "unsupported_claim_rate": null,
+          "retrieved_unknown_id_rate": 0.0
+        },
+        "retrieval": {
+          "retrieved_ids": [],
+          "reranked_ids": [],
+          "relevant_ids": [
+            "c87e9c2e56842a8dfa14ef5e::1",
+            "c87e9c2e56842a8dfa14ef5e::37"
+          ],
+          "web_urls": [],
+          "expected_urls": [],
+          "expected_domains": [],
+          "first_relevant_rank": null,
+          "expected_route": "private",
+          "actual_route": "none",
+          "abstained": false,
+          "relevant_labels": [
+            "Training Llm.pdf#1",
+            "Training Llm.pdf#37"
+          ],
+          "retrieved_labels": [],
+          "unknown_retrieved_ids": []
+        },
+        "citations": {
+          "cited_ids": [],
+          "supported_ids": [],
+          "required_ids": []
+        },
+        "self_rag": {
+          "revision_count": 0,
+          "total_claims": null,
+          "unsupported_claims": null,
+          "final_gate_passed": false
+        },
+        "latency_ms": 2110.8529000011913,
+        "error": "ConnectError: [WinError 10061] No connection could be made because the target machine actively refused it"
+      },
+      {
+        "case_id": "gp010",
+        "category": "golden",
+        "question": "How much does Agentic Harness Engineering (AHE) improve pass@1 on Terminal-Bench 2, and how does the evolved harness compare to the human-designed Codex harness?",
+        "answer": "",
+        "metrics": {
+          "retrieval_recall_at_5": 0.0,
+          "retrieval_precision_at_5": 0.0,
+          "retrieval_hit_at_5": 0.0,
+          "retrieval_document_hit_at_5": 0.0,
+          "retrieval_neighbor_hit_at_5": 0.0,
+          "ndcg_at_5": 0.0,
+          "reciprocal_rank": 0.0,
+          "web_hit_at_5": null,
+          "web_reciprocal_rank": null,
+          "web_domain_precision_at_5": null,
+          "routing_accuracy": 0.0,
+          "web_decision_accuracy": 1.0,
+          "web_use_recall": null,
+          "unnecessary_web_rate": 0.0,
+          "correct_abstention_rate": null,
+          "false_abstention_rate": 0.0,
+          "answer_relevancy": 0.0,
+          "answer_point_coverage": 0.0,
+          "citation_precision": 0.0,
+          "citation_recall": 1.0,
+          "grounding_score": null,
+          "unsupported_claim_rate": null,
+          "retrieved_unknown_id_rate": 0.0
+        },
+        "retrieval": {
+          "retrieved_ids": [],
+          "reranked_ids": [],
+          "relevant_ids": [
+            "7b7add4488da35c33e99474d::1"
+          ],
+          "web_urls": [],
+          "expected_urls": [],
+          "expected_domains": [],
+          "first_relevant_rank": null,
+          "expected_route": "private",
+          "actual_route": "none",
+          "abstained": false,
+          "relevant_labels": [
+            "harness.pdf#1"
+          ],
+          "retrieved_labels": [],
+          "unknown_retrieved_ids": []
+        },
+        "citations": {
+          "cited_ids": [],
+          "supported_ids": [],
+          "required_ids": []
+        },
+        "self_rag": {
+          "revision_count": 0,
+          "total_claims": null,
+          "unsupported_claims": null,
+          "final_gate_passed": false
+        },
+        "latency_ms": 2110.680699999648,
+        "error": "ConnectError: [WinError 10061] No connection could be made because the target machine actively refused it"
+      },
+      {
+        "case_id": "gp011",
+        "category": "golden",
+        "question": "Does designing agent loops eliminate the need for prompt engineering, according to the paper?",
+        "answer": "",
+        "metrics": {
+          "retrieval_recall_at_5": 0.0,
+          "retrieval_precision_at_5": 0.0,
+          "retrieval_hit_at_5": 0.0,
+          "retrieval_document_hit_at_5": 0.0,
+          "retrieval_neighbor_hit_at_5": 0.0,
+          "ndcg_at_5": 0.0,
+          "reciprocal_rank": 0.0,
+          "web_hit_at_5": null,
+          "web_reciprocal_rank": null,
+          "web_domain_precision_at_5": null,
+          "routing_accuracy": 0.0,
+          "web_decision_accuracy": 1.0,
+          "web_use_recall": null,
+          "unnecessary_web_rate": 0.0,
+          "correct_abstention_rate": null,
+          "false_abstention_rate": 0.0,
+          "answer_relevancy": 0.0,
+          "answer_point_coverage": 0.0,
+          "citation_precision": 0.0,
+          "citation_recall": 1.0,
+          "grounding_score": null,
+          "unsupported_claim_rate": null,
+          "retrieved_unknown_id_rate": 0.0
+        },
+        "retrieval": {
+          "retrieved_ids": [],
+          "reranked_ids": [],
+          "relevant_ids": [
+            "23b038dd8383e3d47638322b::1"
+          ],
+          "web_urls": [],
+          "expected_urls": [],
+          "expected_domains": [],
+          "first_relevant_rank": null,
+          "expected_route": "private",
+          "actual_route": "none",
+          "abstained": false,
+          "relevant_labels": [
+            "loop.pdf#1"
+          ],
+          "retrieved_labels": [],
+          "unknown_retrieved_ids": []
+        },
+        "citations": {
+          "cited_ids": [],
+          "supported_ids": [],
+          "required_ids": []
+        },
+        "self_rag": {
+          "revision_count": 0,
+          "total_claims": null,
+          "unsupported_claims": null,
+          "final_gate_passed": false
+        },
+        "latency_ms": 2120.8980000010342,
+        "error": "ConnectError: [WinError 10061] No connection could be made because the target machine actively refused it"
+      }
+    ],
+    "latency": {
+      "average_ms": 34247.928549999415,
+      "p50_ms": 34247.928549999415,
+      "p95_ms": 50787.312385001314,
+      "p99_ms": 52257.47983700148,
+      "max_ms": 52625.021700001525
+    },
+    "errors": [
+      {
+        "case_id": "gp003",
+        "error": "ReadError: [WinError 10054] An existing connection was forcibly closed by the remote host"
+      },
+      {
+        "case_id": "gp004",
+        "error": "ConnectError: [WinError 10061] No connection could be made because the target machine actively refused it"
+      },
+      {
+        "case_id": "gp005",
+        "error": "ConnectError: [WinError 10061] No connection could be made because the target machine actively refused it"
+      },
+      {
+        "case_id": "gp006",
+        "error": "ConnectError: [WinError 10061] No connection could be made because the target machine actively refused it"
+      },
+      {
+        "case_id": "gp007",
+        "error": "ConnectError: [WinError 10061] No connection could be made because the target machine actively refused it"
+      },
+      {
+        "case_id": "gp008",
+        "error": "ConnectError: [WinError 10061] No connection could be made because the target machine actively refused it"
+      },
+      {
+        "case_id": "gp009",
+        "error": "ConnectError: [WinError 10061] No connection could be made because the target machine actively refused it"
+      },
+      {
+        "case_id": "gp010",
+        "error": "ConnectError: [WinError 10061] No connection could be made because the target machine actively refused it"
+      },
+      {
+        "case_id": "gp011",
+        "error": "ConnectError: [WinError 10061] No connection could be made because the target machine actively refused it"
+      }
+    ],
+    "metadata": {
+      "api_base_url": "http://127.0.0.1:8000",
+      "dataset": "C:\\Users\\HP\\OneDrive\\Desktop\\KnowledgeMesh\\evals\\datasets\\golden_questions_migrated_candidate_20261018.json",
+      "case_count": 11,
+      "private_identity": "document_id::chunk_id",
+      "web_identity": "normalized URL / domain",
+      "inventory": {
+        "source": "evals\\results\\current_chunk_inventory_candidate.csv",
+        "n_chunks": 1101,
+        "n_documents": 12,
+        "chunks_per_document": {
+          "5-Level Paging and 5-Level EPT - Intel - Revision 1.0 (December, 2016).pdf": 49,
+          "A Block-sorting Lossless Data Compression Algorithm - May 10th, 1994 (SRC-RR-124).pdf": 37,
+          "A Case Study in Optimizing HTM-Enabled Dynamic Data Structures - Patricia Tries (2015).pdf": 34,
+          "A Comparison of Programming Languages in Economics (16-Jun-2014).pdf": 29,
+          "A Comparison of Software and Hardware Techniques for x86 Virtualization - Oct 2015 (asplos235_adams).pdf": 55,
+          "Attention.pdf": 37,
+          "LLM Based-learning.pdf": 288,
+          "LLM.pdf": 198,
+          "RAG.pdf": 55,
+          "Training Llm.pdf": 155,
+          "harness.pdf": 109,
+          "loop.pdf": 55
+        },
+        "issues": []
+      },
+      "dataset_audit": {
+        "total_cases": 11,
+        "unknown_gold": {},
+        "cases_without_gold": [],
+        "cases_per_document": {
+          "Attention.pdf": 2,
+          "LLM Based-learning.pdf": 3,
+          "LLM.pdf": 1,
+          "RAG.pdf": 2,
+          "Training Llm.pdf": 1,
+          "harness.pdf": 1,
+          "loop.pdf": 1
+        },
+        "documents_without_cases": [
+          "5-Level Paging and 5-Level EPT - Intel - Revision 1.0 (December, 2016).pdf",
+          "A Block-sorting Lossless Data Compression Algorithm - May 10th, 1994 (SRC-RR-124).pdf",
+          "A Case Study in Optimizing HTM-Enabled Dynamic Data Structures - Patricia Tries (2015).pdf",
+          "A Comparison of Programming Languages in Economics (16-Jun-2014).pdf",
+          "A Comparison of Software and Hardware Techniques for x86 Virtualization - Oct 2015 (asplos235_adams).pdf"
+        ],
+        "gold_chunk_coverage": 0.013623978201634877,
+        "route_counts": {
+          "private": 11
+        },
+        "unrecognized_routes": {},
+        "ok": true
+      },
+      "evaluation_runtime_ms": 123670.2366999998
+    },
+    "by_document": {
+      "LLM Based-learning.pdf": {
+        "n": 1.0,
+        "retrieval_recall_at_5": 1.0,
+        "retrieval_hit_at_5": 1.0,
+        "retrieval_neighbor_hit_at_5": 1.0,
+        "reciprocal_rank": 1.0
+      },
+      "RAG.pdf": {
+        "n": 1.0,
+        "retrieval_recall_at_5": 1.0,
+        "retrieval_hit_at_5": 1.0,
+        "retrieval_neighbor_hit_at_5": 1.0,
+        "reciprocal_rank": 0.5
+      }
+    },
+    "by_route": {
+      "private": {
+        "n": 2.0,
+        "routing_accuracy": 1.0,
+        "web_decision_accuracy": 1.0,
+        "unnecessary_web_rate": 0.0,
+        "false_abstention_rate": 0.0
+      }
+    }
+  },
+  "unanswerable": null,
+  "adversarial": null,
+  "metadata": {
+    "api_base_url": "http://127.0.0.1:8000"
+  }
+}

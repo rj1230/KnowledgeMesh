@@ -1,0 +1,346 @@
+{
+  "artifact_type": "retrieval_gold_label_candidate_audit",
+  "created_at_utc": "2026-10-20T08:12:05.494586+00:00",
+  "original_dataset": "evals\\datasets\\inventory_retrieval_probes_70.json",
+  "collection": "enterprise_rag_bge_base",
+  "source_filename": "Attention.pdf",
+  "live_document_id": "9ff74efe2d339c2bb9a53c06",
+  "live_chunk_count": 37,
+  "probe_count": 10,
+  "warning": "Candidate mappings only. Original dataset was not modified. Review labels before using them for benchmark scoring.",
+  "probes": [
+    {
+      "id": "inv_attention_001",
+      "question": "What is the main architectural idea introduced by the Transformer in Attention Is All You Need?",
+      "category": "architecture",
+      "source_filename": "Attention.pdf",
+      "original_relevant_chunks": [
+        {
+          "document_id": "c5403b511fa73a2221411a42",
+          "chunk_id": 0
+        }
+      ],
+      "candidate_relevant_chunks": [
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 0
+        },
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 5
+        }
+      ],
+      "rationale": "Chunk 0 states the Transformer replaces recurrence and convolutions with attention; chunk 5 describes its reliance on self-attention.",
+      "evidence": [
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 0,
+          "evidence_excerpt": "Provided proper attribution is provided, Google hereby grants permission to reproduce the tables and figures in this paper solely for use in journalistic or scholarly works. Attention Is All You Need Ashish Vaswani∗ Google Brain avaswani@google.com Noam Shazeer∗ Google Brain noam@google.com Niki Parmar∗ Google Research nikip@google.com Jakob Uszkoreit∗ Google Research usz@google.com Llion Jones∗ Google Research llion@google.com Aidan N. Gomez∗† University of Toronto aidan@cs.toronto.edu Łukasz Kaiser∗ Google Brain lukaszkaiser@google.com Illia Polosukhin∗‡ illia.polosukhin@gmail.com Abstract The dominant sequence transduction models are based"
+        },
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 5,
+          "evidence_excerpt": "ced e Self-attention, sometimes called intra-attention is an attention mechanism relating different positions of a single sequence in order to compute a representation of the sequence. Self-attention has been used successfully in a variety of tasks including reading comprehension, abstractive summarization, textual entailment and learning task-independent sentence representations [4, 27, 28, 22]. End-to-end memory networks are based on a recurrent attention mechanism instead of sequence- aligned recurrence and have been shown to perform well on simple-language question answering and language modeling tasks [34]. To the best of our knowledge, "
+        }
+      ],
+      "review_status": "PROPOSED_CONTENT_MATCH_REQUIRES_FINAL_REVIEW"
+    },
+    {
+      "id": "inv_attention_002",
+      "question": "How does self-attention differ between the encoder and decoder with respect to which positions can be attended to?",
+      "category": "self_attention",
+      "source_filename": "Attention.pdf",
+      "original_relevant_chunks": [
+        {
+          "document_id": "c5403b511fa73a2221411a42",
+          "chunk_id": 9
+        }
+      ],
+      "candidate_relevant_chunks": [
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 7
+        },
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 11
+        }
+      ],
+      "rationale": "Chunk 7 describes masking future decoder positions; chunk 11 describes encoder and decoder attention behavior.",
+      "evidence": [
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 7,
+          "evidence_excerpt": "d by layer normalization. We also modify the self-attention sub-layer in the decoder stack to prevent positions from attending to subsequent positions This masking, combined with fact that the output embeddings are offset by one position, ensures that the predictions for position i can depend only on the known outputs at positions less than i. 3.2 Attention An attention function can be described as mapping a query and a set of key-value pairs to an output, where the query, keys, values, and output are all vectors. The output is computed as a weighted sum 3"
+        },
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 11,
+          "evidence_excerpt": "In a self-attention layer all of the keys, values and queries come from the same place, in this case, the output of the prev Each position in the encoder can attend to all positions in the previous layer of the encoder. • Similarly, self-attention layers in the decoder allow each position in the decoder to attend to all positions in the decoder up to and including that position. We need to prevent leftward information flow in the decoder to preserve the auto-regressive property. We implement this inside of scaled dot-product attention by masking out (setting to −∞) all values in the input of the softmax which correspond to illegal connections"
+        }
+      ],
+      "review_status": "PROPOSED_CONTENT_MATCH_REQUIRES_FINAL_REVIEW"
+    },
+    {
+      "id": "inv_attention_003",
+      "question": "What do the experiments indicate about the effect of changing the number of attention heads and the attention key size?",
+      "category": "experiments",
+      "source_filename": "Attention.pdf",
+      "original_relevant_chunks": [
+        {
+          "document_id": "c5403b511fa73a2221411a42",
+          "chunk_id": 18
+        }
+      ],
+      "candidate_relevant_chunks": [
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 22
+        },
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 23
+        }
+      ],
+      "rationale": "Chunk 22 contains the architecture-variation results; chunk 23 states that too many heads and smaller attention key sizes can reduce model quality.",
+      "evidence": [
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 22,
+          "evidence_excerpt": "nge in performance on English-to-German translation on the 5We used values of 2.8, 3.7, 6.0 and 9.5 T Table 3: Variations on the Transformer architecture. Unlisted values are identical to those of the base model. All metrics are on the English-to-German translation development set, newstest2013. Listed perplexities are per-wordpiece, according to our byte-pair encoding, and should not be compared to per-word perplexities. N dmodel dff h dk dv Pdrop ϵls train PPL BLEU params steps (dev) (dev) ×106 base 6 512 2048 8 64 64 0.1 0.1 100K 4.92 25.8 65 (A) 1 512 512 5.29 24.9 4 128 128 5.00 25.5 16 32 32 4.91 25.8 32 16 16 5.01 25.4 (B) 16 5.16 25.1"
+        },
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 23,
+          "evidence_excerpt": "best setting, quality also drops off with too many heads. In Table 3 rows (B), we observe that reducing the attention key size dk hurts model quality This suggests that determining compatibility is not easy and that a more sophisticated compatibility function than dot product may be beneficial. We further observe in rows (C) and (D) that, as expected, bigger models are better, and dropout is very helpful in avoiding over-fitting. In row (E) we replace our sinusoidal positional encoding with learned positional embeddings [9], and observe nearly identical results to the base model. 6.3 English Constituency Parsing To evaluate if the Transformer"
+        }
+      ],
+      "review_status": "PROPOSED_CONTENT_MATCH_REQUIRES_FINAL_REVIEW"
+    },
+    {
+      "id": "inv_attention_004",
+      "question": "What do the visualized attention heads reveal about anaphora resolution in the Transformer?",
+      "category": "analysis",
+      "source_filename": "Attention.pdf",
+      "original_relevant_chunks": [
+        {
+          "document_id": "c5403b511fa73a2221411a42",
+          "chunk_id": 27
+        }
+      ],
+      "candidate_relevant_chunks": [
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 35
+        },
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 36
+        }
+      ],
+      "rationale": "These chunks contain the attention visualizations and describe heads associated with anaphora resolution for 'its'.",
+      "evidence": [
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 35,
+          "evidence_excerpt": "rase ‘making...more difficult’. Attentions here shown only for the word ‘making’. Different colors represent different heads. Best viewed in color. 13 The Law will never be perfect , but its application should be just - this is what we are missing , in my opinion . <EOS> <pad> The Law will never be perfect , but its application should be just - this is what we are missing , in my opinion . <EOS> <pad> The Law will never be perfect , but its application should be just - this is what we are missing , in my opinion . <EOS> <pad> The Law will never be perfect , but its application should be just - this is what we are missing , in my opinion . <EO"
+        },
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 36,
+          "evidence_excerpt": "or head 5. Bottom: Isolated attentions from just the word ‘its’ for attention heads 5 and 6. Note that the attentions are very sharp for this word. 14 The Law will never be perfect , but its application should be just - this is what we are missing , in my opinion . <EOS> <pad> The Law will never be perfect , but its application should be just - this is what we are missing , in my opinion . <EOS> <pad> The Law will never be perfect , but its application should be just - this is what we are missing , in my opinion . <EOS> <pad> The Law will never be perfect , but its application should be just - this is what we are missing , in my opinion . <EO"
+        }
+      ],
+      "review_status": "PROPOSED_CONTENT_MATCH_REQUIRES_FINAL_REVIEW"
+    },
+    {
+      "id": "inv_attention_005",
+      "question": "What BLEU score did the Transformer achieve on the WMT 2014 English-to-French translation task, and how long did training take on how many GPUs?",
+      "category": "results",
+      "source_filename": "Attention.pdf",
+      "original_relevant_chunks": [
+        {
+          "document_id": "c5403b511fa73a2221411a42",
+          "chunk_id": "1"
+        }
+      ],
+      "candidate_relevant_chunks": [
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 1
+        }
+      ],
+      "rationale": "Chunk 1 explicitly reports 41.8 BLEU on WMT 2014 English-to-French, 3.5 days of training, and eight GPUs.",
+      "evidence": [
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 1,
+          "evidence_excerpt": "achieves On the WMT 2014 English-to-French translation task, our model establishes a new single-model state-of-the-art BLEU score of 41.8 after training for 3.5 days on eight GPUs, a small fraction of the training costs of the best models from the literature. We show that the Transformer generalizes well to other tasks by applying it successfully to English constituency parsing both with large and limited training data. ∗Equal contribution. Listing order is random. Jakob proposed replacing RNNs with self-attention and started the effort to evaluate this idea. Ashish, with Illia, designed and implemented the first Transformer models and has be"
+        }
+      ],
+      "review_status": "PROPOSED_CONTENT_MATCH_REQUIRES_FINAL_REVIEW"
+    },
+    {
+      "id": "inv_attention_006",
+      "question": "What is self-attention, and what does it compute for positions within a single sequence?",
+      "category": "self_attention",
+      "source_filename": "Attention.pdf",
+      "original_relevant_chunks": [
+        {
+          "document_id": "c5403b511fa73a2221411a42",
+          "chunk_id": "4"
+        }
+      ],
+      "candidate_relevant_chunks": [
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 5
+        }
+      ],
+      "rationale": "Chunk 5 defines self-attention as relating positions in one sequence to compute a representation of that sequence.",
+      "evidence": [
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 5,
+          "evidence_excerpt": "ced e Self-attention, sometimes called intra-attention is an attention mechanism relating different positions of a single sequence in order to compute a representation of the sequence. Self-attention has been used successfully in a variety of tasks including reading comprehension, abstractive summarization, textual entailment and learning task-independent sentence representations [4, 27, 28, 22]. End-to-end memory networks are based on a recurrent attention mechanism instead of sequence- aligned recurrence and have been shown to perform well on simple-language question answering and language modeling tasks [34]. To the best of our knowledge, "
+        }
+      ],
+      "review_status": "PROPOSED_CONTENT_MATCH_REQUIRES_FINAL_REVIEW"
+    },
+    {
+      "id": "inv_attention_007",
+      "question": "How does scaled dot-product attention differ from ordinary dot-product attention, and why is the scaling factor used?",
+      "category": "attention",
+      "source_filename": "Attention.pdf",
+      "original_relevant_chunks": [
+        {
+          "document_id": "c5403b511fa73a2221411a42",
+          "chunk_id": "7"
+        }
+      ],
+      "candidate_relevant_chunks": [
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 9
+        }
+      ],
+      "rationale": "Chunk 9 explains large dot products, small softmax gradients, and scaling by the inverse square root of the key dimension.",
+      "evidence": [
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 9,
+          "evidence_excerpt": "t-product attention is much faster and more space-efficient in practice, since it can be implemented using highly optimized matrix multiplication code While for small values of dk the two mechanisms perform similarly, additive attention outperforms dot product attention without scaling for larger values of dk [3]. We suspect that for large values of dk, the dot products grow large in magnitude, pushing the softmax function into regions where it has extremely small gradients 4. To counteract this effect, we scale the dot products by 1 √dk . 3.2.2 Multi-Head Attention Instead of performing a single attention function with dmodel-dimensional key"
+        }
+      ],
+      "review_status": "PROPOSED_CONTENT_MATCH_REQUIRES_FINAL_REVIEW"
+    },
+    {
+      "id": "inv_attention_008",
+      "question": "What advantage does multi-head attention provide over using a single attention head?",
+      "category": "multi_head_attention",
+      "source_filename": "Attention.pdf",
+      "original_relevant_chunks": [
+        {
+          "document_id": "c5403b511fa73a2221411a42",
+          "chunk_id": "8"
+        }
+      ],
+      "candidate_relevant_chunks": [
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 10
+        }
+      ],
+      "rationale": "Chunk 10 explains that multi-head attention jointly attends to different representation subspaces and positions.",
+      "evidence": [
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 10,
+          "evidence_excerpt": "ts of q and k are independent ran output values. These are concatenated and once again projected, resulting in the final values, as depicted in Figure 2. Multi-head attention allows the model to jointly attend to information from different representation subspaces at different positions. With a single attention head, averaging inhibits this. MultiHead(Q, K, V ) = Concat(head1, ..., headh)W O where headi = Attention(QW Q i , KW K i , V W V i ) Where the projections are parameter matrices W Q i ∈Rdmodel×dk, W K i ∈Rdmodel×dk, W V i ∈Rdmodel×dv and W O ∈Rhdv×dmodel. In this work we employ h = 8 parallel attention layers, or heads. For each of th"
+        }
+      ],
+      "review_status": "PROPOSED_CONTENT_MATCH_REQUIRES_FINAL_REVIEW"
+    },
+    {
+      "id": "inv_attention_009",
+      "question": "Why does the Transformer architecture make learning long-range dependencies easier?",
+      "category": "architecture",
+      "source_filename": "Attention.pdf",
+      "original_relevant_chunks": [
+        {
+          "document_id": "c5403b511fa73a2221411a42",
+          "chunk_id": "12"
+        }
+      ],
+      "candidate_relevant_chunks": [
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 15
+        },
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 16
+        }
+      ],
+      "rationale": "These chunks discuss shorter paths between positions and the constant sequential-operation path of self-attention.",
+      "evidence": [
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 15,
+          "evidence_excerpt": "ne key factor affecting the ability to learn such dependencies is the length of the paths forward and backward signals have to traverse in the network The shorter these paths between any combination of positions in the input and output sequences, the easier it is to learn long-range dependencies [12]. Hence we also compare the maximum path length between any two input and output positions in networks composed of the different layer types. As noted in Table 1, a self-attention layer connects all positions with a constant number of sequentially executed operations, whereas a recurrent layer requires O(n) sequential operations. In terms of compu"
+        },
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 16,
+          "evidence_excerpt": "requires O(n) seq length n is smaller than the representation dimensionality d, which is most often the case with sentence representations used by state-of-the-art models in machine translations, such as word-piece [38] and byte-pair [31] representations. To improve computational performance for tasks involving very long sequences, self-attention could be restricted to considering only a neighborhood of size r in the input sequence centered around the respective output position. This would increase the maximum path length to O(n/r). We plan to investigate this approach further in future work. A single convolutional layer with kernel width k <"
+        }
+      ],
+      "review_status": "PROPOSED_CONTENT_MATCH_REQUIRES_FINAL_REVIEW"
+    },
+    {
+      "id": "inv_attention_010",
+      "question": "How did the Transformer big model perform on the WMT 2014 English-to-German translation task compared with previously reported models?",
+      "category": "results",
+      "source_filename": "Attention.pdf",
+      "original_relevant_chunks": [
+        {
+          "document_id": "c5403b511fa73a2221411a42",
+          "chunk_id": "16"
+        }
+      ],
+      "candidate_relevant_chunks": [
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 0
+        },
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 19
+        },
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 20
+        }
+      ],
+      "rationale": "Chunk 0 gives the 28.4 BLEU English-to-German result; chunk 19 contains the comparison table; chunk 20 discusses performance relative to previously reported models.",
+      "evidence": [
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 0,
+          "evidence_excerpt": "Provided proper attribution is provided, Google hereby grants permission to reproduce the tables and figures in this paper solely for use in journalistic or scholarly works. Attention Is All You Need Ashish Vaswani∗ Google Brain avaswani@google.com Noam Shazeer∗ Google Brain noam@google.com Niki Parmar∗ Google Research nikip@google.com Jakob Uszkoreit∗ Google Research usz@google.com Llion Jones∗ Google Research llion@google.com Aidan N. Gomez∗† University of Toronto aidan@cs.toronto.edu Łukasz Kaiser∗ Google Brain lukaszkaiser@google.com Illia Polosukhin∗‡ illia.polosukhin@gmail.com Abstract The dominant sequence transduction models are based"
+        },
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 19,
+          "evidence_excerpt": "the inverse square root Table 2: The Transformer achieves better BLEU scores than previous state-of-the-art models on the English-to-German and English-to-French newstest2014 tests at a fraction of the training cost. Model BLEU Training Cost (FLOPs) EN-DE EN-FR EN-DE EN-FR ByteNet [18] 23.75 Deep-Att + PosUnk [39] 39.2 1.0 · 1020 GNMT + RL [38] 24.6 39.92 2.3 · 1019 1.4 · 1020 ConvS2S [9] 25.16 40.46 9.6 · 1018 1.5 · 1020 MoE [32] 26.03 40.56 2.0 · 1019 1.2 · 1020 Deep-Att + PosUnk Ensemble [39] 40.4 8.0 · 1020 GNMT + RL Ensemble [38] 26.30 41.16 1.8 · 1020 1.1 · 1021 ConvS2S Ensemble [9] 26.36 41.29 7.7 · 1019 1.2 · 1021 Transformer (base mo"
+        },
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 20,
+          "evidence_excerpt": "2) outperforms the best previously reported models (including ensembles) by more than 2.0 The configuration of this model is listed in the bottom line of Table 3. Training took 3.5 days on 8 P100 GPUs. Even our base model surpasses all previously published models and ensembles, at a fraction of the training cost of any of the competitive models. On the WMT 2014 English-to-French translation task, our big model achieves a BLEU score of 41.0, outperforming all of the previously published single models, at less than 1/4 the training cost of the previous state-of-the-art model. The Transformer (big) model trained for English-to-French used dropou"
+        }
+      ],
+      "review_status": "PROPOSED_CONTENT_MATCH_REQUIRES_FINAL_REVIEW"
+    }
+  ]
+}

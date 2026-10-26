@@ -34,6 +34,24 @@ Evidence architecture
     HHEMv2 entailment
         ↓
     best supported window
+
+Citation consistency policy
+---------------------------
+
+A claim must be supported (that is checked separately, per claim). The
+citation audit then asks whether the citations ATTACHED to that claim are
+honest:
+
+    HARD violation (fails grounding, triggers a revision):
+        * a cited chunk has no evidence at all, or
+        * NONE of the cited chunks supports the claim (the claim was only
+          supported by a chunk it did not cite).
+
+    SOFT warning (reported, never fails grounding):
+        * at least one cited chunk supports the claim, and an additional
+          co-cited chunk was not verified as supporting it.
+
+A redundant co-citation is a style problem, not a hallucination.
 """
 
 from __future__ import annotations
@@ -44,9 +62,14 @@ import logging
 import math
 import re
 from difflib import SequenceMatcher
+from contextvars import ContextVar
+
 from time import perf_counter
 from typing import Any, Dict, Iterable, List, Sequence, Tuple
 from app.evaluation.trace import append_trace_event
+
+
+logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -66,9 +89,14 @@ MAX_ENTAILMENT_CANDIDATES = 8
 MAX_CITED_ENTAILMENT_CANDIDATES = 3
 MAX_DISCOVERY_ENTAILMENT_CANDIDATES = 3
 MAX_ATOMIC_SEMANTIC_BUDGET = 3
+MAX_COMBINED_PREMISE_CHARS = 3000
 
 MIN_WINDOW_OVERLAP = 1
 FALLBACK_WINDOW_COUNT = 3
+
+# Atomic claims shorter than this are merged into a neighbouring claim
+# instead of being evaluated as an orphan fragment without its subject.
+MIN_ATOMIC_WORDS = 6
 
 
 class _CountingEntailmentCache(dict):
@@ -136,6 +164,189 @@ def _safe_list(value: Any) -> List[Any]:
     return [value]
 
 
+def _prefetch_entailment_scores(
+    claim_records: Sequence[Dict[str, Any]],
+    evidence_map: Dict[str, List[str]],
+    entailment_cache: Dict[Tuple[str, str], float],
+) -> Dict[Tuple[str, str], float]:
+    """
+    Batch-score the pairs the per-claim logic is about to need.
+
+    Mirrors the candidate selection of `_validate_atomic_claim`:
+      * cited claim  -> top candidates from the cited chunks only
+      * uncited claim -> top candidates across all evidence (discovery)
+      * single-citation claim already resolved by a literal match -> skipped
+
+    Scoring runs in waves by candidate rank so early exits are preserved:
+    claims that already meet the threshold (and stop at the first hit in
+    the sequential code) are dropped from later waves.
+
+    Never raises. On any failure the caller simply falls back to the
+    original one-pair-at-a-time scoring.
+    """
+
+    prefetched: Dict[Tuple[str, str], float] = {}
+
+    try:
+        from app.tools.entailment_tool import score_entailment_batch
+    except ImportError:
+        return prefetched
+
+    try:
+        plans: List[Dict[str, Any]] = []
+        seen = set()
+
+        for record in claim_records:
+            citations = _dedupe_preserve_order(record.get("citations", []))
+
+            atomic_claims = record.get("atomic_claims") or [record.get("text")]
+
+            for atomic in atomic_claims:
+                claim = _clean_claim_text(_safe_text(atomic))
+
+                if not claim:
+                    continue
+
+                plan_key = (claim, tuple(citations))
+
+                if plan_key in seen:
+                    continue
+
+                seen.add(plan_key)
+
+                if citations:
+                    # Same early return as _validate_atomic_claim: one
+                    # citation + literal match scores 1.0 without HHEM.
+                    if len(citations) <= 1 and any(
+                        _deterministic_exact_support(claim, window)[1] >= 1.0
+                        for citation_id in citations
+                        for window in evidence_map.get(citation_id, [])
+                    ):
+                        continue
+
+                    reserve = 1 if len(citations) > 1 else 0
+
+                    limit = max(
+                        1,
+                        min(
+                            MAX_CITED_ENTAILMENT_CANDIDATES,
+                            MAX_ATOMIC_SEMANTIC_BUDGET - reserve,
+                        ),
+                    )
+
+                    candidates = _select_global_entailment_candidates(
+                        claim=claim,
+                        evidence_map=evidence_map,
+                        included_citations=citations,
+                        limit=limit,
+                    )
+
+                else:
+                    # Uncited: discovery path. A literal match anywhere
+                    # resolves it without HHEM.
+                    if any(
+                        _deterministic_exact_support(claim, window)[0]
+                        for windows in evidence_map.values()
+                        for window in windows
+                    ):
+                        continue
+
+                    candidates = _select_global_entailment_candidates(
+                        claim=claim,
+                        evidence_map=evidence_map,
+                        limit=min(
+                            MAX_DISCOVERY_ENTAILMENT_CANDIDATES,
+                            MAX_ATOMIC_SEMANTIC_BUDGET,
+                        ),
+                    )
+
+                if not candidates:
+                    continue
+
+                plans.append(
+                    {
+                        "claim": claim,
+                        "windows": [_safe_text(w) for _cid, w in candidates],
+                        # The sequential code stops at the first candidate
+                        # meeting the threshold when there is <=1 citation.
+                        "early_stop": len(citations) <= 1,
+                    }
+                )
+
+        if not plans:
+            return prefetched
+
+        resolved: set = set()
+        waves = 0
+        pairs_scored = 0
+        max_rank = max(len(plan["windows"]) for plan in plans)
+
+        for rank in range(max_rank):
+            wave_keys: List[Tuple[int, Tuple[str, str]]] = []
+            wave_pairs: List[Tuple[str, str]] = []
+            queued = set()
+
+            for index, plan in enumerate(plans):
+                if index in resolved or rank >= len(plan["windows"]):
+                    continue
+
+                window = plan["windows"][rank]
+                key = (plan["claim"], window)
+
+                # Scores restored from earlier passes: the lazy path will
+                # hit them. Just use them for the early-stop decision.
+                if dict.__contains__(entailment_cache, key):
+                    if plan["early_stop"] and (
+                        entailment_cache[key] >= ENTAILMENT_THRESHOLD
+                    ):
+                        resolved.add(index)
+                    continue
+
+                if key in prefetched:
+                    continue
+
+                wave_keys.append((index, key))
+
+                if key not in queued:
+                    queued.add(key)
+                    wave_pairs.append((window, plan["claim"]))
+
+            if not wave_pairs:
+                continue
+
+            scores = score_entailment_batch(wave_pairs)
+
+            waves += 1
+            pairs_scored += len(wave_pairs)
+
+            score_by_key = {
+                (claim, window): score
+                for (window, claim), score in zip(wave_pairs, scores)
+            }
+
+            for index, key in wave_keys:
+                score = score_by_key[key]
+                prefetched[key] = score
+
+                if plans[index]["early_stop"] and score >= ENTAILMENT_THRESHOLD:
+                    resolved.add(index)
+
+        logger.info(
+            "GROUNDING_PREFETCH claims=%s waves=%s pairs=%s",
+            len(plans),
+            waves,
+            pairs_scored,
+        )
+
+    except Exception:
+        logger.warning(
+            "Grounding prefetch failed; falling back to sequential scoring.",
+            exc_info=True,
+        )
+
+    return prefetched
+
+
 def _dedupe_preserve_order(values: Iterable[str]) -> List[str]:
     seen = set()
     output: List[str] = []
@@ -169,6 +380,31 @@ HEADING_PATTERN = re.compile(r"^\s{0,3}#{1,6}\s+")
 TABLE_SEPARATOR_PATTERN = re.compile(
     r"^\s*\|?\s*:?-{3,}:?\s*(?:\|\s*:?-{3,}:?\s*)+\|?\s*$"
 )
+
+
+_ABSENCE_RE = re.compile(
+    r"\b(?:evidence|sources?|documents?|context|passages?|paper|survey|report)\b"
+    r"[^.;]{0,40}\b(?:does|do|did)\s+not\s+"
+    r"(?:contain|provide|include|mention|state|specify|establish|report|cover|address|give)\b"
+    r"|\b(?:there\s+is|there's|is)\s+no\s+(?:evidence|information|data|mention)\b"
+    r"|\bcould(?:n't|\s+not)\s+find\b",
+    re.IGNORECASE,
+)
+
+
+def _is_pure_absence(text: str) -> bool:
+    """A short single-clause statement about what the sources lack.
+
+    Mixed sentences (an absence clause joined to a factual clause) are NOT
+    matched, so the factual part is still verified.
+    """
+    text = _strip_citations(text or "").strip()
+
+    return bool(
+        _ABSENCE_RE.search(text)
+        and len(text.split()) <= 28
+        and not re.search(r";|,\s*(?:while|whereas|but|and)\b", text, re.IGNORECASE)
+    )
 
 
 def _strip_citations(text: str) -> str:
@@ -225,10 +461,60 @@ def _clean_claim_text(text: str) -> str:
     text = _strip_citations(text)
     text = _strip_markdown_prefix(text)
 
+    # Remove interior emphasis/code markers so the entailment scorer sees
+    # clean prose ("**Multi-agent** - ..." must not become "Multi-agent** - ...").
+    # "__" is left alone on purpose so identifiers like __init__ survive.
+    text = text.replace("**", "").replace("`", "")
+
     text = text.strip(" `*_")
     text = re.sub(r"\s+", " ", text)
 
     return text.strip()
+
+
+_prefetched_scores: ContextVar["Dict[Tuple[str, str], float] | None"] = ContextVar(
+    "grounding_prefetched_scores",
+    default=None,
+)
+
+
+def _merge_short_claim_pieces(pieces: Sequence[str]) -> List[str]:
+    """
+    Merge pieces shorter than MIN_ATOMIC_WORDS into a neighbour.
+
+    A fragment such as "the agent runs proven skills" has lost its
+    subject and is evaluated out of context, where it can pass or fail
+    by lexical accident. A short piece is appended to the previous
+    piece; a short FIRST piece is carried forward into the next one.
+    """
+
+    merged: List[str] = []
+    carry = ""
+
+    for raw_piece in pieces:
+        piece = raw_piece.strip(" -•")
+
+        if not piece:
+            continue
+
+        if carry:
+            piece = f"{carry}; {piece}"
+            carry = ""
+
+        if len(piece.split()) < MIN_ATOMIC_WORDS:
+            if merged:
+                merged[-1] = f"{merged[-1]}; {piece}"
+            else:
+                carry = piece
+
+            continue
+
+        merged.append(piece)
+
+    if carry:
+        merged.append(carry)
+
+    return merged
 
 
 def _split_compound_claim(text: str) -> List[str]:
@@ -237,6 +523,13 @@ def _split_compound_claim(text: str) -> List[str]:
 
     Avoids aggressive splitting because technical statements frequently
     contain several dependent clauses that should be evaluated together.
+
+    Two guards keep it from producing orphan fragments:
+
+      * ';' pieces shorter than MIN_ATOMIC_WORDS are merged back into a
+        neighbouring piece.
+      * An " and " that closes an enumeration ("a trigger, a goal, ...,
+        and an external memory ...") is never used as a split point.
     """
 
     text = _clean_claim_text(text)
@@ -244,9 +537,11 @@ def _split_compound_claim(text: str) -> List[str]:
     if not text:
         return []
 
-    pieces = re.split(
-        r";\s+",
-        text,
+    pieces = _merge_short_claim_pieces(
+        re.split(
+            r";\s+",
+            text,
+        )
     )
 
     cleaned: List[str] = []
@@ -270,8 +565,13 @@ def _split_compound_claim(text: str) -> List[str]:
                 flags=re.IGNORECASE,
             )
 
+            is_enumeration = (
+                candidates[0].rstrip().endswith(",") or candidates[0].count(",") >= 2
+            )
+
             if (
-                len(candidates) == 2
+                not is_enumeration
+                and len(candidates) == 2
                 and len(candidates[0].split()) >= 6
                 and len(candidates[1].split()) >= 6
             ):
@@ -283,6 +583,8 @@ def _split_compound_claim(text: str) -> List[str]:
                 continue
 
         cleaned.append(piece)
+
+    cleaned = [piece for piece in cleaned if not _is_pure_absence(piece)]
 
     return _dedupe_preserve_order(cleaned)
 
@@ -308,6 +610,9 @@ def _extract_claim_records(answer: str) -> List[Dict[str, Any]]:
         atomic_claims = _split_compound_claim(claim)
 
         if not atomic_claims:
+            if _is_pure_absence(claim):
+                continue  # a limitation statement; nothing to verify
+
             atomic_claims = [claim]
 
         records.append(
@@ -373,24 +678,15 @@ def _extract_text_from_document(document: Any) -> str:
 
 
 def _extract_citation_id(document: Any) -> str:
+    """Return an explicit answer-facing citation label, not a chunk/point ID."""
     if isinstance(document, dict):
-        for key in (
-            "citation_id",
-            "citation",
-            "chunk_id",
-            "id",
-        ):
+        for key in ("citation_id", "citation"):
             value = document.get(key)
 
             if value:
                 return _safe_text(value)
 
-    for attr in (
-        "citation_id",
-        "citation",
-        "chunk_id",
-        "id",
-    ):
+    for attr in ("citation_id", "citation"):
         value = getattr(document, attr, None)
 
         if value:
@@ -874,7 +1170,6 @@ def _resolve_citation_provenance(
     }
 
 
-
 def _explicit_query_source_entity_mismatch(
     query: Any,
     source: Any,
@@ -912,10 +1207,8 @@ def _explicit_query_source_entity_mismatch(
     if not marker:
         return False
 
-    source_entity = title[:marker.start()].strip(" \t-–—:|,")
-    source_entity_normalized = re.sub(
-        r"[^a-z0-9]", "", source_entity.lower()
-    )
+    source_entity = title[: marker.start()].strip(" \t-–—:|,")
+    source_entity_normalized = re.sub(r"[^a-z0-9]", "", source_entity.lower())
 
     if not source_entity_normalized:
         return False
@@ -923,13 +1216,20 @@ def _explicit_query_source_entity_mismatch(
     # The source prefix must identify an entity; generic prefixes are
     # not reliable evidence of a different company.
     generic_prefixes = {
-        "the", "company", "annual", "financial", "report",
-        "official", "investor", "consolidated",
+        "the",
+        "company",
+        "annual",
+        "financial",
+        "report",
+        "official",
+        "investor",
+        "consolidated",
     }
     if source_entity.lower() in generic_prefixes:
         return False
 
     return expected not in source_entity_normalized
+
 
 def _resolve_citation_metadata(
     citation_provenance: Any,
@@ -962,9 +1262,7 @@ def _resolve_citation_metadata(
             continue
 
         citation_id = _safe_text(
-            item.get("citation_id")
-            or item.get("citation")
-            or item.get("id")
+            item.get("citation_id") or item.get("citation") or item.get("id")
         )
 
         if not citation_id:
@@ -984,10 +1282,7 @@ def _resolve_citation_metadata(
                 chunk_id = nested.get("chunk_id")
 
             if point_id is None:
-                point_id = (
-                    nested.get("point_id")
-                    or nested.get("id")
-                )
+                point_id = nested.get("point_id") or nested.get("id")
 
         document_id = _safe_text(document_id) or None
         point_id = _safe_text(point_id) or None
@@ -1027,6 +1322,7 @@ def _resolve_citation_metadata(
 
     return result
 
+
 def _resolve_documents_by_citation(
     documents: Sequence[Any],
 ) -> Dict[str, List[str]]:
@@ -1065,44 +1361,43 @@ def _build_evidence_map(
     state: Dict[str, Any],
 ) -> Dict[str, List[str]]:
     """
-    Resolve exact generation evidence.
+    Resolve answer evidence without promoting ungraded documents.
 
-    Priority:
-
-        1. citation_provenance
-        2. generation_documents
-        3. web_documents
-        4. documents
+    Citation provenance is authoritative. Approved generation documents
+    may fill missing citation labels. Raw web/document fallbacks are
+    permitted only for legacy states without explicit grader status.
     """
 
     evidence_map: Dict[str, List[str]] = {}
-
     provenance = state.get("citation_provenance")
-
     provenance_map = _resolve_citation_provenance(provenance)
 
     for citation_id, windows in provenance_map.items():
-        evidence_map.setdefault(
-            citation_id,
-            [],
-        ).extend(windows)
+        evidence_map.setdefault(citation_id, []).extend(windows)
 
     generation_documents = _safe_list(state.get("generation_documents"))
+    grader_status = str(state.get("grader_status") or "").strip().lower()
+    grading_mode = str(state.get("grading_mode") or "").strip().lower()
 
-    web_documents = _safe_list(state.get("web_documents"))
+    grading_not_approved = grader_status in {"failed", "skipped"} or grading_mode in {
+        "unavailable",
+        "no_documents",
+    }
 
-    documents = _safe_list(state.get("documents"))
-
-    fallback_documents: List[Any] = []
-
-    if generation_documents:
-        fallback_documents.extend(generation_documents)
-
-    if web_documents:
-        fallback_documents.extend(web_documents)
-
-    if documents:
-        fallback_documents.extend(documents)
+    if grading_not_approved:
+        # Never promote stale generation documents after grading fails
+        # or is skipped. Trusted citation provenance remains preserved.
+        fallback_documents: List[Any] = []
+    elif generation_documents:
+        fallback_documents = list(generation_documents)
+    elif not grader_status and not grading_mode:
+        # Compatibility for legacy states that predate explicit grader
+        # status fields.
+        fallback_documents = _safe_list(state.get("web_documents")) + _safe_list(
+            state.get("documents")
+        )
+    else:
+        fallback_documents = []
 
     document_map = _resolve_documents_by_citation(fallback_documents)
 
@@ -1447,7 +1742,6 @@ def _content_tokens(
     return normalized.split()
 
 
-
 def _deterministic_numeric_detail_support(
     claim: str,
     evidence: str,
@@ -1471,38 +1765,27 @@ def _deterministic_numeric_detail_support(
     if not claim_tokens or not evidence_tokens:
         return False, 0.0
 
-    claim_numeric = [
-        token
-        for token in claim_tokens
-        if token.isdigit()
-    ]
+    claim_numeric = [token for token in claim_tokens if token.isdigit()]
 
     if len(claim_numeric) < 2:
         return False, 0.0
 
     evidence_set = set(evidence_tokens)
 
-    numeric_coverage = sum(
-        1
-        for token in claim_numeric
-        if token in evidence_set
-    ) / max(len(claim_numeric), 1)
+    numeric_coverage = sum(1 for token in claim_numeric if token in evidence_set) / max(
+        len(claim_numeric), 1
+    )
 
     if numeric_coverage < 1.0:
         return False, 0.0
 
-    claim_non_numeric = {
-        token
-        for token in claim_tokens
-        if not token.isdigit()
-    }
+    claim_non_numeric = {token for token in claim_tokens if not token.isdigit()}
 
     if not claim_non_numeric:
         return False, 0.0
 
-    non_numeric_overlap = (
-        len(claim_non_numeric.intersection(evidence_set))
-        / max(len(claim_non_numeric), 1)
+    non_numeric_overlap = len(claim_non_numeric.intersection(evidence_set)) / max(
+        len(claim_non_numeric), 1
     )
 
     if non_numeric_overlap < 0.30:
@@ -1510,9 +1793,7 @@ def _deterministic_numeric_detail_support(
 
     score = min(
         1.0,
-        0.80
-        + (numeric_coverage * 0.10)
-        + (min(non_numeric_overlap, 1.0) * 0.10),
+        0.80 + (numeric_coverage * 0.10) + (min(non_numeric_overlap, 1.0) * 0.10),
     )
 
     return True, score
@@ -1546,11 +1827,9 @@ def _deterministic_exact_support(
     if claim_normalized in evidence_normalized:
         return True, 1.0
 
-    numeric_supported, numeric_score = (
-        _deterministic_numeric_detail_support(
-            claim,
-            evidence,
-        )
+    numeric_supported, numeric_score = _deterministic_numeric_detail_support(
+        claim,
+        evidence,
     )
 
     if numeric_supported:
@@ -1596,18 +1875,69 @@ def _deterministic_exact_support(
 # Entailment
 # ---------------------------------------------------------------------------
 
+_prefetched_scores: ContextVar["Dict[Tuple[str, str], float] | None"] = ContextVar(
+    "grounding_prefetched_scores",
+    default=None,
+)
+
 
 def _get_entailment_scorer():
     try:
-        from app.tools.entailment_tool import score_entailment, get_hhem_profile
-
-        return score_entailment
-
+        from app.tools.entailment_tool import score_entailment
     except ImportError as exc:
         raise ImportError(
             "Could not import KnowledgeMesh entailment scorer from "
             "app.tools.entailment_tool."
         ) from exc
+
+    prefetched = _prefetched_scores.get()
+
+    if not prefetched:
+        return score_entailment
+
+    def scorer(premise: str, hypothesis: str) -> float:
+        hit = prefetched.get((hypothesis, _safe_text(premise)))
+
+        if hit is not None:
+            return hit
+
+        return score_entailment(premise=premise, hypothesis=hypothesis)
+
+    return scorer
+
+
+def warm_up_entailment_model() -> bool:
+    """
+    Load HHEMv2 and run one throwaway inference.
+
+    Call this ONCE at application startup (next to the NeMo Guardrails
+    initialisation). Without it the first grounding request pays for the
+    model load plus a cold inference (~7s in the logs).
+
+    Never raises: a failed warm-up only means the first real request is
+    slow, not broken. Returns True when the model answered.
+    """
+
+    try:
+        scorer = _get_entailment_scorer()
+
+        scorer(
+            premise="Warm-up premise.",
+            hypothesis="Warm-up hypothesis.",
+        )
+
+        logger.info("HHEMv2 grounding model warmed up.")
+
+        return True
+
+    except Exception:
+        logger.warning(
+            "HHEMv2 warm-up failed; the first grounding request will "
+            "load the model lazily.",
+            exc_info=True,
+        )
+
+        return False
 
 
 def _score_claim_against_evidence(
@@ -1731,7 +2061,6 @@ Answer:
 # ---------------------------------------------------------------------------
 
 
-
 def _select_global_entailment_candidates(
     claim: str,
     evidence_map: Dict[str, List[str]],
@@ -1756,13 +2085,9 @@ def _select_global_entailment_candidates(
     if not claim:
         return []
 
-    excluded = set(
-        _dedupe_preserve_order(excluded_citations)
-    )
+    excluded = set(_dedupe_preserve_order(excluded_citations))
 
-    included = set(
-        _dedupe_preserve_order(included_citations)
-    )
+    included = set(_dedupe_preserve_order(included_citations))
 
     scored: List[
         Tuple[
@@ -1828,6 +2153,33 @@ def _select_global_entailment_candidates(
 
     limit = max(1, int(limit))
 
+    if len(included) > 1:
+        selected = []
+        selected_pairs = set()
+        selected_citations = set()
+
+        for item in scored:
+            pair = (item[0], item[1])
+            if item[0] in selected_citations:
+                continue
+            selected.append(item)
+            selected_pairs.add(pair)
+            selected_citations.add(item[0])
+            if len(selected) >= limit:
+                break
+
+        for item in scored:
+            pair = (item[0], item[1])
+            if len(selected) >= limit:
+                break
+            if pair not in selected_pairs:
+                selected.append(item)
+                selected_pairs.add(pair)
+
+        selected = [item for item in scored if (item[0], item[1]) in selected_pairs]
+    else:
+        selected = scored[:limit]
+
     return [
         (citation_id, evidence_window)
         for (
@@ -1837,8 +2189,9 @@ def _select_global_entailment_candidates(
             _overlap,
             _density,
             _stable_index,
-        ) in scored[:limit]
+        ) in selected
     ]
+
 
 def _discover_supporting_evidence(
     claim: str,
@@ -1868,9 +2221,7 @@ def _discover_supporting_evidence(
             "support_method": "empty_claim",
         }
 
-    excluded = set(
-        _dedupe_preserve_order(excluded_citations)
-    )
+    excluded = set(_dedupe_preserve_order(excluded_citations))
 
     best_score = 0.0
     best_evidence_unit = ""
@@ -1938,10 +2289,7 @@ def _discover_supporting_evidence(
                     _safe_text(evidence_window),
                 )
 
-                if (
-                    entailment_cache is not None
-                    and cache_key in entailment_cache
-                ):
+                if entailment_cache is not None and cache_key in entailment_cache:
                     score = entailment_cache[cache_key]
                 else:
                     score = scorer(
@@ -1971,8 +2319,7 @@ def _discover_supporting_evidence(
                 break
 
     supported = bool(
-        best_score >= ENTAILMENT_THRESHOLD
-        or best_method == "deterministic_exact_match"
+        best_score >= ENTAILMENT_THRESHOLD or best_method == "deterministic_exact_match"
     )
 
     return {
@@ -1982,6 +2329,7 @@ def _discover_supporting_evidence(
         "best_citation": best_citation,
         "support_method": best_method,
     }
+
 
 def _validate_atomic_claim(
     claim: str,
@@ -2049,7 +2397,7 @@ def _validate_atomic_claim(
                     best_citation = citation_id
                     best_method = "deterministic_exact_match"
 
-        if best_score >= 1.0:
+        if best_score >= 1.0 and len(citations) <= 1:
             return {
                 "claim": claim,
                 "score": round(best_score, 4),
@@ -2070,10 +2418,19 @@ def _validate_atomic_claim(
         # -----------------------------------------------------------
         semantic_budget_remaining = MAX_ATOMIC_SEMANTIC_BUDGET
 
-        cited_candidate_limit = min(
-            MAX_CITED_ENTAILMENT_CANDIDATES,
-            semantic_budget_remaining,
+        # Multi-citation claims reserve one HHEM call for a combined-premise
+        # check (the claim may need facts from several cited chunks).
+        reserve_for_combined = 1 if len(citations) > 1 else 0
+
+        cited_candidate_limit = max(
+            1,
+            min(
+                MAX_CITED_ENTAILMENT_CANDIDATES,
+                semantic_budget_remaining - reserve_for_combined,
+            ),
         )
+
+        per_citation_best: Dict[str, Tuple[float, str]] = {}
 
         candidates = _select_global_entailment_candidates(
             claim=claim,
@@ -2094,10 +2451,7 @@ def _validate_atomic_claim(
                     _safe_text(evidence_window),
                 )
 
-                if (
-                    entailment_cache is not None
-                    and cache_key in entailment_cache
-                ):
+                if entailment_cache is not None and cache_key in entailment_cache:
                     score = entailment_cache[cache_key]
                 else:
                     score = scorer(
@@ -2116,14 +2470,71 @@ def _validate_atomic_claim(
             except Exception:
                 continue
 
+            previous = per_citation_best.get(citation_id)
+            if previous is None or score > previous[0]:
+                per_citation_best[citation_id] = (score, evidence_window)
+
             if score > best_score:
                 best_score = score
                 best_evidence_unit = evidence_window
                 best_citation = citation_id
                 best_method = "entailment"
 
-            if best_score >= ENTAILMENT_THRESHOLD:
+            if best_score >= ENTAILMENT_THRESHOLD and len(citations) <= 1:
                 break
+
+        # -----------------------------------------------------------
+        # Phase 1C: combined-premise check for multi-citation claims.
+        #
+        # No single chunk entailed the claim, but the claim cites several
+        # chunks and may be a fair synthesis of them. Score it once
+        # against the best window from each cited chunk joined together.
+        # best_citation stays the strongest single contributor so the
+        # citation-consistency audit keeps working unchanged.
+        # -----------------------------------------------------------
+        if (
+            best_score < ENTAILMENT_THRESHOLD
+            and len(per_citation_best) > 1
+            and semantic_budget_remaining > 0
+        ):
+            ordered = sorted(
+                per_citation_best.values(),
+                key=lambda item: item[0],
+                reverse=True,
+            )
+            combined_premise = " ".join(
+                _safe_text(window) for _score, window in ordered
+            )[:MAX_COMBINED_PREMISE_CHARS]
+
+            try:
+                cache_key = (claim, combined_premise)
+
+                if entailment_cache is not None and cache_key in entailment_cache:
+                    combined_score = entailment_cache[cache_key]
+                else:
+                    combined_score = max(
+                        0.0,
+                        min(
+                            1.0,
+                            float(
+                                _get_entailment_scorer()(
+                                    premise=combined_premise,
+                                    hypothesis=claim,
+                                )
+                            ),
+                        ),
+                    )
+                    semantic_budget_remaining -= 1
+
+                    if entailment_cache is not None:
+                        entailment_cache[cache_key] = combined_score
+
+                if combined_score >= ENTAILMENT_THRESHOLD:
+                    best_score = combined_score
+                    best_evidence_unit = combined_premise
+                    best_method = "entailment_multi_chunk"
+            except Exception:
+                pass
 
         if (
             best_score >= ENTAILMENT_THRESHOLD
@@ -2147,9 +2558,7 @@ def _validate_atomic_claim(
     # ---------------------------------------------------------------
     discovery_budget = min(
         MAX_DISCOVERY_ENTAILMENT_CANDIDATES,
-        semantic_budget_remaining
-        if citations
-        else MAX_ATOMIC_SEMANTIC_BUDGET,
+        semantic_budget_remaining if citations else MAX_ATOMIC_SEMANTIC_BUDGET,
     )
 
     if discovery_budget > 0:
@@ -2177,21 +2586,13 @@ def _validate_atomic_claim(
             "support_method": "semantic_budget_exhausted",
         }
 
-    discovered_citation = _safe_text(
-        discovered.get("best_citation")
-    )
+    discovered_citation = _safe_text(discovered.get("best_citation"))
     discovered_windows = evidence_map.get(
         discovered_citation,
         [],
     )
 
-    if (
-        discovered.get("supported")
-        and discovered_citation
-        and discovered_windows
-    ):
-
-
+    if discovered.get("supported") and discovered_citation and discovered_windows:
         return {
             "claim": claim,
             "score": discovered.get("score", 0.0),
@@ -2228,37 +2629,149 @@ def _validate_atomic_claim(
     }
 
 
+# ---------------------------------------------------------------------------
+# Citation consistency audit
+# ---------------------------------------------------------------------------
+
+
+def _check_citation_against_claim(
+    claim: str,
+    citation_id: str,
+    atomic_result: Dict[str, Any],
+    evidence_map: Dict[str, List[str]],
+    entailment_cache: Dict[Tuple[str, str], float] | None,
+) -> Dict[str, Any]:
+    """
+    Check ONE citation against ONE claim.
+
+    Performs no new HHEMv2 inference. The atomic validation pass is
+    authoritative for entailment; this only reuses its result, plus
+    deterministic exact matches and already-cached qualifying scores.
+    """
+
+    windows = evidence_map.get(citation_id, [])
+
+    def _result(
+        score: float,
+        supported: bool,
+        method: str,
+        unit: str = "",
+    ) -> Dict[str, Any]:
+        return {
+            "claim": claim,
+            "citation": citation_id,
+            "score": round(float(score), 4),
+            "supported": supported,
+            "support_method": method,
+            "best_evidence_unit": unit,
+        }
+
+    if not windows:
+        return _result(0.0, False, "missing_evidence")
+
+    if citation_id == _safe_text(atomic_result.get("best_citation")):
+        score = float(atomic_result.get("score", 0.0) or 0.0)
+        method = _safe_text(atomic_result.get("support_method")) or "entailment"
+        supported = bool(
+            atomic_result.get("supported")
+            and (score >= ENTAILMENT_THRESHOLD or method == "deterministic_exact_match")
+        )
+
+        return _result(
+            score,
+            supported,
+            method,
+            _safe_text(atomic_result.get("best_evidence_unit")),
+        )
+
+    for window in windows:
+        exact_supported, exact_score = _deterministic_exact_support(
+            claim,
+            window,
+        )
+
+        if exact_supported:
+            return _result(
+                exact_score,
+                True,
+                "deterministic_exact_match",
+                window,
+            )
+
+    if entailment_cache is not None:
+        for window in windows:
+            cache_key = (
+                claim,
+                _safe_text(window),
+            )
+
+            if cache_key not in entailment_cache:
+                continue
+
+            cached_score = entailment_cache[cache_key]
+
+            if (
+                isinstance(cached_score, (int, float))
+                and not isinstance(cached_score, bool)
+                and math.isfinite(cached_score)
+                and cached_score >= ENTAILMENT_THRESHOLD
+            ):
+                return _result(
+                    float(cached_score),
+                    True,
+                    "entailment",
+                    window,
+                )
+
+    return _result(0.0, False, "not_selected")
+
+
+# Strict: every cited chunk must support its claim (matches main).
+STRICT_CITATION_AUDIT = True
+
+
 def _audit_citation_consistency(
     atomic_results: Sequence[Dict[str, Any]],
     evidence_map: Dict[str, List[str]],
     entailment_cache: Dict[Tuple[str, str], float] | None = None,
 ) -> Dict[str, Any]:
     """
-    Verify that every effective citation attached to every atomic claim
-    independently corresponds to the support result already established
-    during `_validate_atomic_claim()`.
+    Verify that the citations attached to each SUPPORTED atomic claim are
+    honest, using the support results already established during
+    `_validate_atomic_claim()`. No additional HHEMv2 inference runs here.
 
-    The atomic validation pass is authoritative for entailment. This audit
-    deliberately performs no additional HHEMv2 inference so that citation
-    diagnostics do not duplicate expensive grounding work.
+    Hard violation (fails grounding, drives a revision):
+        * a cited chunk has no evidence at all, or
+        * none of the cited chunks supports the claim (the claim was only
+          supported by a chunk it did not cite).
+
+    Soft warning (reported only, never fails grounding):
+        * at least one cited chunk supports the claim, and an additional
+          co-cited chunk was not verified as supporting it.
+
+    Atomic claims that are themselves unsupported are skipped: they are
+    already reported through `unsupported_atomic_claims` and fail
+    grounding on their own, so auditing their citations would only
+    double-report the same problem.
     """
 
     citation_results: List[Dict[str, Any]] = []
     violations: List[Dict[str, Any]] = []
+    warnings: List[Dict[str, Any]] = []
 
     claims_checked = 0
     citations_checked = 0
 
     for atomic_result in atomic_results:
-        claim = _clean_claim_text(
-            _safe_text(atomic_result.get("claim"))
-        )
+        claim = _clean_claim_text(_safe_text(atomic_result.get("claim")))
 
         if not claim:
             continue
 
         citations = _dedupe_preserve_order(
-            atomic_result.get("citations") or []
+            atomic_result.get("source_citations")
+            or atomic_result.get("citations")
+            or []
         )
 
         if not citations:
@@ -2266,87 +2779,171 @@ def _audit_citation_consistency(
 
         claims_checked += 1
 
-        best_citation = _safe_text(
-            atomic_result.get("best_citation")
-        )
-        best_score = float(
-            atomic_result.get("score", 0.0) or 0.0
-        )
-        best_evidence_unit = _safe_text(
-            atomic_result.get("best_evidence_unit")
-        )
-        best_method = _safe_text(
-            atomic_result.get("support_method")
-        ) or "entailment"
-
-        for citation_id in citations:
-            citations_checked += 1
-
-            evidence_windows = evidence_map.get(
+        per_claim = [
+            _check_citation_against_claim(
+                claim,
                 citation_id,
-                [],
+                atomic_result,
+                evidence_map,
+                entailment_cache,
             )
+            for citation_id in citations
+        ]
 
-            if not evidence_windows:
-                result = {
-                    "claim": claim,
-                    "citation": citation_id,
-                    "score": 0.0,
-                    "supported": False,
-                    "support_method": "missing_evidence",
-                    "best_evidence_unit": "",
-                }
+        citations_checked += len(per_claim)
 
-                citation_results.append(result)
-                violations.append(result)
+        any_supported = any(item["supported"] for item in per_claim)
+
+        best_citation = _safe_text(atomic_result.get("best_citation"))
+
+        for item in per_claim:
+            citation_results.append(item)
+
+            if item["supported"]:
                 continue
 
-            if citation_id == best_citation:
-                score = best_score
-                supported = bool(
-                    atomic_result.get("supported")
-                    and (
-                        score >= ENTAILMENT_THRESHOLD
-                        or best_method == "deterministic_exact_match"
-                    )
-                )
-                evidence_unit = best_evidence_unit
-                support_method = best_method
+            if STRICT_CITATION_AUDIT or item["support_method"] == "missing_evidence" or not any_supported:
+                item["severity"] = "hard"
+
+                if best_citation and best_citation not in citations:
+                    item["suggested_citation"] = best_citation
+
+                violations.append(item)
 
             else:
-                score = 0.0
-                supported = False
-                evidence_unit = ""
-                support_method = "not_selected"
-
-            result = {
-                "claim": claim,
-                "citation": citation_id,
-                "score": round(score, 4),
-                "supported": supported,
-                "support_method": support_method,
-                "best_evidence_unit": evidence_unit,
-            }
-
-            citation_results.append(result)
-
-            if not supported:
-                violations.append(result)
+                item["severity"] = "soft"
+                warnings.append(item)
 
     return {
+        # Hard violations only.
         "passed": not violations,
         "claims_checked": claims_checked,
         "citations_checked": citations_checked,
         "violation_count": len(violations),
         "violations": violations,
+        "warning_count": len(warnings),
+        "warnings": warnings,
         "results": citation_results,
     }
 
-def _build_revision_prompt(
-    unsupported_atomic_claims: Sequence[Dict[str, Any]],
-) -> str:
 
-    if not unsupported_atomic_claims:
+# Sentence-initial words that point back at an earlier sentence. A line that
+# starts with one, right after a deleted line, has lost its subject.
+_ANAPHORIC_OPENERS = {
+    "it",
+    "its",
+    "they",
+    "their",
+    "them",
+    "this",
+    "these",
+    "those",
+    "he",
+    "she",
+    "his",
+    "her",
+    "such",
+}
+
+
+def _starts_with_anaphor(line: str) -> bool:
+    text = _strip_citations(_strip_markdown_prefix(line.strip()))
+    text = text.lstrip(" *_`\"'(")
+
+    if not text:
+        return False
+
+    first_word = re.split(r"\W+", text.lower(), maxsplit=1)[0]
+
+    return first_word in _ANAPHORIC_OPENERS
+
+
+def _prune_unsupported_lines(
+    final_answer: str,
+    unsupported_raw_lines: Sequence[str],
+) -> str:
+    """
+    Deterministically remove the answer lines whose claims failed
+    grounding, so the supported remainder can be salvaged instead of
+    abstaining on the whole answer.
+
+    Nothing is rewritten or invented: lines are only deleted (plus any
+    heading left with no content under it). Returns "" when nothing was
+    removed, no substantive claim line would remain, or a remaining line
+    would be left dangling.
+
+    Dangling: a kept line that opens with a pronoun or demonstrative
+    ("It uses...", "These...") directly after a deleted line has lost its
+    subject. Salvaging it would present a misleading statement, so the
+    whole salvage is refused and the caller abstains instead.
+    """
+
+    drop = {line.strip() for line in unsupported_raw_lines if line.strip()}
+
+    if not drop:
+        return ""
+
+    kept: List[str] = []
+
+    previous_claim_dropped = False
+
+    for line in _safe_text(final_answer).splitlines():
+        stripped = line.strip()
+
+        if not stripped:
+            kept.append(line)
+            continue
+
+        if stripped in drop:
+            previous_claim_dropped = True
+            continue
+
+        if not _is_non_claim_line(stripped):
+            if previous_claim_dropped and _starts_with_anaphor(stripped):
+                return ""
+
+            previous_claim_dropped = False
+
+        kept.append(line)
+
+    cleaned: List[str] = []
+
+    for index, line in enumerate(kept):
+        if _is_heading(line.strip()):
+            following = next(
+                (item for item in kept[index + 1 :] if item.strip()),
+                "",
+            )
+
+            if not following or _is_heading(following.strip()):
+                continue
+
+        cleaned.append(line)
+
+    if not any(not _is_non_claim_line(line.strip()) for line in cleaned):
+        return ""
+
+    return re.sub(r"\n{3,}", "\n\n", "\n".join(cleaned)).strip()
+
+
+def _build_revision_prompt(
+    unsupported_atomic_claims: Sequence[Dict[str, Any]] = (),
+    citation_violations: Sequence[Dict[str, Any]] = (),
+    uncited_claims: Sequence[Dict[str, Any]] = (),
+    invalid_citations: Sequence[Dict[str, Any]] = (),
+) -> str:
+    """
+    Build an actionable revision prompt covering EVERY failure type the
+    critic can produce, so the revision responder is never regenerating
+    blind.
+    """
+
+    if not (
+        unsupported_atomic_claims
+        or citation_violations
+        or uncited_claims
+        or invalid_citations
+    ):
         return ""
 
     lines = [
@@ -2362,34 +2959,99 @@ def _build_revision_prompt(
         "4. Keep citations attached to the claims they support.",
         "5. Do not merge unsupported details into otherwise supported claims.",
         "6. If a claim cannot be supported, omit it.",
-        "",
-        "Unsupported atomic claims:",
+        "7. Cite only chunk IDs that appear in the supplied evidence, and "
+        "prefer citing just the chunk(s) that directly support each claim.",
+        "8. Stay close to the evidence's own wording. Do not paraphrase "
+        "with added detail (extra adjectives, purposes or explanations "
+        "that the evidence does not state).",
     ]
 
-    for index, item in enumerate(
-        unsupported_atomic_claims,
-        start=1,
-    ):
-        claim = _safe_text(item.get("claim"))
-
-        score = item.get(
-            "score",
-            0.0,
+    if unsupported_atomic_claims:
+        lines.extend(
+            [
+                "",
+                "Unsupported atomic claims:",
+            ]
         )
 
-        evidence = _safe_text(item.get("best_evidence_unit"))
+        for index, item in enumerate(
+            unsupported_atomic_claims,
+            start=1,
+        ):
+            claim = _safe_text(item.get("claim"))
 
-        citation = _safe_text(item.get("best_citation"))
+            score = item.get(
+                "score",
+                0.0,
+            )
 
-        lines.append(f"{index}. {claim}")
+            evidence = _safe_text(item.get("best_evidence_unit"))
 
-        lines.append(f"   Entailment score: {score}")
+            citation = _safe_text(item.get("best_citation"))
 
-        if citation:
-            lines.append(f"   Citation: [{citation}]")
+            lines.append(f"{index}. {claim}")
 
-        if evidence:
-            lines.append("   Best available evidence: " + evidence)
+            lines.append(f"   Entailment score: {score}")
+
+            if citation:
+                lines.append(f"   Citation: [{citation}]")
+
+            if evidence:
+                lines.append("   Best available evidence: " + evidence)
+
+            lines.append(
+                "   Fix: restate it using the evidence's wording, or remove it."
+            )
+
+    if citation_violations:
+        lines.extend(
+            [
+                "",
+                "Citation corrections:",
+            ]
+        )
+
+        for violation in citation_violations:
+            line = (
+                f"- Claim: {_safe_text(violation.get('claim'))}\n"
+                f"  Citation [{_safe_text(violation.get('citation'))}] "
+                "does not support it"
+            )
+
+            suggested = _safe_text(violation.get("suggested_citation"))
+
+            if suggested:
+                line += f"; cite [{suggested}] instead"
+            else:
+                line += "; remove the claim or the citation"
+
+            lines.append(line)
+
+    if uncited_claims:
+        lines.extend(
+            [
+                "",
+                "Claims missing a citation (add a valid chunk ID or remove the claim):",
+            ]
+        )
+
+        for item in uncited_claims:
+            lines.append(f"- {_safe_text(item.get('claim'))}")
+
+    if invalid_citations:
+        lines.extend(
+            [
+                "",
+                "Citations not present in the evidence (use only supplied chunk IDs):",
+            ]
+        )
+
+        for item in invalid_citations:
+            cited = ", ".join(
+                _safe_text(citation) for citation in item.get("citations", [])
+            )
+
+            lines.append(f"- {_safe_text(item.get('claim'))} -> {cited}")
 
     lines.extend(
         [
@@ -2406,18 +3068,15 @@ def _build_revision_prompt(
 # ---------------------------------------------------------------------------
 
 
-def grounding_critic_node(
+def _grounding_critic_node_with_profile(
     state: Dict[str, Any],
+    hhem_profile: Dict[str, float],
 ) -> Dict[str, Any]:
     """
     Strict post-generation grounding validator.
     """
 
     grounding_started = perf_counter()
-
-    # Per-pass HHEMv2 profiling baseline.
-    from app.tools.entailment_tool import get_hhem_profile
-    hhem_profile_start = get_hhem_profile()
 
     final_answer = _safe_text(
         state.get("final_answer")
@@ -2471,6 +3130,8 @@ def grounding_critic_node(
             "grounding_scores": grounding_scores,
             "unsupported_atomic_claims": [],
             "revision_prompt": "",
+            "pruned_answer": "",
+            "prunable_claims": [],
             "status": ("Grounding validation failed: empty answer."),
         }
 
@@ -2497,19 +3158,22 @@ def grounding_critic_node(
                     and math.isfinite(score)
                     and 0.0 <= score <= 1.0
                 ):
-                    entailment_cache[(claim, evidence)] = float(score)
+                    normalized_claim = _clean_claim_text(claim)
+                    if normalized_claim:
+                        entailment_cache[(normalized_claim, evidence)] = float(score)
 
     cache_entries_received = len(entailment_cache)
 
     evidence_map = _build_evidence_map(state)
 
-    citation_metadata = _resolve_citation_metadata(
-        state.get("citation_provenance")
-    )
+    citation_metadata = _resolve_citation_metadata(state.get("citation_provenance"))
 
     available_citations = {
         citation_id for citation_id, windows in evidence_map.items() if windows
     }
+    _prefetched_scores.set(
+        _prefetch_entailment_scores(claim_records, evidence_map, entailment_cache)
+    )
 
     atomic_results: List[Dict[str, Any]] = []
     claim_results: List[Dict[str, Any]] = []
@@ -2521,6 +3185,9 @@ def grounding_critic_node(
     invalid_citations: List[Dict[str, Any]] = []
 
     substantive_results: List[Dict[str, Any]] = []
+
+    # Raw answer lines whose claim failed grounding (for salvage pruning).
+    unsupported_raw_lines: List[str] = []
 
     # ------------------------------------------------------------------
     # Validate every claim
@@ -2554,7 +3221,6 @@ def grounding_critic_node(
                 }
             )
 
-
         # --------------------------------------------------------------
         # Atomic validation
         # --------------------------------------------------------------
@@ -2569,9 +3235,9 @@ def grounding_critic_node(
                 entailment_cache,
             )
 
-            best_citation = _safe_text(
-                result.get("best_citation")
-            )
+            result["source_citations"] = list(citations)
+
+            best_citation = _safe_text(result.get("best_citation"))
 
             if result.get("supported") and best_citation:
                 result["citations"] = [best_citation]
@@ -2585,9 +3251,7 @@ def grounding_critic_node(
                     "canonical_evidence_id": None,
                 },
             )
-            original_query = state.get("original_query") or state.get(
-                "current_query"
-            )
+            original_query = state.get("original_query") or state.get("current_query")
             provenance = result["evidence_provenance"]
 
             if _explicit_query_source_entity_mismatch(
@@ -2678,6 +3342,7 @@ def grounding_critic_node(
 
         if not claim_supported:
             unsupported_claims.append(claim_result)
+            unsupported_raw_lines.append(_safe_text(record.get("raw_text")))
 
     # ------------------------------------------------------------------
     # Citation consistency audit
@@ -2723,15 +3388,41 @@ def grounding_critic_node(
 
     # ------------------------------------------------------------------
     # Strict grounding decision
+    #
+    # citation_consistency["passed"] reflects HARD violations only;
+    # redundant co-citations are warnings and never fail grounding.
     # ------------------------------------------------------------------
 
     semantic_support_ok = bool(substantive_results and not unsupported_claims)
 
-    citation_support_ok = bool(not uncited_claims and not invalid_citations)
+    citation_support_ok = bool(
+        not uncited_claims and not invalid_citations and citation_consistency["passed"]
+    )
 
     answer_supported = bool(semantic_support_ok and citation_support_ok)
 
     is_grounded = bool(answer_supported)
+
+    # ------------------------------------------------------------------
+    # Salvage candidate
+    #
+    # When grounding fails ONLY because some lines are unsupported, the
+    # supported remainder is still a valid, honest answer. Offer it to the
+    # graph; the graph decides whether to use it (only after the revision
+    # budget is spent) and re-validates it before returning it.
+    # ------------------------------------------------------------------
+
+    pruned_answer = (
+        _prune_unsupported_lines(final_answer, unsupported_raw_lines)
+        if (not is_grounded and unsupported_raw_lines)
+        else ""
+    )
+
+    prunable_claims = (
+        [_safe_text(item.get("claim")) for item in unsupported_claims]
+        if pruned_answer
+        else []
+    )
 
     # ------------------------------------------------------------------
     # Stable grounding schema
@@ -2769,6 +3460,11 @@ def grounding_critic_node(
             f"{len(unsupported_atomic_claims)} unsupported atomic claim(s)"
         )
 
+    if citation_consistency["violation_count"]:
+        feedback_parts.append(
+            f"{citation_consistency['violation_count']} citation violation(s)"
+        )
+
     if uncited_claims:
         feedback_parts.append(f"{len(uncited_claims)} uncited claim(s)")
 
@@ -2783,29 +3479,25 @@ def grounding_critic_node(
 
     # ------------------------------------------------------------------
     # Revision prompt
+    #
+    # Built fresh from THIS pass's failures only. A prompt carried over
+    # from an earlier pass would describe claims that may no longer
+    # exist, and would linger in state after a passing pass.
     # ------------------------------------------------------------------
 
-    revision_prompt = _build_revision_prompt(unsupported_atomic_claims)
-
-    existing_revision_prompt = _safe_text(state.get("revision_prompt"))
-
-    if not revision_prompt and existing_revision_prompt:
-        revision_prompt = existing_revision_prompt
+    revision_prompt = _build_revision_prompt(
+        unsupported_atomic_claims,
+        citation_consistency["violations"],
+        uncited_claims,
+        invalid_citations,
+    )
 
     # ------------------------------------------------------------------
     # Final state update
     # ------------------------------------------------------------------
 
-    hhem_profile_end = get_hhem_profile()
-    hhem_call_count = (
-        int(hhem_profile_end.get("call_count", 0))
-        - int(hhem_profile_start.get("call_count", 0))
-    )
-    hhem_total_ms = round(
-        float(hhem_profile_end.get("total_ms", 0.0))
-        - float(hhem_profile_start.get("total_ms", 0.0)),
-        2,
-    )
+    hhem_call_count = int(hhem_profile["call_count"])
+    hhem_total_ms = round(float(hhem_profile["total_ms"]), 2)
 
     grounding_ms = round(
         (perf_counter() - grounding_started) * 1000,
@@ -2816,20 +3508,15 @@ def grounding_critic_node(
     # Per-pass metrics above remain unchanged; these accumulate across
     # every grounding pass executed during this request.
     request_hhem_call_count = (
-        int(state.get("request_hhem_call_count", 0))
-        + hhem_call_count
+        int(state.get("request_hhem_call_count", 0)) + hhem_call_count
     )
 
     request_hhem_total_ms = round(
-        float(state.get("request_hhem_total_ms", 0.0))
-        + hhem_total_ms,
+        float(state.get("request_hhem_total_ms", 0.0)) + hhem_total_ms,
         2,
     )
 
-    grounding_pass_count = (
-        int(state.get("grounding_pass_count", 0))
-        + 1
-    )
+    grounding_pass_count = int(state.get("grounding_pass_count", 0)) + 1
 
     logging.getLogger(__name__).debug(
         "GROUNDING_CACHE_METRICS pass=%s received=%s hits=%s misses=%s returned=%s hhem_calls=%s hhem_ms=%s",
@@ -2841,6 +3528,13 @@ def grounding_critic_node(
         hhem_call_count,
         hhem_total_ms,
     )
+
+    if citation_consistency.get("warning_count"):
+        logging.getLogger(__name__).info(
+            "CITATION_AUDIT_WARNINGS pass=%s warnings=%s",
+            grounding_pass_count,
+            citation_consistency["warning_count"],
+        )
 
     trace_update = append_trace_event(
         state,
@@ -2854,6 +3548,9 @@ def grounding_critic_node(
         unsupported_atomic_count=len(unsupported_atomic_claims),
         uncited_claim_count=len(uncited_claims),
         invalid_citation_count=len(invalid_citations),
+        citation_violation_count=citation_consistency["violation_count"],
+        citation_warning_count=citation_consistency.get("warning_count", 0),
+        prunable=bool(pruned_answer),
         grounding_ms=grounding_ms,
         hhem_call_count=hhem_call_count,
         hhem_total_ms=hhem_total_ms,
@@ -2890,13 +3587,30 @@ def grounding_critic_node(
         "unsupported_atomic_claims": (unsupported_atomic_claims),
         "citation_consistency": citation_consistency,
         "revision_prompt": revision_prompt,
-        "status": (
-            "Grounding validation passed."
-            if is_grounded
-            else (
-                "Grounding validation failed: "
-                f"{len(unsupported_atomic_claims)} "
-                "unsupported atomic claim(s)."
-            )
-        ),
+        "pruned_answer": pruned_answer,
+        "prunable_claims": prunable_claims,
+        "status": ("Grounding validation passed." if is_grounded else feedback),
     }
+
+
+_prefetched_scores: ContextVar["Dict[Tuple[str, str], float] | None"] = ContextVar(
+    "grounding_prefetched_scores",
+    default=None,
+)
+
+
+def grounding_critic_node(
+    state: Dict[str, Any],
+) -> Dict[str, Any]:
+    """Run grounding validation with exception-safe HHEM profiling."""
+    from app.tools.entailment_tool import (
+        start_hhem_profile,
+        stop_hhem_profile,
+    )
+
+    profile_token, profile = start_hhem_profile()
+    try:
+        return _grounding_critic_node_with_profile(state, profile)
+    finally:
+        _prefetched_scores.set(None)
+        stop_hhem_profile(profile_token)

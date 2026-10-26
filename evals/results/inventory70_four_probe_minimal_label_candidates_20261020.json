@@ -1,0 +1,147 @@
+{
+  "artifact_type": "minimal_live_retrieval_gold_label_candidate_review",
+  "created_at_utc": "2026-10-20T08:26:31.291160+00:00",
+  "original_dataset": "evals\\datasets\\inventory_retrieval_probes_70.json",
+  "derived_from": "evals\\results\\inventory70_four_probe_live_label_candidates_20261020.json",
+  "collection": "enterprise_rag_bge_base",
+  "probe_count": 4,
+  "candidate_chunk_reference_count": 7,
+  "warning": "Proposed minimal labels only. The original dataset and canonical inventory are unchanged. Live chunk existence is verified; semantic gold-label approval and benchmark validity still require review.",
+  "probes": [
+    {
+      "id": "inv_llm_agents_001",
+      "question": "How does the survey define an LLM-based agent, and what basic capabilities distinguish such an agent?",
+      "category": "definition",
+      "source_filename": "LLM Based-learning.pdf",
+      "original_relevant_chunks": [
+        {
+          "document_id": "7ed18d7a17efb3ce8ec56478",
+          "chunk_id": 0
+        }
+      ],
+      "candidate_relevant_chunks": [
+        {
+          "document_id": "e65504ab611fa43ac5013829",
+          "chunk_id": 0
+        },
+        {
+          "document_id": "e65504ab611fa43ac5013829",
+          "chunk_id": 8
+        }
+      ],
+      "rationale": "Chunk 0 directly defines agents as entities that sense, decide, and act. Chunk 8 lists LLM capabilities including knowledge acquisition, instruction comprehension, generalization, planning, reasoning, and natural-language interaction. Chunks 1 and 11 appear supplementary rather than necessary for this question.",
+      "evidence": [
+        {
+          "document_id": "e65504ab611fa43ac5013829",
+          "chunk_id": 0,
+          "evidence_excerpt": "The Rise and Potential of Large Language Model Based Agents: A Survey Zhiheng Xi∗†, Wenxiang Chen∗, Xin Guo∗, Wei He∗, Yiwen Ding∗, Boyang Hong∗, Ming Zhang∗, Junzhe Wang∗, Senjie Jin∗, Enyu Zhou∗, Rui Zheng, Xiaoran Fan, Xiao Wang, Limao Xiong, Yuhao Zhou, Weiran Wang, Changhao Jiang, Yicheng Zou, Xiangyang Liu, Zhangyue Yin, Shihan Dou, Rongxiang Weng, Wensen Cheng, Qi Zhang†, Wenjuan Qin, Yongyan Zheng, Xipeng Qiu, Xuanjing Huang and Tao Gui† Fudan NLP Group Abstract For a long time, humanity has pursued artificial intelligence (AI) equivalent to or surpassing the human level, with AI agents considered a promising vehicle for this pursuit. AI agents are artificial entities that sense their environment, make decisions, and take actions. Many efforts have been made to develop intelligent agents, but they mainly focus on advancement in algorithms or training strategies to enhance specific capabilities or performance on particular tasks. Actually, what the community lacks is a general and powerful model to serve as a starting point for designing AI agents that can adapt to diverse scenarios. Due to the versatile capabilities they demonstrate, large language models (LLMs) are regarded as potential sparks for Artificial General Intelligence (AGI), offering hope for building general AI agents. Many researchers have leveraged LLMs as the foundation to build AI agents and have achieved significant progress. In this paper, we perform a comprehensive survey on LLM-based agents."
+        },
+        {
+          "document_id": "e65504ab611fa43ac5013829",
+          "chunk_id": 8,
+          "evidence_excerpt": "f the model’s inherent general abilities like knowledge memorization, long-term planning, effective gene Actually, enhancing the inherent capabilities of the model is the pivotal factor for advancing the agent further, and the domain is in need of a powerful foundational model endowed with a variety of key attributes mentioned above to serve as a starting point for agent systems. The development of large language models (LLMs) has brought a glimmer of hope for the further development of agents [24; 25; 26], and significant progress has been made by the community [22; 27; 28; 29]. According to the notion of World Scope (WS) [30] which encompasses five levels that depict the research progress from NLP to general AI (i.e., Corpus, Internet, Perception, Embodiment, and Social), the pure LLMs are built on the second level with internet-scale textual inputs and outputs. Despite this, LLMs have demonstrated powerful capabilities in knowledge acquisition, instruction comprehension, generalization, planning, and reasoning, while displaying effective natural language interactions with humans. These advantages have earned LLMs the designation of sparks for AGI [31], making them highly desirable for building intelligent agents to foster a world where humans and agents coexist harmoniously [22]. Starting from this, if we elevate LLMs to the status of agents and equip them with an expanded perception space and action space, they have the potential to reach the third and fourth levels of WS"
+        }
+      ],
+      "review_status": "PROPOSED_MINIMAL_SET_REQUIRES_FINAL_REVIEW"
+    },
+    {
+      "id": "inv_llm_agents_003",
+      "question": "What role does AutoGPT play in the survey's discussion of autonomous or lifelong-learning agents?",
+      "category": "autonomous_agents",
+      "source_filename": "LLM Based-learning.pdf",
+      "original_relevant_chunks": [
+        {
+          "document_id": "7ed18d7a17efb3ce8ec56478",
+          "chunk_id": 74
+        }
+      ],
+      "candidate_relevant_chunks": [
+        {
+          "document_id": "e65504ab611fa43ac5013829",
+          "chunk_id": 85
+        }
+      ],
+      "rationale": "Chunk 85 directly describes AutoGPT's autonomous objective-driven task execution, external tools, and long-/short-term memory.",
+      "evidence": [
+        {
+          "document_id": "e65504ab611fa43ac5013829",
+          "chunk_id": 85,
+          "evidence_excerpt": "we elucidate the diverse application scenarios of Single Agent, including task-oriented, innovation-oriented, and lifecycle-oriented scenarios (§ 4.1) Then, we present the significant coordinating potential of Multiple Agents. Whether through cooperative interaction for complementarity or adversarial interaction for advancement, both approaches can lead to higher task efficiency and response quality (§ 4.2). Finally, we categorize the interactive collaboration between humans and agents into two paradigms and introduce the main forms and specific applications respectively (§ 4.3). The topological diagram for LLM-based agent applications is depicted in Figure 6. 4.1 General Ability of Single Agent Currently, there is a vibrant development of application instances of LLM-based agents [429; 430; 431]. AutoGPT [114] is one of the ongoing popular open-source projects aiming to achieve a fully autonomous system. Apart from the basic functions of large language models like GPT-4, the AutoGPT framework also incorporates various practical external tools and long/short-term memory management. After users input their customized objectives, they can free their hands and wait for AutoGPT to automatically generate thoughts and perform specific tasks, all without requiring additional user prompts. As shown in Figure 8, we introduce the astonishingly diverse capabilities that the agent exhibits in scenarios where only one single agent is present."
+        }
+      ],
+      "review_status": "PROPOSED_MINIMAL_SET_REQUIRES_FINAL_REVIEW"
+    },
+    {
+      "id": "inv_llm_001",
+      "question": "What motivation does the GPT-3 paper give for pretraining large language models before applying them to downstream tasks?",
+      "category": "pretraining",
+      "source_filename": "LLM.pdf",
+      "original_relevant_chunks": [
+        {
+          "document_id": "3caf265f6ce786e3c2bd0ad6",
+          "chunk_id": 0
+        }
+      ],
+      "candidate_relevant_chunks": [
+        {
+          "document_id": "68424e3d1aa5e84e426da70c",
+          "chunk_id": 5
+        },
+        {
+          "document_id": "68424e3d1aa5e84e426da70c",
+          "chunk_id": 6
+        },
+        {
+          "document_id": "68424e3d1aa5e84e426da70c",
+          "chunk_id": 8
+        }
+      ],
+      "rationale": "Chunk 5 covers the cost and limited applicability of collecting labeled examples for every task and discusses fine-tuning generalization concerns. Chunks 6 and 8 describe pretraining skills and in-context adaptation from instructions or examples. Review whether chunk 6 is needed in addition to chunks 5 and 8.",
+      "evidence": [
+        {
+          "document_id": "68424e3d1aa5e84e426da70c",
+          "chunk_id": 5,
+          "evidence_excerpt": "on a dataset of thousands to hundreds of thousands of examples speciﬁc to that task. Removing this limitation would First, from a practical perspective, the need for a large dataset of labeled examples for every new task limits the applicability of language models. There exists a very wide range of possible useful language tasks, encompassing anything from correcting grammar, to generating examples of an abstract concept, to critiquing a short story. For many of these tasks it is difﬁcult to collect a large supervised training dataset, especially when the process must be repeated for every new task. Second, the potential to exploit spurious correlations in training data fundamentally grows with the expressiveness of the model and the narrowness of the training distribution. This can create problems for the pre-training plus ﬁne-tuning paradigm, where models are designed to be large to absorb information during pre-training, but are then ﬁne-tuned on very narrow task distributions. For instance [HLW+20] observe that larger models do not necessarily generalize better out-of-distribution. There is evidence that suggests that the generalization achieved under this paradigm can be poor because the model is overly speciﬁc to the training distribution and does not generalize well outside it [YdC+19, MPL19]. Thus, the performance of ﬁne-tuned models on speciﬁc benchmarks, even when it is nominally at human-level, may exaggerate actual performance on the underlying task [GSL+18, NK19]"
+        },
+        {
+          "document_id": "68424e3d1aa5e84e426da70c",
+          "chunk_id": 6,
+          "evidence_excerpt": "-tuned models on speciﬁc benchmarks, even when it is nominally at human-level, may exaggerate actual performance on the underlying task [GSL+18, NK19] Third, humans do not require large supervised datasets to learn most language tasks – a brief directive in natural language (e.g. “please tell me if this sentence describes something happy or something sad”) or at most a tiny number of demonstrations (e.g. “here are two examples of people acting brave; please give a third example of bravery”) is often Figure 1.1: Language model meta-learning. During unsupervised pre-training, a language model develops a broad set of skills and pattern recognition abilities. It then uses these abilities at inference time to rapidly adapt to or recognize the desired task. We use the term “in-context learning” to describe the inner loop of this process, which occurs within the forward-pass upon each sequence. The sequences in this diagram are not intended to be representative of the data a model would see during pre-training, but are intended to show that there are sometimes repeated sub-tasks embedded within a single sequence. 3"
+        },
+        {
+          "document_id": "68424e3d1aa5e84e426da70c",
+          "chunk_id": 8,
+          "evidence_excerpt": "ities at training time, and then uses those abilities at inference time to rapidly adapt to or recognize the desired task (illustrated in F Recent work [RWC+19] attempts to do this via what we call “in-context learning”, using the text input of a pretrained language model as a form of task speciﬁcation: the model is conditioned on a natural language instruction and/or a few demonstrations of the task and is then expected to complete further instances of the task simply by predicting what comes next. While it has shown some initial promise, this approach still achieves results far inferior to ﬁne-tuning – for example [RWC+19] achieves only 4% on Natural Questions, and even its 55 F1 CoQa result is now more than 35 points behind the state of the art. Meta-learning clearly requires substantial improvement in order to be viable as a practical method of solving language tasks. Another recent trend in language modeling may offer a way forward. In recent years the capacity of transformer language models has increased substantially, from 100 million parameters [RNSS18], to 300 million parameters [DCLT18], to 1.5 billion parameters [RWC+19], to 8 billion parameters [SPP+19], 11 billion parameters [RSR+19], and ﬁnally 17 billion parameters [Tur20]. Each increase has brought improvements in text synthesis and/or downstream NLP tasks, and there is evidence suggesting that log loss, which correlates well with many downstream tasks, follows a smooth trend of improvement with scale [KMH+20]"
+        }
+      ],
+      "review_status": "PROPOSED_MINIMAL_SET_REQUIRES_FINAL_REVIEW"
+    },
+    {
+      "id": "inv_rag_001",
+      "question": "What limitations of pretrained language models motivate Retrieval-Augmented Generation?",
+      "category": "motivation",
+      "source_filename": "RAG.pdf",
+      "original_relevant_chunks": [
+        {
+          "document_id": "89e40c0de3ce2081b9d726b9",
+          "chunk_id": 0
+        }
+      ],
+      "candidate_relevant_chunks": [
+        {
+          "document_id": "8f25ec73a5dcfeca772c16ff",
+          "chunk_id": 0
+        }
+      ],
+      "rationale": "Chunk 0's abstract directly covers limited access to and precise manipulation of parametric knowledge, weaker knowledge-intensive task performance, provenance, and updating world knowledge.",
+      "evidence": [
+        {
+          "document_id": "8f25ec73a5dcfeca772c16ff",
+          "chunk_id": 0,
+          "evidence_excerpt": "Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks Patrick Lewis†‡, Ethan Perez⋆, Aleksandra Piktus†, Fabio Petroni†, Vladimir Karpukhin†, Naman Goyal†, Heinrich Küttler†, Mike Lewis†, Wen-tau Yih†, Tim Rocktäschel†‡, Sebastian Riedel†‡, Douwe Kiela† †Facebook AI Research; ‡University College London; ⋆New York University; plewis@fb.com Abstract Large pre-trained language models have been shown to store factual knowledge in their parameters, and achieve state-of-the-art results when ﬁne-tuned on down- stream NLP tasks. However, their ability to access and precisely manipulate knowl- edge is still limited, and hence on knowledge-intensive tasks, their performance lags behind task-speciﬁc architectures. Additionally, providing provenance for their decisions and updating their world knowledge remain open research problems. Pre- trained models with a differentiable access mechanism to explicit non-parametric memory have so far been only investigated for extractive downstream tasks. We explore a general-purpose ﬁne-tuning recipe for retrieval-augmented generation (RAG) — models which combine pre-trained parametric and non-parametric mem- ory for language generation. We introduce RAG models where the parametric memory is a pre-trained seq2seq model and the non-parametric memory is a dense vector index of Wikipedia, accessed with a pre-trained neural retriever."
+        }
+      ],
+      "review_status": "PROPOSED_MINIMAL_SET_REQUIRES_FINAL_REVIEW"
+    }
+  ]
+}

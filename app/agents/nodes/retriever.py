@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import logging
+import math
 import re
+import statistics
 import time
 
 import logfire
@@ -10,6 +12,10 @@ from app.agents.state import AgentState
 from app.evaluation.trace import append_trace_event
 from app.services.retrieval.qdrant_service import (
     search_enterprise_knowledge,
+)
+from app.services.retrieval.embedding import (
+    CANONICAL_EMBEDDING_DIMENSION,
+    CANONICAL_EMBEDDING_MODEL,
 )
 from app.services.retrieval.ranking_service import (
     rerank_documents,
@@ -23,8 +29,7 @@ logger = logging.getLogger(__name__)
 # ============================================================
 #
 # Dense candidate retrieval:
-#     Qdrant + BGE-small-en-v1.5 → 50 candidates
-#
+#     Qdrant + BGE-base-en-v1.5 → 50 candidates
 # Semantic reranking:
 #     FlashRank → scores all 50 candidates
 #
@@ -61,7 +66,7 @@ FINAL_CONTEXT_K = 5
 
 # Dense recovery is intentionally small and conservative.
 DENSE_RECOVERY_K = 20
-DENSE_RECOVERY_MIN_SCORE = 0.68
+DENSE_RECOVERY_MIN_SCORE = 0.64
 DENSE_RECOVERY_MIN_COVERAGE = 0.20
 
 # Normal FlashRank candidates must clear this threshold.
@@ -93,12 +98,56 @@ _TOKEN_PATTERN = re.compile(r"\b[a-zA-Z0-9][a-zA-Z0-9_-]*\b")
 
 
 _STOPWORDS = {
-    "the", "a", "an", "and", "or", "of", "to", "for", "in", "on",
-    "with", "by", "from", "is", "are", "was", "were", "be", "been",
-    "being", "how", "does", "do", "did", "what", "why", "which",
-    "who", "when", "where", "this", "that", "these", "those", "as",
-    "at", "it", "its", "can", "could", "would", "should", "into",
-    "than", "then", "through", "about", "over", "under", "using",
+    "the",
+    "a",
+    "an",
+    "and",
+    "or",
+    "of",
+    "to",
+    "for",
+    "in",
+    "on",
+    "with",
+    "by",
+    "from",
+    "is",
+    "are",
+    "was",
+    "were",
+    "be",
+    "been",
+    "being",
+    "how",
+    "does",
+    "do",
+    "did",
+    "what",
+    "why",
+    "which",
+    "who",
+    "when",
+    "where",
+    "this",
+    "that",
+    "these",
+    "those",
+    "as",
+    "at",
+    "it",
+    "its",
+    "can",
+    "could",
+    "would",
+    "should",
+    "into",
+    "than",
+    "then",
+    "through",
+    "about",
+    "over",
+    "under",
+    "using",
 }
 
 
@@ -366,7 +415,9 @@ def _select_complementary_evidence(
             continue
 
         recovery_document = dict(document)
-        recovery_document["_dense_recovery"] = True  # internal only; stripped before return
+        recovery_document["_dense_recovery"] = (
+            True  # internal only; stripped before return
+        )
         dense_recovery_candidates.append(recovery_document)
 
         logger.debug(
@@ -579,7 +630,7 @@ def retrieve_node(state: AgentState):
 
         Query
           ↓
-        BGE-small-en-v1.5
+        BGE-base-en-v1.5
           ↓
         Qdrant dense retrieval
         Top 50
@@ -615,8 +666,8 @@ def retrieve_node(state: AgentState):
         "🔍 Internal Knowledge Retrieval",
         query=query,
         candidate_k=DENSE_CANDIDATE_K,
-        embedding_model="BAAI/bge-small-en-v1.5",
-        embedding_dimension=384,
+        embedding_model=CANONICAL_EMBEDDING_MODEL,
+        embedding_dimension=CANONICAL_EMBEDDING_DIMENSION,
     ):
         try:
             raw_results = search_enterprise_knowledge(
@@ -640,7 +691,10 @@ def retrieve_node(state: AgentState):
         if raw_results:
             logger.info(
                 "Retriever dense scores | %s",
-                [round(float(document.get("score", 0.0)), 6) for document in raw_results],
+                [
+                    round(float(document.get("score", 0.0)), 6)
+                    for document in raw_results
+                ],
             )
         else:
             logger.warning(
@@ -688,6 +742,67 @@ def retrieve_node(state: AgentState):
     # ========================================================
     # FINAL EVIDENCE SELECTION
     # ========================================================
+
+    # Numeric-only diagnostics for evidence-selector calibration.
+    # Never log retrieved document contents or credentials.
+    dense_scores = [
+        _dense_score(document)
+        for document in reranked_candidates
+        if math.isfinite(_dense_score(document))
+    ]
+    rerank_scores = [
+        _rerank_score(document)
+        for document in reranked_candidates
+        if math.isfinite(_rerank_score(document))
+    ]
+
+    query_terms = _tokenize(query)
+    semantic_eligible = sum(
+        _rerank_score(document) >= MIN_SEMANTIC_SCORE
+        for document in reranked_candidates
+    )
+    dense_above_threshold = sum(
+        _dense_score(document) >= DENSE_RECOVERY_MIN_SCORE
+        for document in reranked_candidates
+    )
+    recovery_eligible = sum(
+        _dense_score(document) >= DENSE_RECOVERY_MIN_SCORE
+        and _rerank_score(document) < MIN_SEMANTIC_SCORE
+        and _query_coverage(
+            query_terms,
+            _tokenize(_content(document)),
+        )
+        >= DENSE_RECOVERY_MIN_COVERAGE
+        for document in reranked_candidates
+    )
+    missing_rerank_scores = sum(
+        document.get("rerank_score") is None for document in reranked_candidates
+    )
+
+    def _score_summary(values):
+        if not values:
+            return "n/a"
+        return (
+            f"min={min(values):.6f},"
+            f"median={statistics.median(values):.6f},"
+            f"max={max(values):.6f}"
+        )
+
+    logger.info(
+        "Retrieval score diagnostics | "
+        "raw=%d reranked=%d "
+        "dense[%s] dense_ge_threshold=%d "
+        "flashrank[%s] flashrank_ge_threshold=%d "
+        "recovery_eligible=%d missing_rerank_scores=%d",
+        len(raw_results),
+        len(reranked_candidates),
+        _score_summary(dense_scores),
+        dense_above_threshold,
+        _score_summary(rerank_scores),
+        semantic_eligible,
+        recovery_eligible,
+        missing_rerank_scores,
+    )
 
     selected_documents = _select_complementary_evidence(
         query=query,
@@ -745,16 +860,24 @@ def retrieve_node(state: AgentState):
             "id": str(document.get("id", "")),
             # Corpus identity
             "document_id": str(document.get("document_id", "")),
-            "chunk_id": int(document["chunk_id"]) if document.get("chunk_id") is not None else -1,
-            "total_chunks": int(document["total_chunks"]) if document.get("total_chunks") is not None else 0,
+            "chunk_id": int(document["chunk_id"])
+            if document.get("chunk_id") is not None
+            else -1,
+            "total_chunks": int(document["total_chunks"])
+            if document.get("total_chunks") is not None
+            else 0,
             # Content / source
             "content": str(document.get("content", "")),
             "source": str(document.get("source", "Unknown")),
             "source_type": str(document.get("source_type", "internal")),
             # Retrieval / semantic scores
-            "score": float(document["score"]) if document.get("score") is not None else 0.0,
+            "score": float(document["score"])
+            if document.get("score") is not None
+            else 0.0,
             "rerank_score": (
-                float(document["rerank_score"]) if document.get("rerank_score") is not None else None
+                float(document["rerank_score"])
+                if document.get("rerank_score") is not None
+                else None
             ),
             # Optional compatibility field
             "url": document.get("url"),

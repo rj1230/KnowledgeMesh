@@ -1,0 +1,357 @@
+{
+  "retrieval": {
+    "total_cases": 2,
+    "successful_cases": 0,
+    "failed_cases": 2,
+    "metrics": {
+      "retrieval_recall_at_5": null,
+      "retrieval_precision_at_5": null,
+      "retrieval_hit_at_5": null,
+      "retrieval_document_hit_at_5": null,
+      "retrieval_neighbor_hit_at_5": null,
+      "ndcg_at_5": null,
+      "reciprocal_rank": null,
+      "web_hit_at_5": null,
+      "web_reciprocal_rank": null,
+      "web_domain_precision_at_5": null,
+      "answer_relevancy": null,
+      "runtime_answer_usefulness_rate": null,
+      "runtime_answer_usefulness_score": null,
+      "answer_point_coverage": null,
+      "citation_precision": null,
+      "citation_recall": null,
+      "grounding_score": null,
+      "unsupported_claim_rate": null,
+      "retrieved_unknown_id_rate": null,
+      "routing_accuracy": null,
+      "web_decision_accuracy": null,
+      "web_use_recall": null,
+      "unnecessary_web_rate": null,
+      "correct_abstention_rate": null,
+      "false_abstention_rate": null,
+      "final_gate_pass_rate": null
+    },
+    "metrics_n": {
+      "retrieval_recall_at_5": 0,
+      "retrieval_precision_at_5": 0,
+      "retrieval_hit_at_5": 0,
+      "retrieval_document_hit_at_5": 0,
+      "retrieval_neighbor_hit_at_5": 0,
+      "ndcg_at_5": 0,
+      "reciprocal_rank": 0,
+      "web_hit_at_5": 0,
+      "web_reciprocal_rank": 0,
+      "web_domain_precision_at_5": 0,
+      "answer_relevancy": 0,
+      "runtime_answer_usefulness_rate": 0,
+      "runtime_answer_usefulness_score": 0,
+      "answer_point_coverage": 0,
+      "citation_precision": 0,
+      "citation_recall": 0,
+      "grounding_score": 0,
+      "unsupported_claim_rate": 0,
+      "retrieved_unknown_id_rate": 0,
+      "routing_accuracy": 0,
+      "web_decision_accuracy": 0,
+      "web_use_recall": 0,
+      "unnecessary_web_rate": 0,
+      "correct_abstention_rate": 0,
+      "false_abstention_rate": 0,
+      "final_gate_pass_rate": 0
+    },
+    "quality_gate": {
+      "passed": false,
+      "checks": {
+        "retrieval_recall_at_5": {
+          "value": null,
+          "threshold": 0.7,
+          "passed": true,
+          "skipped": true
+        },
+        "answer_relevancy": {
+          "value": null,
+          "threshold": 0.7,
+          "passed": true,
+          "skipped": true
+        },
+        "grounding_score": {
+          "value": 0.0,
+          "threshold": 0.9,
+          "passed": false
+        },
+        "citation_precision": {
+          "value": null,
+          "threshold": 0.9,
+          "passed": true,
+          "skipped": true
+        },
+        "final_gate_pass_rate": {
+          "value": null,
+          "threshold": 0.9,
+          "passed": true,
+          "skipped": true
+        },
+        "unsupported_claim_rate": {
+          "value": 1.0,
+          "threshold": 0.1,
+          "passed": false
+        },
+        "web_decision_accuracy": {
+          "value": null,
+          "threshold": 0.8,
+          "passed": true,
+          "skipped": true
+        },
+        "correct_abstention_rate": {
+          "value": null,
+          "threshold": 0.8,
+          "passed": true,
+          "skipped": true
+        },
+        "false_abstention_rate": {
+          "value": null,
+          "threshold": 0.1,
+          "passed": true,
+          "skipped": true
+        },
+        "attack_success_rate": {
+          "value": null,
+          "threshold": 0.0,
+          "passed": true,
+          "skipped": true
+        },
+        "leaked_sensitive_content": {
+          "value": null,
+          "threshold": 0.0,
+          "passed": true,
+          "skipped": true
+        },
+        "false_refusal": {
+          "value": null,
+          "threshold": 0.2,
+          "passed": true,
+          "skipped": true
+        },
+        "safety_correct": {
+          "value": null,
+          "threshold": 0.9,
+          "passed": true,
+          "skipped": true
+        }
+      }
+    },
+    "cases": [
+      {
+        "case_id": "gp001",
+        "category": "golden",
+        "question": "What is retrieval-augmented generation and what two types of memory does it combine?",
+        "answer": "",
+        "metrics": {
+          "retrieval_recall_at_5": 0.0,
+          "retrieval_precision_at_5": 0.0,
+          "retrieval_hit_at_5": 0.0,
+          "retrieval_document_hit_at_5": 0.0,
+          "retrieval_neighbor_hit_at_5": 0.0,
+          "ndcg_at_5": 0.0,
+          "reciprocal_rank": 0.0,
+          "web_hit_at_5": null,
+          "web_reciprocal_rank": null,
+          "web_domain_precision_at_5": null,
+          "routing_accuracy": 0.0,
+          "web_decision_accuracy": 1.0,
+          "web_use_recall": null,
+          "unnecessary_web_rate": 0.0,
+          "correct_abstention_rate": null,
+          "false_abstention_rate": 0.0,
+          "answer_relevancy": 0.0,
+          "runtime_answer_usefulness_rate": null,
+          "runtime_answer_usefulness_score": null,
+          "answer_point_coverage": 0.0,
+          "citation_precision": 0.0,
+          "citation_recall": 1.0,
+          "grounding_score": null,
+          "unsupported_claim_rate": null,
+          "retrieved_unknown_id_rate": 0.0
+        },
+        "retrieval": {
+          "retrieved_ids": [],
+          "reranked_ids": [],
+          "relevant_ids": [
+            "8f25ec73a5dcfeca772c16ff::0",
+            "8f25ec73a5dcfeca772c16ff::1"
+          ],
+          "web_urls": [],
+          "expected_urls": [],
+          "expected_domains": [],
+          "first_relevant_rank": null,
+          "expected_route": "private",
+          "actual_route": "none",
+          "abstained": false,
+          "relevant_labels": [
+            "RAG.pdf#0",
+            "RAG.pdf#1"
+          ],
+          "retrieved_labels": [],
+          "unknown_retrieved_ids": []
+        },
+        "citations": {
+          "cited_ids": [],
+          "supported_ids": [],
+          "required_ids": []
+        },
+        "self_rag": {
+          "revision_count": 0,
+          "total_claims": null,
+          "unsupported_claims": null,
+          "final_gate_passed": false
+        },
+        "latency_ms": 71357.91440000321,
+        "error": "ReadError: [WinError 10054] An existing connection was forcibly closed by the remote host"
+      },
+      {
+        "case_id": "gp002",
+        "category": "golden",
+        "question": "What are the main components of an LLM-based agent according to the survey?",
+        "answer": "",
+        "metrics": {
+          "retrieval_recall_at_5": 0.0,
+          "retrieval_precision_at_5": 0.0,
+          "retrieval_hit_at_5": 0.0,
+          "retrieval_document_hit_at_5": 0.0,
+          "retrieval_neighbor_hit_at_5": 0.0,
+          "ndcg_at_5": 0.0,
+          "reciprocal_rank": 0.0,
+          "web_hit_at_5": null,
+          "web_reciprocal_rank": null,
+          "web_domain_precision_at_5": null,
+          "routing_accuracy": 0.0,
+          "web_decision_accuracy": 1.0,
+          "web_use_recall": null,
+          "unnecessary_web_rate": 0.0,
+          "correct_abstention_rate": null,
+          "false_abstention_rate": 0.0,
+          "answer_relevancy": 0.0,
+          "runtime_answer_usefulness_rate": null,
+          "runtime_answer_usefulness_score": null,
+          "answer_point_coverage": 0.0,
+          "citation_precision": 0.0,
+          "citation_recall": 1.0,
+          "grounding_score": null,
+          "unsupported_claim_rate": null,
+          "retrieved_unknown_id_rate": 0.0
+        },
+        "retrieval": {
+          "retrieved_ids": [],
+          "reranked_ids": [],
+          "relevant_ids": [
+            "e65504ab611fa43ac5013829::11"
+          ],
+          "web_urls": [],
+          "expected_urls": [],
+          "expected_domains": [],
+          "first_relevant_rank": null,
+          "expected_route": "private",
+          "actual_route": "none",
+          "abstained": false,
+          "relevant_labels": [
+            "LLM Based-learning.pdf#11"
+          ],
+          "retrieved_labels": [],
+          "unknown_retrieved_ids": []
+        },
+        "citations": {
+          "cited_ids": [],
+          "supported_ids": [],
+          "required_ids": []
+        },
+        "self_rag": {
+          "revision_count": 0,
+          "total_claims": null,
+          "unsupported_claims": null,
+          "final_gate_passed": false
+        },
+        "latency_ms": 2054.648699999234,
+        "error": "ConnectError: [WinError 10061] No connection could be made because the target machine actively refused it"
+      }
+    ],
+    "latency": {
+      "average_ms": 0.0,
+      "p50_ms": 0.0,
+      "p95_ms": 0.0,
+      "p99_ms": 0.0,
+      "max_ms": 0.0
+    },
+    "errors": [
+      {
+        "case_id": "gp001",
+        "error": "ReadError: [WinError 10054] An existing connection was forcibly closed by the remote host"
+      },
+      {
+        "case_id": "gp002",
+        "error": "ConnectError: [WinError 10061] No connection could be made because the target machine actively refused it"
+      }
+    ],
+    "metadata": {
+      "api_base_url": "http://127.0.0.1:8000",
+      "dataset": "C:\\Users\\HP\\OneDrive\\Desktop\\KnowledgeMesh\\evals\\datasets\\golden_questions_migrated_candidate_20261018.json",
+      "case_count": 2,
+      "private_identity": "document_id::chunk_id",
+      "web_identity": "normalized URL / domain",
+      "inventory": {
+        "source": "evals\\results\\current_chunk_inventory_candidate.csv",
+        "n_chunks": 1101,
+        "n_documents": 12,
+        "chunks_per_document": {
+          "5-Level Paging and 5-Level EPT - Intel - Revision 1.0 (December, 2016).pdf": 49,
+          "A Block-sorting Lossless Data Compression Algorithm - May 10th, 1994 (SRC-RR-124).pdf": 37,
+          "A Case Study in Optimizing HTM-Enabled Dynamic Data Structures - Patricia Tries (2015).pdf": 34,
+          "A Comparison of Programming Languages in Economics (16-Jun-2014).pdf": 29,
+          "A Comparison of Software and Hardware Techniques for x86 Virtualization - Oct 2015 (asplos235_adams).pdf": 55,
+          "Attention.pdf": 37,
+          "LLM Based-learning.pdf": 288,
+          "LLM.pdf": 198,
+          "RAG.pdf": 55,
+          "Training Llm.pdf": 155,
+          "harness.pdf": 109,
+          "loop.pdf": 55
+        },
+        "issues": []
+      },
+      "dataset_audit": {
+        "total_cases": 11,
+        "unknown_gold": {},
+        "cases_without_gold": [],
+        "cases_per_document": {
+          "Attention.pdf": 2,
+          "LLM Based-learning.pdf": 3,
+          "LLM.pdf": 1,
+          "RAG.pdf": 2,
+          "Training Llm.pdf": 1,
+          "harness.pdf": 1,
+          "loop.pdf": 1
+        },
+        "documents_without_cases": [
+          "5-Level Paging and 5-Level EPT - Intel - Revision 1.0 (December, 2016).pdf",
+          "A Block-sorting Lossless Data Compression Algorithm - May 10th, 1994 (SRC-RR-124).pdf",
+          "A Case Study in Optimizing HTM-Enabled Dynamic Data Structures - Patricia Tries (2015).pdf",
+          "A Comparison of Programming Languages in Economics (16-Jun-2014).pdf",
+          "A Comparison of Software and Hardware Techniques for x86 Virtualization - Oct 2015 (asplos235_adams).pdf"
+        ],
+        "gold_chunk_coverage": 0.013623978201634877,
+        "route_counts": {
+          "private": 11
+        },
+        "unrecognized_routes": {},
+        "ok": true
+      },
+      "evaluation_runtime_ms": 73417.66460000144
+    },
+    "by_document": {},
+    "by_route": {}
+  },
+  "unanswerable": null,
+  "adversarial": null,
+  "metadata": {
+    "api_base_url": "http://127.0.0.1:8000"
+  }
+}

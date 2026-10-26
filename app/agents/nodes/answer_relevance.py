@@ -3,12 +3,19 @@ from __future__ import annotations
 import json
 import logging
 import re
+from time import perf_counter
 from typing import Any, Dict
 
 from app.gateway.client import LLMGatewayError, create_chat_completion
 from app.evaluation.trace import append_trace_event
 
 logger = logging.getLogger(__name__)
+
+# One retry for transient gateway errors or malformed JSON. Relevance is
+# now the first validation gate, so a single blip would otherwise abstain
+# before grounding even runs. The retry only costs time when something
+# actually failed.
+RELEVANCE_EVALUATOR_ATTEMPTS = 2
 
 
 def _extract_json(text: str) -> Dict[str, Any]:
@@ -95,7 +102,10 @@ Important:
   procedure, or question asked by the user.
 - If the answer discusses a related but different subject, mark it NOT useful.
 - Use the original user question exactly as the evaluation target.
-
+- An answer that clearly states what the sources cover and what they do not,
+  while still giving substantive content for the parts they do cover, is
+  useful. Do not mark it not useful only because the sources lack a requested
+  judgment such as a recommendation or ranking.
 Return ONLY valid JSON with this exact structure:
 
 {{
@@ -139,22 +149,64 @@ ANSWER:
     }
 
 
+def _evaluate_with_retry(
+    *,
+    question: str,
+    answer: str,
+    attempts: int = RELEVANCE_EVALUATOR_ATTEMPTS,
+) -> Dict[str, Any]:
+    """
+    Run the relevance evaluator, retrying transient failures.
+
+    Retries gateway errors and unparseable output (JSONDecodeError is a
+    ValueError). The last failure is re-raised so the node can mark the
+    evaluator as failed.
+    """
+
+    last_exc: Exception | None = None
+
+    for attempt in range(1, max(1, attempts) + 1):
+        try:
+            return _evaluate_answer_relevance(
+                question=question,
+                answer=answer,
+            )
+        except (LLMGatewayError, ValueError) as exc:
+            last_exc = exc
+
+            if attempt < attempts:
+                logger.warning(
+                    "Relevance evaluator attempt %s/%s failed (%s); retrying.",
+                    attempt,
+                    attempts,
+                    type(exc).__name__,
+                )
+
+    assert last_exc is not None
+    raise last_exc
+
+
 def answer_relevance_node(
     state: Dict[str, Any],
 ) -> Dict[str, Any]:
     """
     Validate that the final answer actually answers the original question.
 
+    Pipeline position: runs AFTER citation_check and BEFORE
+    grounding_critic. It reads only the question and the answer text, so
+    it does not depend on any grounding output.
+
     The evaluator fails closed: if the evaluator itself cannot run,
     answer_useful is False and the trajectory cannot be considered
     successful.
+
+    `relevance_evaluator_failed` distinguishes "the evaluator could not
+    run" (infrastructure problem; retrieving again cannot help) from "the
+    evaluator ran and judged the answer irrelevant" (a broader retrieval
+    may help). The router uses it to abstain without a re-retrieval.
     """
 
-    question = str(
-        state.get("original_query")
-        or state.get("message")
-        or ""
-    ).strip()
+    question = str(state.get("original_query") or state.get("message") or "").strip()
 
     answer = str(
         state.get("final_answer")
@@ -177,6 +229,7 @@ def answer_relevance_node(
             **trace_update,
             "answer_useful": False,
             "usefulness_score": 0.0,
+            "relevance_evaluator_failed": False,
             "status": "Answer relevance evaluation failed: missing question.",
         }
 
@@ -194,15 +247,18 @@ def answer_relevance_node(
             **trace_update,
             "answer_useful": False,
             "usefulness_score": 0.0,
+            "relevance_evaluator_failed": False,
             "status": "Answer relevance evaluation failed: empty answer.",
         }
 
     try:
-        result = _evaluate_answer_relevance(
+        relevance_started = perf_counter()
+        result = _evaluate_with_retry(
             question=question,
             answer=answer,
         )
 
+        relevance_ms = round((perf_counter() - relevance_started) * 1000, 2)
     except LLMGatewayError as exc:
         logger.exception("Answer relevance evaluator gateway failure.")
 
@@ -220,6 +276,7 @@ def answer_relevance_node(
             **trace_update,
             "answer_useful": False,
             "usefulness_score": 0.0,
+            "relevance_evaluator_failed": True,
             "status": (
                 "Answer relevance evaluation failed because "
                 "the LLM gateway was unavailable."
@@ -243,9 +300,8 @@ def answer_relevance_node(
             **trace_update,
             "answer_useful": False,
             "usefulness_score": 0.0,
-            "status": (
-                "Answer relevance evaluation failed unexpectedly."
-            ),
+            "relevance_evaluator_failed": True,
+            "status": ("Answer relevance evaluation failed unexpectedly."),
         }
 
     useful = bool(result["useful"])
@@ -259,12 +315,14 @@ def answer_relevance_node(
         answer_useful=useful,
         usefulness_score=score,
         reason=reason,
+        relevance_ms=relevance_ms,
     )
 
     return {
         **trace_update,
         "answer_useful": useful,
         "usefulness_score": score,
+        "relevance_evaluator_failed": False,
         "status": (
             "Answer relevance validation passed."
             if useful
@@ -276,32 +334,72 @@ def answer_relevance_node(
 def answer_abstention_node(
     state: Dict[str, Any],
 ) -> Dict[str, Any]:
-    """Replace an answer that cannot pass validation with a safe abstention."""
+    """
+    Replace an answer that cannot pass validation with a safe abstention.
 
-    if state.get("citation_valid") is False:
-        reason = "citation_validation_revision_budget_exhausted"
+    This node records THAT an abstention happened and WHY. It deliberately
+    does not rewrite citation_valid / is_grounded / answer_supported /
+    support_score / answer_useful. Those describe the last answer that was
+    actually evaluated, and overwriting them made a single failure look
+    like a citation failure, a grounding failure and zero support at once.
+
+    The reason is chosen in PIPELINE ORDER: generation, named-document
+    scope, relevance evaluator, citation, relevance, grounding. Relevance
+    runs before grounding, so a relevance failure must be recognised before
+    the (not yet evaluated, or reset) grounding flags are consulted.
+
+    Consumers must check `answer_abstained` before presenting or scoring
+    the answer.
+    """
+
+    if bool(state.get("generation_failed", False)):
+        reason = "generation_failed_during_revision"
         status_message = (
-            "Final answer abstained because citation validation failed."
+            "Final answer abstained because the revision could not be "
+            "generated and the previous answer had failed validation."
         )
     elif (
-        state.get("is_grounded") is False
-        or state.get("grounding_valid") is False
-        or state.get("answer_supported") is False
+        bool(state.get("document_scoped"))
+        and not str(state.get("candidate_answer") or "").strip()
     ):
-        reason = "grounding_validation_revision_budget_exhausted"
+        # The question named a document, retrieval found nothing in it, and
+        # the web fallback was deliberately skipped. No answer was ever
+        # generated, so no validation stage failed.
+        reason = "named_document_has_no_evidence"
         status_message = (
-            "Final answer abstained because grounding validation failed."
+            "Final answer abstained because the document named in the "
+            "question has no supporting evidence."
         )
-    else:
+    elif bool(state.get("relevance_evaluator_failed", False)):
+        reason = "answer_relevance_evaluator_unavailable"
+        status_message = (
+            "Final answer abstained because the relevance evaluator was unavailable."
+        )
+    elif state.get("citation_valid") is False:
+        reason = "citation_validation_revision_budget_exhausted"
+        status_message = "Final answer abstained because citation validation failed."
+    elif not bool(state.get("answer_useful", False)):
+        # Relevance is evaluated before grounding, so an answer that was
+        # judged off-topic never reached the grounding critic.
         reason = "answer_relevance_revision_budget_exhausted"
         status_message = (
             "Final answer abstained because relevance could not be recovered."
         )
+    else:
+        # Passed citation and relevance, so grounding is what failed.
+        reason = "grounding_validation_revision_budget_exhausted"
+        status_message = "Final answer abstained because grounding validation failed."
 
-    abstention = (
-        "I couldn't find evidence in the available sources that "
-        "establishes an answer to your specific question."
-    )
+    if reason == "named_document_has_no_evidence":
+        abstention = (
+            "The document you referred to does not contain an answer to this "
+            "question, and I did not substitute other sources."
+        )
+    else:
+        abstention = (
+            "I couldn't find evidence in the available sources that "
+            "establishes an answer to your specific question."
+        )
 
     trace_update = append_trace_event(
         state,
@@ -314,12 +412,14 @@ def answer_abstention_node(
         **trace_update,
         "final_answer": abstention,
         "candidate_answer": abstention,
-        "answer_useful": False,
-        "usefulness_score": 0.0,
-        "answer_supported": False,
-        "is_grounded": False,
-        "grounding_valid": False,
-        "citation_valid": False,
-        "support_score": 0.0,
+        # Single source of truth for "this response is an abstention".
+        "answer_abstained": True,
+        "abstention_reason": reason,
+        # Do not let stale revision state leak out of a terminal node.
+        "revision_requested": False,
+        "revision_prompt": "",
+        # Terminal abstention supersedes feedback from earlier attempts.
+        "grounding_feedback": [],
+        "citation_feedback": "",
         "status": status_message,
     }

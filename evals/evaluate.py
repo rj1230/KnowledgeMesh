@@ -83,10 +83,10 @@ ROOT_DIR = Path(__file__).resolve().parents[1]
 
 DEFAULT_DATASET = ROOT_DIR / "evals" / "datasets" / "golden_questions.json"
 
-DEFAULT_ADVERSARIAL_DATASET = ROOT_DIR / "evals" / "datasets" / "adversarial_cases.json"
+DEFAULT_ADVERSARIAL_DATASET = ROOT_DIR / "evals" / "datasets" / "adversarial_questions.json"
 
 DEFAULT_UNANSWERABLE_DATASET = (
-    ROOT_DIR / "evals" / "datasets" / "unanswerable_questions.json"
+    ROOT_DIR / "evals" / "datasets" / "unsupported_questions.json"
 )
 
 DEFAULT_INVENTORY = ROOT_DIR / "evals" / "datasets" / "true_chunk_inventory.csv"
@@ -263,11 +263,12 @@ def load_dataset(
         expected_route = item.get("expected_route")
 
         if expected_route is not None:
-            expected_route = str(expected_route).strip()
+            original_route = str(expected_route).strip()
+            expected_route = normalize_route(original_route)
 
-            if normalize_route(expected_route) is None:
+            if expected_route is None:
                 raise ValueError(
-                    f"{where}: unrecognized expected_route {expected_route!r}; "
+                    f"{where}: unrecognized expected_route {original_route!r}; "
                     "use private, web, both, or abstain"
                 )
 
@@ -609,6 +610,100 @@ def _extract_web_urls(response: dict[str, Any]) -> list[str]:
     return list(dict.fromkeys(u for u in urls if u))
 
 
+def _get_trace_events(response: dict[str, Any]) -> list[dict[str, Any]]:
+    """Return valid events from supported top-level or nested API trace fields."""
+    candidates = [
+        response.get("trace"),
+        response.get("evaluation_trace"),
+    ]
+
+    trajectory = response.get("trajectory")
+    if isinstance(trajectory, dict):
+        candidates.append(trajectory.get("trace"))
+
+    for trace in candidates:
+        if not isinstance(trace, list):
+            continue
+
+        events = [event for event in trace if isinstance(event, dict)]
+        if events:
+            return events
+
+    return []
+
+
+def _find_trace_event(
+    response: dict[str, Any], step: str
+) -> dict[str, Any] | None:
+    """Find the most recent event for a named graph step."""
+    return next(
+        (
+            event
+            for event in reversed(_get_trace_events(response))
+            if event.get("step") == step
+        ),
+        None,
+    )
+
+
+def _extract_private_retrieval_attempted(
+    response: dict[str, Any],
+) -> bool | None:
+    """Whether the private retrieval node executed; None means unknown."""
+    event = _find_trace_event(response, "private_retrieval")
+    if event is not None:
+        return True
+
+    explicit = response.get("private_retrieval_attempted")
+    if isinstance(explicit, bool):
+        return explicit
+
+    return None
+
+
+def _extract_web_search_node_executed(
+    response: dict[str, Any],
+) -> bool | None:
+    """Whether the web-search graph node executed; None means unknown."""
+    event = _find_trace_event(response, "web_search")
+    if event is not None:
+        return True
+
+    explicit = response.get("web_search_node_executed")
+    if isinstance(explicit, bool):
+        return explicit
+
+    return None
+
+
+def _extract_web_search_attempted(
+    response: dict[str, Any],
+) -> bool | None:
+    """Whether the trace indicates a provider search was attempted."""
+    event = _find_trace_event(response, "web_search")
+    if event is not None:
+        details = event.get("details")
+        if not isinstance(details, dict):
+            details = {}
+
+        # An empty query executes the graph node but skips provider search.
+        if event.get("status") == "empty_query":
+            return False
+
+        attempted = details.get("attempted")
+        if isinstance(attempted, bool):
+            return attempted
+
+        # Older trace events may not include the attempted detail.
+        return None
+
+    explicit = response.get("web_search_attempted")
+    if isinstance(explicit, bool):
+        return explicit
+
+    return None
+
+
 def _extract_used_private(response: dict[str, Any], retrieved_ids: list[str]) -> bool:
     """
     Whether the agent actually queried the private KB this turn.
@@ -757,23 +852,35 @@ def _extract_supported_chunk_ids(response: dict[str, Any]) -> list[str]:
     return list(dict.fromkeys(ids))
 
 
-def _count_claims(response: dict[str, Any]) -> int:
+def _count_claims(response: dict[str, Any]) -> int | None:
     claims = response.get("claims")
+    if isinstance(claims, list):
+        return len(claims)
 
-    return len(claims) if isinstance(claims, list) else 0
+    scores = response.get("grounding_scores")
+    if isinstance(scores, list):
+        return len(scores)
+
+    if "total_claims" in response:
+        return _safe_int(response.get("total_claims"), 0)
+
+    return None
 
 
-def _count_unsupported_claims(response: dict[str, Any]) -> int:
-    grounding_scores = response.get("grounding_scores")
+def _count_unsupported_claims(
+    response: dict[str, Any],
+) -> int | None:
+    scores = response.get("grounding_scores")
+    if isinstance(scores, list):
+        return sum(
+            1 for item in scores
+            if isinstance(item, dict) and item.get("supported") is False
+        )
 
-    if not isinstance(grounding_scores, list):
-        return 0
+    if "unsupported_claims" in response:
+        return _safe_int(response.get("unsupported_claims"), 0)
 
-    return sum(
-        1
-        for item in grounding_scores
-        if isinstance(item, dict) and item.get("supported") is False
-    )
+    return None
 
 
 # ============================================================
@@ -796,6 +903,20 @@ def normalize_api_response(response: dict[str, Any]) -> dict[str, Any]:
     total_claims = _count_claims(response)
     unsupported_claims = _count_unsupported_claims(response)
 
+    answer_useful = response.get("answer_useful")
+    if not isinstance(answer_useful, bool):
+        answer_useful = None
+
+    usefulness_score = response.get("usefulness_score")
+    if (
+        isinstance(usefulness_score, bool)
+        or not isinstance(usefulness_score, (int, float))
+        or not 0.0 <= usefulness_score <= 1.0
+    ):
+        usefulness_score = None
+    else:
+        usefulness_score = float(usefulness_score)
+
     validation_passed = response.get("validation_passed")
 
     if validation_passed is None:
@@ -811,12 +932,17 @@ def normalize_api_response(response: dict[str, Any]) -> dict[str, Any]:
         "web_urls": web_urls,
         "used_private": _extract_used_private(response, retrieved_ids),
         "used_web": _extract_used_web(response, web_urls),
+        "private_retrieval_attempted": _extract_private_retrieval_attempted(response),
+        "web_search_node_executed": _extract_web_search_node_executed(response),
+        "web_search_attempted": _extract_web_search_attempted(response),
         "abstained": _extract_abstained(response, answer),
         "refused": _extract_refused(response, answer),
         "cited_ids": _extract_cited_chunk_ids(response),
         "supported_citation_ids": _extract_supported_chunk_ids(response),
         "total_claims": total_claims,
         "unsupported_claims": unsupported_claims,
+        "runtime_answer_useful": answer_useful,
+        "runtime_answer_usefulness_score": usefulness_score,
         "revision_count": _safe_int(response.get("revision_count"), 0),
         "final_gate_passed": bool(validation_passed),
         "latency_ms": _safe_float(response.get("latency_ms"), 0.0),
@@ -1332,7 +1458,11 @@ def main() -> int:
             audit = audit_dataset(retrieval_cases, inventory)
             print_dataset_audit(audit)
 
-            if not audit.ok and not args.allow_unknown_gold:
+            if (
+                audit.unrecognized_routes
+                or audit.cases_without_gold
+                or (audit.unknown_gold and not args.allow_unknown_gold)
+            ):
                 print(
                     "Aborting: fix the private gold chunks above, or pass --allow-unknown-gold to score them as misses."
                 )
@@ -1345,10 +1475,9 @@ def main() -> int:
     if run_adversarial:
         adversarial_path = args.adversarial_dataset or DEFAULT_ADVERSARIAL_DATASET
 
-        if args.adversarial_dataset is None and not adversarial_path.exists():
-            print(f"Adversarial: not found at {adversarial_path}; skipping this suite.")
-            print()
-            run_adversarial = False
+        if not adversarial_path.exists():
+            print(f"ERROR: Adversarial dataset not found: {adversarial_path}")
+            return 2
         else:
             try:
                 adversarial_cases = load_adversarial_dataset(adversarial_path)
@@ -1379,12 +1508,9 @@ def main() -> int:
     if run_unanswerable:
         unanswerable_path = args.unanswerable_dataset or DEFAULT_UNANSWERABLE_DATASET
 
-        if args.unanswerable_dataset is None and not unanswerable_path.exists():
-            print(
-                f"Unanswerable: not found at {unanswerable_path}; skipping this suite."
-            )
-            print()
-            run_unanswerable = False
+        if not unanswerable_path.exists():
+            print(f"ERROR: Unanswerable dataset not found: {unanswerable_path}")
+            return 2
         else:
             try:
                 unanswerable_cases = load_unanswerable_dataset(unanswerable_path)
@@ -1408,7 +1534,14 @@ def main() -> int:
         return 2
 
     if args.validate_only:
-        retrieval_ok = audit is None or audit.ok
+        retrieval_ok = (
+            audit is None
+            or (
+                not audit.unrecognized_routes
+                and not audit.cases_without_gold
+                and (not audit.unknown_gold or args.allow_unknown_gold)
+            )
+        )
         print(
             "Validation passed." if retrieval_ok else "Validation finished with errors."
         )

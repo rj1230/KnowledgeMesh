@@ -1,0 +1,347 @@
+{
+  "artifact_type": "inventory70_semantic_review_decisions",
+  "created_for": "separate provisional review; not benchmark labels",
+  "original_dataset": "evals\\datasets\\inventory_retrieval_probes_70.json",
+  "original_probe_count": 70,
+  "reviewed_candidate_count": 13,
+  "unreviewed_probe_count": 57,
+  "benchmark_ready": false,
+  "semantic_approval_complete": false,
+  "decisions": [
+    {
+      "probe_id": "inv_harness_003",
+      "question": "What kinds of information does the paper suggest searching for when researching coding-agent techniques and implementations?",
+      "source_filename": "harness.pdf",
+      "proposed_live_document_id": "7b7add4488da35c33e99474d",
+      "proposed_live_chunk_ids": [
+        68,
+        69
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "7b7add4488da35c33e99474d",
+          "chunk_id": 68,
+          "point_id": "b3982929-1595-54a9-b74f-8394f31235a2",
+          "source": "harness.pdf"
+        },
+        {
+          "document_id": "7b7add4488da35c33e99474d",
+          "chunk_id": 69,
+          "point_id": "e67df65b-c940-531e-a461-ea881e6c5bd1",
+          "source": "harness.pdf"
+        }
+      ],
+      "reference_verification_status": "LIVE_REFERENCES_RESOLVED",
+      "reference_issues": [],
+      "semantic_review_status": "PROVISIONAL_REQUIRES_FINAL_APPROVAL",
+      "semantic_approval": false,
+      "rationale": "Use both adjacent chunks: chunk 68 begins the research-target list and chunk 69 continues it with ablations, implementation specifics, failure analysis, and citations."
+    },
+    {
+      "probe_id": "inv_harness_004",
+      "question": "How does the paper describe the effect of encoding recurring coordination patterns into tools, middleware, and memory?",
+      "source_filename": "harness.pdf",
+      "proposed_live_document_id": "7b7add4488da35c33e99474d",
+      "proposed_live_chunk_ids": [
+        108
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "7b7add4488da35c33e99474d",
+          "chunk_id": 108,
+          "point_id": "b9559456-0ffa-5300-8bf3-df30cb186512",
+          "source": "harness.pdf"
+        }
+      ],
+      "reference_verification_status": "LIVE_REFERENCES_RESOLVED",
+      "reference_issues": [],
+      "semantic_review_status": "PROVISIONAL_REQUIRES_FINAL_APPROVAL",
+      "semantic_approval": false,
+      "rationale": "Provisional candidate retained for semantic review against the full original question and live source text."
+    },
+    {
+      "probe_id": "inv_harness_005",
+      "question": "What three observability pillars are used to drive the Agentic Harness Engineering closed loop?",
+      "source_filename": "harness.pdf",
+      "proposed_live_document_id": "7b7add4488da35c33e99474d",
+      "proposed_live_chunk_ids": [
+        5
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "7b7add4488da35c33e99474d",
+          "chunk_id": 5,
+          "point_id": "0419dae4-fc17-5c32-ac58-864b12480196",
+          "source": "harness.pdf"
+        }
+      ],
+      "reference_verification_status": "LIVE_REFERENCES_RESOLVED",
+      "reference_issues": [],
+      "semantic_review_status": "PROVISIONAL_REQUIRES_FINAL_APPROVAL",
+      "semantic_approval": false,
+      "rationale": "Provisional candidate retained for semantic review against the full original question and live source text."
+    },
+    {
+      "probe_id": "inv_harness_006",
+      "question": "What framework is used to instantiate the editable harness substrate, and what does the substrate expose as explicit files?",
+      "source_filename": "harness.pdf",
+      "proposed_live_document_id": "7b7add4488da35c33e99474d",
+      "proposed_live_chunk_ids": [
+        10
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "7b7add4488da35c33e99474d",
+          "chunk_id": 10,
+          "point_id": "a9163479-a2be-560f-8237-dccc94dcc299",
+          "source": "harness.pdf"
+        }
+      ],
+      "reference_verification_status": "LIVE_REFERENCES_RESOLVED",
+      "reference_issues": [],
+      "semantic_review_status": "PROVISIONAL_REQUIRES_FINAL_APPROVAL",
+      "semantic_approval": false,
+      "rationale": "Provisional candidate retained for semantic review against the full original question and live source text."
+    },
+    {
+      "probe_id": "inv_harness_007",
+      "question": "How are failures counted for pass@1 in the Terminal-Bench evaluation, and what runtime components are described as infrastructure?",
+      "source_filename": "harness.pdf",
+      "proposed_live_document_id": "7b7add4488da35c33e99474d",
+      "proposed_live_chunk_ids": [
+        45,
+        17
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "7b7add4488da35c33e99474d",
+          "chunk_id": 45,
+          "point_id": "44be359d-a720-5ef5-b093-1e7d092d6fb1",
+          "source": "harness.pdf"
+        },
+        {
+          "document_id": "7b7add4488da35c33e99474d",
+          "chunk_id": 17,
+          "point_id": "53c448a7-eb7f-5ebb-9675-c4331a321e79",
+          "source": "harness.pdf"
+        }
+      ],
+      "reference_verification_status": "LIVE_REFERENCES_RESOLVED",
+      "reference_issues": [],
+      "semantic_review_status": "PROVISIONAL_REQUIRES_FINAL_APPROVAL",
+      "semantic_approval": false,
+      "rationale": "Provisional candidate retained for semantic review against the full original question and live source text."
+    },
+    {
+      "probe_id": "inv_harness_008",
+      "question": "What does the AHE evaluation report about the generality of its gains across different providers or reasoning depths?",
+      "source_filename": "harness.pdf",
+      "proposed_live_document_id": "7b7add4488da35c33e99474d",
+      "proposed_live_chunk_ids": [
+        22
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "7b7add4488da35c33e99474d",
+          "chunk_id": 22,
+          "point_id": "986a3756-2b7c-5ed9-8dce-8daa5e93db25",
+          "source": "harness.pdf"
+        }
+      ],
+      "reference_verification_status": "LIVE_REFERENCES_RESOLVED",
+      "reference_issues": [],
+      "semantic_review_status": "PROVISIONAL_REQUIRES_FINAL_APPROVAL",
+      "semantic_approval": false,
+      "rationale": "Provisional candidate retained for semantic review against the full original question and live source text."
+    },
+    {
+      "probe_id": "inv_harness_009",
+      "question": "What governance mechanisms does AHE use to bound self-modification and roll back ineffective edits?",
+      "source_filename": "harness.pdf",
+      "proposed_live_document_id": "7b7add4488da35c33e99474d",
+      "proposed_live_chunk_ids": [
+        14,
+        27
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "7b7add4488da35c33e99474d",
+          "chunk_id": 14,
+          "point_id": "480c9491-e5d7-534c-a87a-fba4188d5e64",
+          "source": "harness.pdf"
+        },
+        {
+          "document_id": "7b7add4488da35c33e99474d",
+          "chunk_id": 27,
+          "point_id": "40e42236-358a-5e75-9a4f-6e29385790ff",
+          "source": "harness.pdf"
+        }
+      ],
+      "reference_verification_status": "LIVE_REFERENCES_RESOLVED",
+      "reference_issues": [],
+      "semantic_review_status": "PROVISIONAL_REQUIRES_FINAL_APPROVAL",
+      "semantic_approval": false,
+      "rationale": "Provisional candidate retained for semantic review against the full original question and live source text."
+    },
+    {
+      "probe_id": "inv_harness_010",
+      "question": "What repeated guarding behaviors are codified into the AHE system prompt?",
+      "source_filename": "harness.pdf",
+      "proposed_live_document_id": "7b7add4488da35c33e99474d",
+      "proposed_live_chunk_ids": [
+        78
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "7b7add4488da35c33e99474d",
+          "chunk_id": 78,
+          "point_id": "fde22c32-2eaa-5a4f-a42f-12953a3afd90",
+          "source": "harness.pdf"
+        }
+      ],
+      "reference_verification_status": "LIVE_REFERENCES_RESOLVED",
+      "reference_issues": [],
+      "semantic_review_status": "PROVISIONAL_REQUIRES_FINAL_APPROVAL",
+      "semantic_approval": false,
+      "rationale": "Provisional candidate retained for semantic review against the full original question and live source text."
+    },
+    {
+      "probe_id": "inv_harness_011",
+      "question": "What evidence shows that the AHE loop can recover previously observed failure modes across later iterations?",
+      "source_filename": "harness.pdf",
+      "proposed_live_document_id": "7b7add4488da35c33e99474d",
+      "proposed_live_chunk_ids": [
+        5,
+        15
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "7b7add4488da35c33e99474d",
+          "chunk_id": 5,
+          "point_id": "0419dae4-fc17-5c32-ac58-864b12480196",
+          "source": "harness.pdf"
+        },
+        {
+          "document_id": "7b7add4488da35c33e99474d",
+          "chunk_id": 15,
+          "point_id": "6195e4db-8601-5f68-9562-528f5bdaa5c8",
+          "source": "harness.pdf"
+        }
+      ],
+      "reference_verification_status": "LIVE_REFERENCES_RESOLVED",
+      "reference_issues": [],
+      "semantic_review_status": "PROVISIONAL_REQUIRES_FINAL_APPROVAL",
+      "semantic_approval": false,
+      "rationale": "Provisional candidate retained for semantic review against the full original question and live source text."
+    },
+    {
+      "probe_id": "inv_harness_012",
+      "question": "What task does configure-git-webserver require the agent to complete, and what loophole or middleware issue was patched?",
+      "source_filename": "harness.pdf",
+      "proposed_live_document_id": "7b7add4488da35c33e99474d",
+      "proposed_live_chunk_ids": [
+        91,
+        93,
+        97
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "7b7add4488da35c33e99474d",
+          "chunk_id": 91,
+          "point_id": "80b8c76e-c1b0-59db-84f9-dc9dd92b9cbe",
+          "source": "harness.pdf"
+        },
+        {
+          "document_id": "7b7add4488da35c33e99474d",
+          "chunk_id": 93,
+          "point_id": "5ca49440-e29a-5232-bbf6-b7b5648595ed",
+          "source": "harness.pdf"
+        },
+        {
+          "document_id": "7b7add4488da35c33e99474d",
+          "chunk_id": 97,
+          "point_id": "3358ec5c-250b-542c-bd27-a34f39e81205",
+          "source": "harness.pdf"
+        }
+      ],
+      "reference_verification_status": "LIVE_REFERENCES_RESOLVED",
+      "reference_issues": [],
+      "semantic_review_status": "PROVISIONAL_REQUIRES_FINAL_APPROVAL",
+      "semantic_approval": false,
+      "rationale": "Provisional candidate retained for semantic review against the full original question and live source text."
+    },
+    {
+      "probe_id": "inv_loop_001",
+      "question": "What five elements does the paper define as part of a loop specification for coding agents?",
+      "source_filename": "loop.pdf",
+      "proposed_live_document_id": "23b038dd8383e3d47638322b",
+      "proposed_live_chunk_ids": [
+        10
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "23b038dd8383e3d47638322b",
+          "chunk_id": 10,
+          "point_id": "901c8fdf-d3ff-55ec-9934-4a74f07a8f87",
+          "source": "loop.pdf"
+        }
+      ],
+      "reference_verification_status": "LIVE_REFERENCES_RESOLVED",
+      "reference_issues": [],
+      "semantic_review_status": "PROVISIONAL_REQUIRES_FINAL_APPROVAL",
+      "semantic_approval": false,
+      "rationale": "Provisional candidate retained for semantic review against the full original question and live source text."
+    },
+    {
+      "probe_id": "inv_rag_008",
+      "question": "How is the Wikipedia knowledge source organized for RAG retrieval, and what retrieval method and passage sizes are used?",
+      "source_filename": "RAG.pdf",
+      "proposed_live_document_id": "8f25ec73a5dcfeca772c16ff",
+      "proposed_live_chunk_ids": [
+        4,
+        11
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "8f25ec73a5dcfeca772c16ff",
+          "chunk_id": 4,
+          "point_id": "520eb83d-1f91-5c7e-87a5-b14fe812de98",
+          "source": "RAG.pdf"
+        },
+        {
+          "document_id": "8f25ec73a5dcfeca772c16ff",
+          "chunk_id": 11,
+          "point_id": "3d24404a-0c11-5a22-a987-9250decf5d45",
+          "source": "RAG.pdf"
+        }
+      ],
+      "reference_verification_status": "LIVE_REFERENCES_RESOLVED",
+      "reference_issues": [],
+      "semantic_review_status": "PROVISIONAL_REQUIRES_FINAL_APPROVAL",
+      "semantic_approval": false,
+      "rationale": "Provisional candidate retained for semantic review against the full original question and live source text."
+    },
+    {
+      "probe_id": "inv_attention_010",
+      "question": "How did the Transformer big model perform on the WMT 2014 English-to-German translation task compared with previously reported models?",
+      "source_filename": "Attention.pdf",
+      "proposed_live_document_id": "9ff74efe2d339c2bb9a53c06",
+      "proposed_live_chunk_ids": [
+        19
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 19,
+          "point_id": "acda89fe-15d4-58d5-be06-926835e0a392",
+          "source": "Attention.pdf"
+        }
+      ],
+      "reference_verification_status": "LIVE_REFERENCES_RESOLVED",
+      "reference_issues": [],
+      "semantic_review_status": "PROVISIONAL_REQUIRES_FINAL_APPROVAL",
+      "semantic_approval": false,
+      "rationale": "Prefer chunk 19: it contains the WMT 2014 English-to-German Transformer results table and comparison with prior models; avoid the English-to-French-focused chunk 20."
+    }
+  ]
+}

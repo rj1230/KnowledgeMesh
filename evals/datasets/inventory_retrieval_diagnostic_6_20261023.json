@@ -1,0 +1,131 @@
+[
+  {
+    "id": "inv_llm_agents_001",
+    "question": "How does the survey define an LLM-based agent, and what basic capabilities distinguish such an agent?",
+    "relevant_chunks": [
+      {
+        "document_id": "e65504ab611fa43ac5013829",
+        "chunk_id": 0
+      },
+      {
+        "document_id": "e65504ab611fa43ac5013829",
+        "chunk_id": 8
+      },
+      {
+        "document_id": "e65504ab611fa43ac5013829",
+        "chunk_id": 11
+      }
+    ],
+    "category": "definition",
+    "metadata": {
+      "source_filename": "LLM Based-learning.pdf",
+      "probe_type": "inventory_pilot"
+    }
+  },
+  {
+    "id": "inv_llm_002",
+    "question": "What does the GPT-3 evaluation report about the largest model's accuracy in few-shot learning?",
+    "relevant_chunks": [
+      {
+        "document_id": "68424e3d1aa5e84e426da70c",
+        "chunk_id": 32
+      }
+    ],
+    "category": "evaluation",
+    "metadata": {
+      "source_filename": "LLM.pdf",
+      "probe_type": "inventory_pilot"
+    }
+  },
+  {
+    "id": "inv_loop_001",
+    "question": "What five elements does the paper define as part of a loop specification for coding agents?",
+    "relevant_chunks": [
+      {
+        "document_id": "23b038dd8383e3d47638322b",
+        "chunk_id": 11
+      },
+      {
+        "document_id": "23b038dd8383e3d47638322b",
+        "chunk_id": 12
+      },
+      {
+        "document_id": "23b038dd8383e3d47638322b",
+        "chunk_id": 16
+      }
+    ],
+    "category": "definition",
+    "metadata": {
+      "source_filename": "loop.pdf",
+      "probe_type": "inventory_pilot"
+    }
+  },
+  {
+    "id": "inv_harness_011",
+    "question": "What evidence shows that the AHE loop can recover previously observed failure modes across later iterations?",
+    "relevant_chunks": [
+      {
+        "document_id": "7b7add4488da35c33e99474d",
+        "chunk_id": 90
+      },
+      {
+        "document_id": "7b7add4488da35c33e99474d",
+        "chunk_id": 93
+      }
+    ],
+    "category": "iteration",
+    "metadata": {
+      "source_filename": "harness.pdf",
+      "benchmark_tier": "inventory_expansion",
+      "gold_type": "A_EXACT_candidate"
+    }
+  },
+  {
+    "id": "inv_rag_008",
+    "question": "How is the Wikipedia knowledge source organized for RAG retrieval, and what retrieval method and passage sizes are used?",
+    "relevant_chunks": [
+      {
+        "document_id": "8f25ec73a5dcfeca772c16ff",
+        "chunk_id": 11
+      }
+    ],
+    "category": "retrieval",
+    "metadata": {
+      "source_filename": "RAG.pdf",
+      "benchmark_tier": "inventory_expansion",
+      "gold_type": "A_EXACT_candidate"
+    }
+  },
+  {
+    "id": "inv_training_005",
+    "question": "What criteria and rating scale were used when human labelers evaluated model responses?",
+    "relevant_chunks": [
+      {
+        "document_id": "c87e9c2e56842a8dfa14ef5e",
+        "chunk_id": 30
+      },
+      {
+        "document_id": "c87e9c2e56842a8dfa14ef5e",
+        "chunk_id": 97
+      },
+      {
+        "document_id": "c87e9c2e56842a8dfa14ef5e",
+        "chunk_id": 98
+      },
+      {
+        "document_id": "c87e9c2e56842a8dfa14ef5e",
+        "chunk_id": 99
+      },
+      {
+        "document_id": "c87e9c2e56842a8dfa14ef5e",
+        "chunk_id": 100
+      }
+    ],
+    "category": "evaluation",
+    "metadata": {
+      "source_filename": "Training Llm.pdf",
+      "benchmark_tier": "inventory_expansion",
+      "gold_type": "A_EXACT_candidate"
+    }
+  }
+]

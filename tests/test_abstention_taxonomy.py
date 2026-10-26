@@ -54,6 +54,46 @@ def test_generation_error_remains_generation_failure():
     assert "NO_APPROVED_EVIDENCE" not in result["failure_taxonomy"]
 
 
+def test_final_abstention_reason_maps_to_failure_category():
+    cases = [
+        ("citation_validation_revision_budget_exhausted", "CITATION_FAILURE"),
+        ("grounding_validation_revision_budget_exhausted", "GROUNDING_FAILURE"),
+        ("answer_relevance_revision_budget_exhausted", "ANSWER_RELEVANCE_FAILURE"),
+    ]
+
+    for reason, expected_category in cases:
+        state = {
+            "retrieval_required": True,
+            "evaluation_trace": [
+                {"step": "planner", "status": "technical", "details": {}},
+                {
+                    "step": "private_retrieval",
+                    "status": "success",
+                    "details": {"selected_count": 3},
+                },
+                {
+                    "step": "answer_abstention",
+                    "status": "abstained",
+                    "details": {"reason": reason},
+                },
+            ],
+            "citation_valid": False if reason.startswith("citation_") else None,
+            "grounding_valid": False if reason.startswith("grounding_") else None,
+            "is_grounded": False if reason.startswith("grounding_") else None,
+            "answer_supported": False,
+            "answer_useful": False,
+            "generation_failed": False,
+        }
+
+        result = evaluate_trajectory(state)
+
+        assert result["trajectory_status"] == "failed", reason
+        assert expected_category in result["failure_taxonomy"], (
+            reason,
+            result["failure_taxonomy"],
+        )
+
+
 def test_new_category_is_accepted_by_persistence_contract():
     from app.evaluation.contracts import FAILURE_CATEGORIES
 

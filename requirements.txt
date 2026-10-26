@@ -2,63 +2,64 @@
 # ENTERPRISE AGENTIC RAG - REQUIREMENTS (Local, No GCP)
 # ==============================================================================
 
+# CPU-only PyTorch wheel index for Streamlit Cloud / lightweight deployments
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.13.0
+
 # --- CORE API & WEB FRAMEWORK ---
-fastapi                     # High-performance web framework for the API
-uvicorn[standard]           # ASGI server to run the FastAPI app
-python-dotenv               # For loading configuration from .env files
-requests                    # HTTP library for internal/external API calls
-streamlit                   # Frontend dashboard for the chat interface
-numpy                       # Numerical processing
-pytz                        # Timezone handling for logs
-nest-asyncio                # Support for nested async loops in notebooks/streamlit
-tavily-python
+fastapi                       # High-performance web framework for the API
+uvicorn[standard]             # ASGI server to run the FastAPI app
+python-dotenv                 # For loading configuration from .env files
+requests                      # HTTP library for internal/external API calls
+streamlit                     # Frontend dashboard for the chat interface
+numpy                         # Numerical processing
+pytz                          # Timezone handling for logs
+nest-asyncio                  # Support for nested async loops in notebooks/streamlit
+tavily-python                 # Tavily web search integration
+
 # --- GEMINI EMBEDDINGS ---
-google-generativeai         # Gemini API — embeddings (text-embedding-004 / gemini-embedding-001)
-langchain-google-genai      # LangChain integration for Gemini models
+google-generativeai           # Gemini API — embeddings
+langchain-google-genai        # LangChain integration for Gemini models
 
 # --- VECTOR DB & RETRIEVAL ---
-qdrant-client               # Vector Database for semantic search
-flashrank                   # Ultra-fast local cross-encoder for semantic reranking
+qdrant-client                 # Vector database for semantic search
+flashrank                     # Ultra-fast local cross-encoder for semantic reranking
 
 # --- LANGCHAIN & AGENTIC ORCHESTRATION ---
-langchain                   # Core LLM orchestration
-langgraph                   # State-machine logic for cyclic agent flows
-langchain-groq              # Integration for lightning-fast Llama 3.3 models
-langchain-google-vertexai   # Required shim for NeMo Guardrails internal import (no GCP credentials needed)
-langchain-community         # Community-contributed tools and loaders
-langchain-openai            # OpenAI-compatible layer (used by Portkey gateway)
-pydantic>=2.0.0             # Data validation and settings management
+langchain                     # Core LLM orchestration
+langgraph                     # State-machine logic for cyclic agent flows
+langchain-groq                # Integration for Groq-hosted Llama models
+langchain-google-vertexai     # Required shim for NeMo Guardrails internal import
+langchain-community           # Community-contributed tools and loaders
+langchain-openai              # OpenAI-compatible layer used by Portkey gateway
+pydantic>=2.0.0               # Data validation and settings management
 
 # --- DATA INGESTION & DOCUMENT PARSING ---
-unstructured                # Base library for DOCX/PPTX partitioning
-python-pptx                 # Parser for PowerPoint files
-python-docx                 # Parser for Word documents
-pypdf                       # Local PDF text extraction (replaces Document AI)
-beautifulsoup4              # High-speed HTML text extraction
-pdfplumber                  # Fallback PDF parser for scanned/complex layouts
+unstructured                  # Base library for DOCX/PPTX partitioning
+python-pptx                   # Parser for PowerPoint files
+python-docx                   # Parser for Word documents
+pypdf                         # Local PDF text extraction
+beautifulsoup4                # High-speed HTML text extraction
+pdfplumber                    # Fallback PDF parser for scanned/complex layouts
 
 # --- OBSERVABILITY & DISTRIBUTED TRACING ---
-langsmith                   # Specialized tracing for LangChain/LangGraph
-logfire[fastapi,requests]   # Pydantic Logfire — FastAPI + requests instrumentation
-loguru                      # Enhanced logging for Python
+langsmith                     # Specialized tracing for LangChain/LangGraph
+logfire[fastapi,requests]     # Pydantic Logfire instrumentation
+loguru                        # Enhanced logging for Python
 
 # --- GUARDRAILS ---
-nemoguardrails              # NVIDIA NeMo Guardrails for input/output safety rails
-langchain-nvidia-ai-endpoints # LangChain integration with NVIDIA AI Endpoints
+nemoguardrails                # NVIDIA NeMo Guardrails for input/output safety rails
+langchain-nvidia-ai-endpoints # LangChain integration for NVIDIA AI Endpoints
 
 # --- LLM GATEWAY ---
-portkey-ai                  # Portkey Gateway for unified LLM routing, fallbacks & observability
+portkey-ai                    # Portkey Gateway for unified LLM routing and observability
 
 # --- EVALUATION (EVALS) ---
-ragas                       # RAG-specific evaluation metrics (Faithfulness, Relevancy, Recall)
-deepeval                    # Pytest-compatible test runner wrapping RAGAS & safety metrics
-langfuse                    # Live production monitoring, tracing & user feedback collection
+ragas                         # RAG-specific evaluation metrics
+deepeval                      # Pytest-compatible evaluation and safety testing
+langfuse                      # Production monitoring, tracing, and feedback collection
 
 # --- EMBEDDINGS (SENTENCE TRANSFORMERS) ---
-sentence-transformers
-transformers==4.39.3    # Used by FlashRank reranker internally
-langchain_google_genai
-
-langchain-google-vertexai
-
-httpx
+sentence-transformers==5.6.1
+transformers==5.14.1          # Used by FlashRank reranker / HHEM grounding model
+httpx                         # HTTP client used by integrations

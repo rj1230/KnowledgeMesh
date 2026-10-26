@@ -1,0 +1,234 @@
+{
+  "artifact_type": "semantic_review_batch",
+  "created_date": "2026-10-20T11:37:36.924344+00:00",
+  "source_dataset": "evals/datasets/inventory_retrieval_probes_70.json",
+  "source_dataset_sha256": "21ee63518d16f2b08d8e5c1e452a4cfa8f5675b5f0322727f623c1aa2ac3e101",
+  "collection_name": "enterprise_rag_bge_base",
+  "candidate_count": 9,
+  "unique_probe_count": 9,
+  "semantic_approvals": 9,
+  "reference_issue_count": 0,
+  "reference_issue_probe_ids": [],
+  "benchmark_ready": false,
+  "decisions": [
+    {
+      "probe_id": "inv_llm_agents_003",
+      "question": "What role does AutoGPT play in the survey's discussion of autonomous or lifelong-learning agents?",
+      "source_filename": "LLM Based-learning.pdf",
+      "proposed_document_id": "e65504ab611fa43ac5013829",
+      "proposed_chunk_ids": [
+        26,
+        94
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "e65504ab611fa43ac5013829",
+          "chunk_id": 26,
+          "point_id": "c5f3757c-c083-5eb6-a9db-a55ecf5d41c9",
+          "source": "LLM Based-learning.pdf"
+        },
+        {
+          "document_id": "e65504ab611fa43ac5013829",
+          "chunk_id": 94,
+          "point_id": "7c8bf42c-e239-5f24-876c-5a4a0b745c65",
+          "source": "LLM Based-learning.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "Chunk 26 identifies Auto-GPT as an example of an autonomous agent that formulates plans and executes available tools toward a goal. Chunk 94 compares Voyager's embodied lifelong learning approach with concepts similar to AutoGPT."
+    },
+    {
+      "probe_id": "inv_llm_agents_005",
+      "question": "How do ChatDB and DB-GPT connect LLM-based agents with SQL databases, and what factors are used for memory retrieval?",
+      "source_filename": "LLM Based-learning.pdf",
+      "proposed_document_id": "e65504ab611fa43ac5013829",
+      "proposed_chunk_ids": [
+        45,
+        46
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "e65504ab611fa43ac5013829",
+          "chunk_id": 45,
+          "point_id": "b61f5ea1-a7cf-55d8-87bc-0fc68ac1417a",
+          "source": "LLM Based-learning.pdf"
+        },
+        {
+          "document_id": "e65504ab611fa43ac5013829",
+          "chunk_id": 46,
+          "point_id": "53d10ef9-0402-58e0-ba06-24539692362f",
+          "source": "LLM Based-learning.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "Chunk 45 states that ChatDB and DB-GPT integrate LLM-based agents with SQL databases. Chunk 46 specifies memory retrieval by a weighted combination of recency, relevance, and importance."
+    },
+    {
+      "probe_id": "inv_llm_agents_006",
+      "question": "How can LLM-based agents acquire knowledge about the tools available to them through zero-shot or few-shot prompting?",
+      "source_filename": "LLM Based-learning.pdf",
+      "proposed_document_id": "e65504ab611fa43ac5013829",
+      "proposed_chunk_ids": [
+        67
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "e65504ab611fa43ac5013829",
+          "chunk_id": 67,
+          "point_id": "657f49e2-a34f-57b0-9634-9306a15b5617",
+          "source": "LLM Based-learning.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "Chunk 67 explains that zero-shot prompts can describe tool functionality and parameters, while few-shot prompts demonstrate tool-use scenarios and corresponding methods."
+    },
+    {
+      "probe_id": "inv_llm_agents_007",
+      "question": "What limitation of static planning is identified for embodied agents, and what information can help correct errors earlier?",
+      "source_filename": "LLM Based-learning.pdf",
+      "proposed_document_id": "e65504ab611fa43ac5013829",
+      "proposed_chunk_ids": [
+        90
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "e65504ab611fa43ac5013829",
+          "chunk_id": 90,
+          "point_id": "ed4f4cbb-a041-5de6-8cac-7b68c59c1094",
+          "source": "LLM Based-learning.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "Chunk 90 explains that static reasoning and planning can ignore dynamic surroundings. Spatial data and item-location relationships provide context, and PET is described as using early error correction."
+    },
+    {
+      "probe_id": "inv_llm_agents_008",
+      "question": "What two major challenges are identified as limiting the realization of LLM-based agents in cutting-edge scientific work?",
+      "source_filename": "LLM Based-learning.pdf",
+      "proposed_document_id": "e65504ab611fa43ac5013829",
+      "proposed_chunk_ids": [
+        91
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "e65504ab611fa43ac5013829",
+          "chunk_id": 91,
+          "point_id": "c7d5dcde-d728-5ceb-bf1b-e7531d1fb042",
+          "source": "LLM Based-learning.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "Chunk 91 explicitly identifies two barriers to cutting-edge scientific-agent applications: scientific complexity that is hard to represent in text and a severe lack of suitable scientific-domain training data."
+    },
+    {
+      "probe_id": "inv_llm_agents_009",
+      "question": "What role can a high-level policy play in embodied action planning according to the discussion of hierarchical reinforcement learning?",
+      "source_filename": "LLM Based-learning.pdf",
+      "proposed_document_id": "e65504ab611fa43ac5013829",
+      "proposed_chunk_ids": [
+        75
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "e65504ab611fa43ac5013829",
+          "chunk_id": 75,
+          "point_id": "8afd655b-1e74-5f31-8db1-d62a7c0bd5df",
+          "source": "LLM Based-learning.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "Chunk 75 describes hierarchical reinforcement learning: the high-level policy constrains subgoals for the low-level policy, which produces appropriate action signals."
+    },
+    {
+      "probe_id": "inv_llm_agents_010",
+      "question": "How are humans and agents characterized in the instructor-executor and equal-partnership paradigms?",
+      "source_filename": "LLM Based-learning.pdf",
+      "proposed_document_id": "e65504ab611fa43ac5013829",
+      "proposed_chunk_ids": [
+        105,
+        106
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "e65504ab611fa43ac5013829",
+          "chunk_id": 105,
+          "point_id": "8a0baf52-617e-54e9-806b-6357bb00f3fb",
+          "source": "LLM Based-learning.pdf"
+        },
+        {
+          "document_id": "e65504ab611fa43ac5013829",
+          "chunk_id": 106,
+          "point_id": "7580d2aa-b780-5527-a8ae-2322350dd78d",
+          "source": "LLM Based-learning.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "Chunks 105 and 106 describe the instructor-executor paradigm, where humans instruct and agents execute, and the equal-partnership paradigm, where agents interact with humans on an equal footing."
+    },
+    {
+      "probe_id": "inv_llm_agents_011",
+      "question": "What is the calibration problem for LLMs, and why can it create difficulties for interactive agents?",
+      "source_filename": "LLM Based-learning.pdf",
+      "proposed_document_id": "e65504ab611fa43ac5013829",
+      "proposed_chunk_ids": [
+        156
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "e65504ab611fa43ac5013829",
+          "chunk_id": 156,
+          "point_id": "9e61bb48-c5cc-5f63-9c54-f24d3c49442c",
+          "source": "LLM Based-learning.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "Chunk 156 defines calibration as LLMs' difficulty expressing prediction certainty precisely and explains that this can cause agent outputs to misalign with human intentions in interactive settings."
+    },
+    {
+      "probe_id": "inv_llm_agents_012",
+      "question": "How can sufficiently large LLMs use prompting to decompose high-level tasks into subtasks without additional training?",
+      "source_filename": "LLM Based-learning.pdf",
+      "proposed_document_id": "e65504ab611fa43ac5013829",
+      "proposed_chunk_ids": [
+        90
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "e65504ab611fa43ac5013829",
+          "chunk_id": 90,
+          "point_id": "ed4f4cbb-a041-5de6-8cac-7b68c59c1094",
+          "source": "LLM Based-learning.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "Chunk 90 states that sufficiently large LLMs with appropriate prompts can decompose high-level tasks into suitable subtasks without additional training."
+    }
+  ]
+}
