@@ -2172,8 +2172,6 @@ def fetch_kb_stats(backend_url):
 
 
 def clear_backend_caches():
-    check_backend_health.clear()
-    check_backend_ready.clear()
     fetch_kb_stats.clear()
 
 
@@ -2266,9 +2264,6 @@ def start_new_session():
     st.session_state.latencies = []
     st.session_state.pending = False
     st.session_state.session_started_at = time.strftime("%H:%M:%S")
-
-    check_backend_health.clear()
-    check_backend_ready.clear()
 
 
 # ============================================================
