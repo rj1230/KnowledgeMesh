@@ -1,0 +1,357 @@
+{
+  "experiment": "generic_query_expansion_shadow",
+  "baseline_file": "DATA\\retrieval_baseline_migrated_20261020.json",
+  "summary": {
+    "probe_count": 11,
+    "baseline_hit_at_5": 0.7272727272727273,
+    "expanded_hit_at_5": 0.7272727272727273,
+    "expanded_mrr": 0.5681818181818182,
+    "expanded_ndcg_at_5": 0.5484847332201807,
+    "gold_in_expanded_pool_rate": 1.0,
+    "improved_probes": [],
+    "regressed_probes": []
+  },
+  "results": [
+    {
+      "id": "gp001",
+      "question": "What is retrieval-augmented generation and what two types of memory does it combine?",
+      "gold_ids": [
+        "8f25ec73a5dcfeca772c16ff::0",
+        "8f25ec73a5dcfeca772c16ff::1"
+      ],
+      "baseline_hit_at_5": 1,
+      "expanded_hit_at_5": 1,
+      "baseline_final_ids": [
+        "8f25ec73a5dcfeca772c16ff::0",
+        "68424e3d1aa5e84e426da70c::187",
+        "8f25ec73a5dcfeca772c16ff::4",
+        "8f25ec73a5dcfeca772c16ff::3",
+        "8f25ec73a5dcfeca772c16ff::28"
+      ],
+      "expanded_final_ids": [
+        "8f25ec73a5dcfeca772c16ff::0",
+        "68424e3d1aa5e84e426da70c::187",
+        "8f25ec73a5dcfeca772c16ff::1",
+        "8f25ec73a5dcfeca772c16ff::3",
+        "8f25ec73a5dcfeca772c16ff::28"
+      ],
+      "expanded_mrr": 1.0,
+      "expanded_ndcg_at_5": 0.9197207891481876,
+      "candidate_count": 74,
+      "gold_in_expanded_pool": true,
+      "retrieval_timings_ms": {
+        "What is retrieval-augmented generation and what two types of memory does it combine?": 28833.7,
+        "What are the key concepts, features, and capabilities related to: What is retrieval-augmented generation and what two types of memory does it combine?": 588.0,
+        "What evidence and important details are needed to answer: What is retrieval-augmented generation and what two types of memory does it combine?": 508.9
+      }
+    },
+    {
+      "id": "gp002",
+      "question": "What are the main components of an LLM-based agent according to the survey?",
+      "gold_ids": [
+        "e65504ab611fa43ac5013829::11"
+      ],
+      "baseline_hit_at_5": 0,
+      "expanded_hit_at_5": 0,
+      "baseline_final_ids": [
+        "e65504ab611fa43ac5013829::1",
+        "e65504ab611fa43ac5013829::172",
+        "e65504ab611fa43ac5013829::76",
+        "e65504ab611fa43ac5013829::157",
+        "e65504ab611fa43ac5013829::85"
+      ],
+      "expanded_final_ids": [
+        "e65504ab611fa43ac5013829::1",
+        "e65504ab611fa43ac5013829::172",
+        "e65504ab611fa43ac5013829::76",
+        "e65504ab611fa43ac5013829::157",
+        "e65504ab611fa43ac5013829::85"
+      ],
+      "expanded_mrr": 0.0,
+      "expanded_ndcg_at_5": 0.0,
+      "candidate_count": 59,
+      "gold_in_expanded_pool": true,
+      "retrieval_timings_ms": {
+        "What are the main components of an LLM-based agent according to the survey?": 641.0,
+        "What are the key concepts, features, and capabilities related to: What are the main components of an LLM-based agent according to the survey?": 632.8,
+        "What evidence and important details are needed to answer: What are the main components of an LLM-based agent according to the survey?": 590.8
+      }
+    },
+    {
+      "id": "gp003",
+      "question": "What memory capabilities does AutoGPT provide?",
+      "gold_ids": [
+        "e65504ab611fa43ac5013829::85"
+      ],
+      "baseline_hit_at_5": 0,
+      "expanded_hit_at_5": 0,
+      "baseline_final_ids": [],
+      "expanded_final_ids": [],
+      "expanded_mrr": 0.0,
+      "expanded_ndcg_at_5": 0.0,
+      "candidate_count": 72,
+      "gold_in_expanded_pool": true,
+      "retrieval_timings_ms": {
+        "What memory capabilities does AutoGPT provide?": 666.4,
+        "What are the key concepts, features, and capabilities related to: What memory capabilities does AutoGPT provide?": 631.7,
+        "What evidence and important details are needed to answer: What memory capabilities does AutoGPT provide?": 617.0
+      }
+    },
+    {
+      "id": "gp004",
+      "question": "What is the role of the brain in an LLM-based agent?",
+      "gold_ids": [
+        "e65504ab611fa43ac5013829::11"
+      ],
+      "baseline_hit_at_5": 1,
+      "expanded_hit_at_5": 1,
+      "baseline_final_ids": [
+        "e65504ab611fa43ac5013829::11",
+        "e65504ab611fa43ac5013829::1",
+        "e65504ab611fa43ac5013829::172",
+        "e65504ab611fa43ac5013829::64",
+        "e65504ab611fa43ac5013829::29"
+      ],
+      "expanded_final_ids": [
+        "e65504ab611fa43ac5013829::11",
+        "e65504ab611fa43ac5013829::1",
+        "e65504ab611fa43ac5013829::172",
+        "e65504ab611fa43ac5013829::64",
+        "e65504ab611fa43ac5013829::29"
+      ],
+      "expanded_mrr": 1.0,
+      "expanded_ndcg_at_5": 1.0,
+      "candidate_count": 61,
+      "gold_in_expanded_pool": true,
+      "retrieval_timings_ms": {
+        "What is the role of the brain in an LLM-based agent?": 1207.1,
+        "What are the key concepts, features, and capabilities related to: What is the role of the brain in an LLM-based agent?": 618.4,
+        "What evidence and important details are needed to answer: What is the role of the brain in an LLM-based agent?": 752.8
+      }
+    },
+    {
+      "id": "gp005",
+      "question": "How does the RAG retriever obtain documents for a query?",
+      "gold_ids": [
+        "8f25ec73a5dcfeca772c16ff::3",
+        "8f25ec73a5dcfeca772c16ff::4",
+        "8f25ec73a5dcfeca772c16ff::8"
+      ],
+      "baseline_hit_at_5": 1,
+      "expanded_hit_at_5": 1,
+      "baseline_final_ids": [
+        "8f25ec73a5dcfeca772c16ff::6",
+        "8f25ec73a5dcfeca772c16ff::8",
+        "8f25ec73a5dcfeca772c16ff::50",
+        "8f25ec73a5dcfeca772c16ff::52",
+        "8f25ec73a5dcfeca772c16ff::54"
+      ],
+      "expanded_final_ids": [
+        "8f25ec73a5dcfeca772c16ff::6",
+        "8f25ec73a5dcfeca772c16ff::8",
+        "8f25ec73a5dcfeca772c16ff::50",
+        "8f25ec73a5dcfeca772c16ff::52",
+        "8f25ec73a5dcfeca772c16ff::54"
+      ],
+      "expanded_mrr": 0.5,
+      "expanded_ndcg_at_5": 0.2960819109658652,
+      "candidate_count": 63,
+      "gold_in_expanded_pool": true,
+      "retrieval_timings_ms": {
+        "How does the RAG retriever obtain documents for a query?": 661.8,
+        "What are the key concepts, features, and capabilities related to: How does the RAG retriever obtain documents for a query?": 658.7,
+        "What evidence and important details are needed to answer: How does the RAG retriever obtain documents for a query?": 641.4
+      }
+    },
+    {
+      "id": "gp006",
+      "question": "What BLEU score did the Transformer achieve on the WMT 2014 English-to-French translation task, and how long did it take to train?",
+      "gold_ids": [
+        "9ff74efe2d339c2bb9a53c06::1"
+      ],
+      "baseline_hit_at_5": 1,
+      "expanded_hit_at_5": 1,
+      "baseline_final_ids": [
+        "9ff74efe2d339c2bb9a53c06::1",
+        "9ff74efe2d339c2bb9a53c06::20",
+        "9ff74efe2d339c2bb9a53c06::26",
+        "9ff74efe2d339c2bb9a53c06::19",
+        "9ff74efe2d339c2bb9a53c06::17"
+      ],
+      "expanded_final_ids": [
+        "9ff74efe2d339c2bb9a53c06::1",
+        "9ff74efe2d339c2bb9a53c06::20",
+        "9ff74efe2d339c2bb9a53c06::26",
+        "9ff74efe2d339c2bb9a53c06::19",
+        "9ff74efe2d339c2bb9a53c06::17"
+      ],
+      "expanded_mrr": 1.0,
+      "expanded_ndcg_at_5": 1.0,
+      "candidate_count": 66,
+      "gold_in_expanded_pool": true,
+      "retrieval_timings_ms": {
+        "What BLEU score did the Transformer achieve on the WMT 2014 English-to-French translation task, and how long did it take to train?": 715.0,
+        "What are the key concepts, features, and capabilities related to: What BLEU score did the Transformer achieve on the WMT 2014 English-to-French translation task, and how long did it take to train?": 573.6,
+        "What evidence and important details are needed to answer: What BLEU score did the Transformer achieve on the WMT 2014 English-to-French translation task, and how long did it take to train?": 810.1
+      }
+    },
+    {
+      "id": "gp007",
+      "question": "What is the formula for scaled dot-product attention, and how does it compare to additive attention?",
+      "gold_ids": [
+        "9ff74efe2d339c2bb9a53c06::8",
+        "9ff74efe2d339c2bb9a53c06::9"
+      ],
+      "baseline_hit_at_5": 1,
+      "expanded_hit_at_5": 1,
+      "baseline_final_ids": [
+        "9ff74efe2d339c2bb9a53c06::8",
+        "9ff74efe2d339c2bb9a53c06::9",
+        "9ff74efe2d339c2bb9a53c06::11"
+      ],
+      "expanded_final_ids": [
+        "9ff74efe2d339c2bb9a53c06::8",
+        "9ff74efe2d339c2bb9a53c06::9",
+        "9ff74efe2d339c2bb9a53c06::11"
+      ],
+      "expanded_mrr": 1.0,
+      "expanded_ndcg_at_5": 1.0,
+      "candidate_count": 71,
+      "gold_in_expanded_pool": true,
+      "retrieval_timings_ms": {
+        "What is the formula for scaled dot-product attention, and how does it compare to additive attention?": 918.9,
+        "What are the key concepts, features, and capabilities related to: What is the formula for scaled dot-product attention, and how does it compare to additive attention?": 999.1,
+        "What evidence and important details are needed to answer: What is the formula for scaled dot-product attention, and how does it compare to additive attention?": 958.3
+      }
+    },
+    {
+      "id": "gp008",
+      "question": "In the GPT-3 paper's human-detection experiment, how accurately could people distinguish GPT-3 175B-generated news articles from human-written ones, compared to the easy-to-spot control articles?",
+      "gold_ids": [
+        "68424e3d1aa5e84e426da70c::68"
+      ],
+      "baseline_hit_at_5": 1,
+      "expanded_hit_at_5": 1,
+      "baseline_final_ids": [
+        "68424e3d1aa5e84e426da70c::70",
+        "68424e3d1aa5e84e426da70c::135",
+        "68424e3d1aa5e84e426da70c::133",
+        "68424e3d1aa5e84e426da70c::68",
+        "68424e3d1aa5e84e426da70c::72"
+      ],
+      "expanded_final_ids": [
+        "68424e3d1aa5e84e426da70c::70",
+        "68424e3d1aa5e84e426da70c::135",
+        "68424e3d1aa5e84e426da70c::133",
+        "68424e3d1aa5e84e426da70c::68",
+        "68424e3d1aa5e84e426da70c::72"
+      ],
+      "expanded_mrr": 0.25,
+      "expanded_ndcg_at_5": 0.43067655807339306,
+      "candidate_count": 60,
+      "gold_in_expanded_pool": true,
+      "retrieval_timings_ms": {
+        "In the GPT-3 paper's human-detection experiment, how accurately could people distinguish GPT-3 175B-generated news articles from human-written ones, compared to the easy-to-spot control articles?": 502.5,
+        "What are the key concepts, features, and capabilities related to: In the GPT-3 paper's human-detection experiment, how accurately could people distinguish GPT-3 175B-generated news articles from human-written ones, compared to the easy-to-spot control articles?": 590.9,
+        "What evidence and important details are needed to answer: In the GPT-3 paper's human-detection experiment, how accurately could people distinguish GPT-3 175B-generated news articles from human-written ones, compared to the easy-to-spot control articles?": 716.7
+      }
+    },
+    {
+      "id": "gp009",
+      "question": "How does the 1.3B parameter InstructGPT model compare to the 175B parameter GPT-3 model in human evaluations, and what improvements does InstructGPT show?",
+      "gold_ids": [
+        "c87e9c2e56842a8dfa14ef5e::1",
+        "c87e9c2e56842a8dfa14ef5e::37"
+      ],
+      "baseline_hit_at_5": 1,
+      "expanded_hit_at_5": 1,
+      "baseline_final_ids": [
+        "c87e9c2e56842a8dfa14ef5e::5",
+        "c87e9c2e56842a8dfa14ef5e::1",
+        "c87e9c2e56842a8dfa14ef5e::36",
+        "c87e9c2e56842a8dfa14ef5e::138",
+        "c87e9c2e56842a8dfa14ef5e::128"
+      ],
+      "expanded_final_ids": [
+        "c87e9c2e56842a8dfa14ef5e::5",
+        "c87e9c2e56842a8dfa14ef5e::1",
+        "c87e9c2e56842a8dfa14ef5e::36",
+        "c87e9c2e56842a8dfa14ef5e::138",
+        "c87e9c2e56842a8dfa14ef5e::128"
+      ],
+      "expanded_mrr": 0.5,
+      "expanded_ndcg_at_5": 0.38685280723454163,
+      "candidate_count": 61,
+      "gold_in_expanded_pool": true,
+      "retrieval_timings_ms": {
+        "How does the 1.3B parameter InstructGPT model compare to the 175B parameter GPT-3 model in human evaluations, and what improvements does InstructGPT show?": 782.3,
+        "What are the key concepts, features, and capabilities related to: How does the 1.3B parameter InstructGPT model compare to the 175B parameter GPT-3 model in human evaluations, and what improvements does InstructGPT show?": 843.5,
+        "What evidence and important details are needed to answer: How does the 1.3B parameter InstructGPT model compare to the 175B parameter GPT-3 model in human evaluations, and what improvements does InstructGPT show?": 632.5
+      }
+    },
+    {
+      "id": "gp010",
+      "question": "How much does Agentic Harness Engineering (AHE) improve pass@1 on Terminal-Bench 2, and how does the evolved harness compare to the human-designed Codex harness?",
+      "gold_ids": [
+        "7b7add4488da35c33e99474d::1"
+      ],
+      "baseline_hit_at_5": 1,
+      "expanded_hit_at_5": 1,
+      "baseline_final_ids": [
+        "7b7add4488da35c33e99474d::1",
+        "7b7add4488da35c33e99474d::5",
+        "7b7add4488da35c33e99474d::3",
+        "7b7add4488da35c33e99474d::16",
+        "7b7add4488da35c33e99474d::7"
+      ],
+      "expanded_final_ids": [
+        "7b7add4488da35c33e99474d::1",
+        "7b7add4488da35c33e99474d::5",
+        "7b7add4488da35c33e99474d::3",
+        "7b7add4488da35c33e99474d::16",
+        "7b7add4488da35c33e99474d::7"
+      ],
+      "expanded_mrr": 1.0,
+      "expanded_ndcg_at_5": 1.0,
+      "candidate_count": 59,
+      "gold_in_expanded_pool": true,
+      "retrieval_timings_ms": {
+        "How much does Agentic Harness Engineering (AHE) improve pass@1 on Terminal-Bench 2, and how does the evolved harness compare to the human-designed Codex harness?": 6827.6,
+        "What are the key concepts, features, and capabilities related to: How much does Agentic Harness Engineering (AHE) improve pass@1 on Terminal-Bench 2, and how does the evolved harness compare to the human-designed Codex harness?": 718.2,
+        "What evidence and important details are needed to answer: How much does Agentic Harness Engineering (AHE) improve pass@1 on Terminal-Bench 2, and how does the evolved harness compare to the human-designed Codex harness?": 766.6
+      }
+    },
+    {
+      "id": "gp011",
+      "question": "Does designing agent loops eliminate the need for prompt engineering, according to the paper?",
+      "gold_ids": [
+        "23b038dd8383e3d47638322b::1"
+      ],
+      "baseline_hit_at_5": 0,
+      "expanded_hit_at_5": 0,
+      "baseline_final_ids": [
+        "23b038dd8383e3d47638322b::2",
+        "23b038dd8383e3d47638322b::39",
+        "7b7add4488da35c33e99474d::7",
+        "23b038dd8383e3d47638322b::0",
+        "23b038dd8383e3d47638322b::38"
+      ],
+      "expanded_final_ids": [
+        "23b038dd8383e3d47638322b::2",
+        "23b038dd8383e3d47638322b::39",
+        "7b7add4488da35c33e99474d::7",
+        "23b038dd8383e3d47638322b::0",
+        "23b038dd8383e3d47638322b::38"
+      ],
+      "expanded_mrr": 0.0,
+      "expanded_ndcg_at_5": 0.0,
+      "candidate_count": 67,
+      "gold_in_expanded_pool": true,
+      "retrieval_timings_ms": {
+        "Does designing agent loops eliminate the need for prompt engineering, according to the paper?": 2189.8,
+        "What are the key concepts, features, and capabilities related to: Does designing agent loops eliminate the need for prompt engineering, according to the paper?": 616.7,
+        "What evidence and important details are needed to answer: Does designing agent loops eliminate the need for prompt engineering, according to the paper?": 610.8
+      }
+    }
+  ]
+}

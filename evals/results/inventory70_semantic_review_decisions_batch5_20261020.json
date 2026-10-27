@@ -1,0 +1,354 @@
+{
+  "artifact_type": "semantic_review_batch",
+  "created_date": "2026-10-20",
+  "source_dataset": "evals/datasets/inventory_retrieval_probes_70.json",
+  "source_dataset_sha256": "21ee63518d16f2b08d8e5c1e452a4cfa8f5675b5f0322727f623c1aa2ac3e101",
+  "collection_name": "enterprise_rag_bge_base",
+  "candidate_count": 10,
+  "unique_probe_count": 10,
+  "reference_issue_count": 0,
+  "reference_issue_probe_ids": [],
+  "semantic_approvals": 10,
+  "benchmark_ready": false,
+  "decisions": [
+    {
+      "probe_id": "inv_training_001",
+      "question": "Why does the InstructGPT paper argue that increasing language-model size alone does not guarantee better instruction following?",
+      "source_filename": "Training Llm.pdf",
+      "proposed_document_id": "c87e9c2e56842a8dfa14ef5e",
+      "proposed_chunk_ids": [
+        0,
+        1
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "c87e9c2e56842a8dfa14ef5e",
+          "chunk_id": 0,
+          "point_id": "b9844a05-c591-52be-8017-0d6c6fad1273",
+          "source": "Training Llm.pdf"
+        },
+        {
+          "document_id": "c87e9c2e56842a8dfa14ef5e",
+          "chunk_id": 1,
+          "point_id": "a7a4b7f4-b048-529b-a0a7-f576ae307e68",
+          "source": "Training Llm.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "The introduction explains that larger pretrained models do not necessarily follow user intent better; the comparison reports stronger human preference for a much smaller InstructGPT model than for GPT-3 175B."
+    },
+    {
+      "probe_id": "inv_training_002",
+      "question": "What evidence does the paper provide that instruction-following alignment can generalize to tasks that were not directly supervised?",
+      "source_filename": "Training Llm.pdf",
+      "proposed_document_id": "c87e9c2e56842a8dfa14ef5e",
+      "proposed_chunk_ids": [
+        6,
+        7,
+        30,
+        114
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "c87e9c2e56842a8dfa14ef5e",
+          "chunk_id": 6,
+          "point_id": "fbca1f8d-7813-596d-9624-c0a4abaebf50",
+          "source": "Training Llm.pdf"
+        },
+        {
+          "document_id": "c87e9c2e56842a8dfa14ef5e",
+          "chunk_id": 7,
+          "point_id": "cfdfabfa-2331-58f3-80ed-ca242b274fa7",
+          "source": "Training Llm.pdf"
+        },
+        {
+          "document_id": "c87e9c2e56842a8dfa14ef5e",
+          "chunk_id": 30,
+          "point_id": "c6197d7c-f1f5-5800-b497-4305e93c60b1",
+          "source": "Training Llm.pdf"
+        },
+        {
+          "document_id": "c87e9c2e56842a8dfa14ef5e",
+          "chunk_id": 114,
+          "point_id": "27ceb999-9780-5157-a182-521b07e5e47b",
+          "source": "Training Llm.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "The paper evaluates on held-out API prompts and public NLP tasks, and reports generalization to held-out labelers. This supports transfer beyond the exact examples used for direct supervision, while not claiming universal generalization."
+    },
+    {
+      "probe_id": "inv_training_003",
+      "question": "How does the paper evaluate whether model outputs are toxic, and what dimensions are considered in that evaluation?",
+      "source_filename": "Training Llm.pdf",
+      "proposed_document_id": "c87e9c2e56842a8dfa14ef5e",
+      "proposed_chunk_ids": [
+        39,
+        101,
+        102
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "c87e9c2e56842a8dfa14ef5e",
+          "chunk_id": 39,
+          "point_id": "b074e7da-6526-55a5-b650-95973a08967a",
+          "source": "Training Llm.pdf"
+        },
+        {
+          "document_id": "c87e9c2e56842a8dfa14ef5e",
+          "chunk_id": 101,
+          "point_id": "69e8aca3-a4e8-5c5a-8a5b-c9eb4546f044",
+          "source": "Training Llm.pdf"
+        },
+        {
+          "document_id": "c87e9c2e56842a8dfa14ef5e",
+          "chunk_id": 102,
+          "point_id": "2c545b9e-ebfe-5e7d-b484-d1f5b2e58cd2",
+          "source": "Training Llm.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "The paper combines automatic Perspective API toxicity scores with human ratings. The human evaluation includes absolute toxicity, toxicity relative to the prompt, continuity, and overall output preference; chunk 101 defines the toxicity scale."
+    },
+    {
+      "probe_id": "inv_training_004",
+      "question": "What does the human evaluation example involving GPT-3 175B and InstructGPT 175B illustrate?",
+      "source_filename": "Training Llm.pdf",
+      "proposed_document_id": "c87e9c2e56842a8dfa14ef5e",
+      "proposed_chunk_ids": [
+        1,
+        2
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "c87e9c2e56842a8dfa14ef5e",
+          "chunk_id": 1,
+          "point_id": "a7a4b7f4-b048-529b-a0a7-f576ae307e68",
+          "source": "Training Llm.pdf"
+        },
+        {
+          "document_id": "c87e9c2e56842a8dfa14ef5e",
+          "chunk_id": 2,
+          "point_id": "ddabbe06-0a9d-58c3-808f-fe77746e76b1",
+          "source": "Training Llm.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "The example and accompanying results compare InstructGPT with GPT-3 and report that outputs from the 1.3B InstructGPT model can be preferred to those from GPT-3 175B."
+    },
+    {
+      "probe_id": "inv_training_005",
+      "question": "What criteria and rating scale were used when human labelers evaluated model responses?",
+      "source_filename": "Training Llm.pdf",
+      "proposed_document_id": "c87e9c2e56842a8dfa14ef5e",
+      "proposed_chunk_ids": [
+        30,
+        97,
+        98,
+        99,
+        100
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "c87e9c2e56842a8dfa14ef5e",
+          "chunk_id": 30,
+          "point_id": "c6197d7c-f1f5-5800-b497-4305e93c60b1",
+          "source": "Training Llm.pdf"
+        },
+        {
+          "document_id": "c87e9c2e56842a8dfa14ef5e",
+          "chunk_id": 97,
+          "point_id": "43b830ca-60c0-5591-bcf6-f6d3ac8a5700",
+          "source": "Training Llm.pdf"
+        },
+        {
+          "document_id": "c87e9c2e56842a8dfa14ef5e",
+          "chunk_id": 98,
+          "point_id": "e061a5d6-75d1-5a5a-84f3-2bec7df72708",
+          "source": "Training Llm.pdf"
+        },
+        {
+          "document_id": "c87e9c2e56842a8dfa14ef5e",
+          "chunk_id": 99,
+          "point_id": "34a77e1b-57fe-5eb9-8e51-8f04ee3606d8",
+          "source": "Training Llm.pdf"
+        },
+        {
+          "document_id": "c87e9c2e56842a8dfa14ef5e",
+          "chunk_id": 100,
+          "point_id": "ea74dccf-95c8-5ccd-a40b-39815eeaecee",
+          "source": "Training Llm.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "Overall response quality is rated on a 1–7 Likert scale. Evaluation guidance assesses helpfulness, truthfulness, and harmlessness, with truthfulness and harmlessness generally prioritized except under specified trade-offs."
+    },
+    {
+      "probe_id": "inv_training_006",
+      "question": "How were InstructGPT models evaluated on public datasets, particularly with respect to language-model safety?",
+      "source_filename": "Training Llm.pdf",
+      "proposed_document_id": "c87e9c2e56842a8dfa14ef5e",
+      "proposed_chunk_ids": [
+        6,
+        30,
+        114
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "c87e9c2e56842a8dfa14ef5e",
+          "chunk_id": 6,
+          "point_id": "fbca1f8d-7813-596d-9624-c0a4abaebf50",
+          "source": "Training Llm.pdf"
+        },
+        {
+          "document_id": "c87e9c2e56842a8dfa14ef5e",
+          "chunk_id": 30,
+          "point_id": "c6197d7c-f1f5-5800-b497-4305e93c60b1",
+          "source": "Training Llm.pdf"
+        },
+        {
+          "document_id": "c87e9c2e56842a8dfa14ef5e",
+          "chunk_id": 114,
+          "point_id": "27ceb999-9780-5157-a182-521b07e5e47b",
+          "source": "Training Llm.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "The paper evaluates public NLP datasets covering truthfulness, toxicity, and bias as well as traditional zero-shot tasks. Examples include TruthfulQA, RealToxicityPrompts, Winogender, CrowS-Pairs, DROP, QuAC, SQuADv2, and HellaSwag."
+    },
+    {
+      "probe_id": "inv_training_007",
+      "question": "What evidence does the PPO evaluation provide about truthfulness and hallucination compared with the GPT-3 baseline?",
+      "source_filename": "Training Llm.pdf",
+      "proposed_document_id": "c87e9c2e56842a8dfa14ef5e",
+      "proposed_chunk_ids": [
+        6,
+        37
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "c87e9c2e56842a8dfa14ef5e",
+          "chunk_id": 6,
+          "point_id": "fbca1f8d-7813-596d-9624-c0a4abaebf50",
+          "source": "Training Llm.pdf"
+        },
+        {
+          "document_id": "c87e9c2e56842a8dfa14ef5e",
+          "chunk_id": 37,
+          "point_id": "deda677a-d148-5f7e-9057-c822b5ee7db6",
+          "source": "Training Llm.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "The paper reports InstructGPT answers are truthful and informative about twice as often on TruthfulQA and reports a 21% hallucination rate on closed-domain API tasks versus 41% for GPT-3."
+    },
+    {
+      "probe_id": "inv_training_008",
+      "question": "How much computational effort is reported for the 175B supervised fine-tuning and PPO-ptx stages, compared with GPT-3 training?",
+      "source_filename": "Training Llm.pdf",
+      "proposed_document_id": "c87e9c2e56842a8dfa14ef5e",
+      "proposed_chunk_ids": [
+        50
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "c87e9c2e56842a8dfa14ef5e",
+          "chunk_id": 50,
+          "point_id": "d0cac048-9aff-5660-887e-a1a8ba00783b",
+          "source": "Training Llm.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "The paper reports 4.9 petaFLOP/s-days for 175B supervised fine-tuning and 60 petaFLOP/s-days for 175B PPO-ptx, compared with 3,640 petaFLOP/s-days for GPT-3 pretraining."
+    },
+    {
+      "probe_id": "inv_training_009",
+      "question": "What concern about inter-labeler agreement is reported in the human evaluation?",
+      "source_filename": "Training Llm.pdf",
+      "proposed_document_id": "c87e9c2e56842a8dfa14ef5e",
+      "proposed_chunk_ids": [
+        22,
+        53,
+        57
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "c87e9c2e56842a8dfa14ef5e",
+          "chunk_id": 22,
+          "point_id": "86e29b69-b83e-56d0-8bec-ecdd18d8de95",
+          "source": "Training Llm.pdf"
+        },
+        {
+          "document_id": "c87e9c2e56842a8dfa14ef5e",
+          "chunk_id": 53,
+          "point_id": "f14dfa84-e43e-5377-907c-7cb8cd368d0b",
+          "source": "Training Llm.pdf"
+        },
+        {
+          "document_id": "c87e9c2e56842a8dfa14ef5e",
+          "chunk_id": 57,
+          "point_id": "c16d6e90-2969-5a98-a6c6-66ca5f116ea0",
+          "source": "Training Llm.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "The paper reports inter-annotator agreement of 72.6 ± 1.5% for training labelers and 77.3 ± 1.3% for held-out labelers, while noting that labelers disagree on some examples and may not represent all users."
+    },
+    {
+      "probe_id": "inv_training_010",
+      "question": "What trade-offs are discussed between open-sourcing large language models and providing controlled API access?",
+      "source_filename": "Training Llm.pdf",
+      "proposed_document_id": "c87e9c2e56842a8dfa14ef5e",
+      "proposed_chunk_ids": [
+        62,
+        63
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "c87e9c2e56842a8dfa14ef5e",
+          "chunk_id": 62,
+          "point_id": "6462d87d-f258-5831-8047-997550c5ae1d",
+          "source": "Training Llm.pdf"
+        },
+        {
+          "document_id": "c87e9c2e56842a8dfa14ef5e",
+          "chunk_id": 63,
+          "point_id": "ab69b51c-fc9b-5fe3-bbca-5a024360e57c",
+          "source": "Training Llm.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "The paper contrasts open-sourcing, which makes restricting harmful uses difficult, with controlled API access, which can support use restrictions, misuse monitoring, revocation, and rate limits but reduces transparency and concentrates decision-making."
+    }
+  ]
+}

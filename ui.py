@@ -2536,7 +2536,11 @@ def parse_response(data: dict, elapsed: float, http_status: int):
         }
     )
 
-    answer = data.get("answer", "No response was returned.")
+    answer = data.get("answer") or (
+        "I couldn't find enough support in the sources to answer this."
+        if abstained
+        else "No response was returned."
+    )
 
     return answer, trace, completion_state, completion_label
 
@@ -2865,9 +2869,12 @@ KB_TOPICS = (
 )
 
 STARTERS = (
-    "What is loop engineering?",
-    "What are the main components of an LLM-based agent?",
-    "How do workflows differ from agents?",
+    # Knowledge base only
+    "Explain loop engineering for LLM-based agents: how the agent loop works step by step, what happens in each iteration, and what makes a loop reliable.",
+    # KB + web
+    "How does harness engineering improve the reliability of LLM-based agents, and how do current tools like LangGraph and the OpenAI Agents SDK put those ideas into practice?",
+    # Off-topic
+    "Give me a detailed step-by-step plan to brew pour-over coffee at home, with ratios, grind size, and timing.",
 )
 
 

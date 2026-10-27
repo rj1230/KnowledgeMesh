@@ -93,7 +93,12 @@ _STRETCH = (
 )
 
 
-@st.cache_resource(show_spinner=False)
+def _release_inprocess_backend(client):
+    """Shut down FastAPI lifespan when Streamlit releases the cached client."""
+    client.__exit__(None, None, None)
+
+
+@st.cache_resource(show_spinner=False, on_release=_release_inprocess_backend)
 def get_inprocess_backend():
     """Create a FastAPI TestClient for Streamlit Cloud mode."""
     # Imported here so a frontend-only deployment does not need FastAPI.
@@ -102,6 +107,9 @@ def get_inprocess_backend():
     secret_names = (
         "QDRANT_CLUSTER_ENDPOINT",
         "QDRANT_API_KEY",
+        "QDRANT_COLLECTION",
+        "EMBEDDING_MODEL",
+        "EMBEDDING_DIMENSION",
         "GROQ_API_KEY",
         "TAVILY_API_KEY",
         "PORTKEY_API_KEY",
@@ -121,7 +129,9 @@ def get_inprocess_backend():
 
     from app.main import app
 
-    return TestClient(app)
+    client = TestClient(app)
+    client.__enter__()  # Run FastAPI startup/lifespan for the cached client.
+    return client
 
 
 # ============================================================
@@ -1192,7 +1202,7 @@ def render_latency_panel(trace: dict) -> str:
     slow = bottleneck_key(trace)
     segments, legend, known = [], [], 0.0
 
-    for key in ("retrieval", "reranking", "grader", "responder", "critic"):
+    for key in ("retrieval", "reranking", "grader", "responder"):
         value = stage_latency_ms(trace, key)
 
         if not value:
@@ -1228,20 +1238,28 @@ def render_latency_panel(trace: dict) -> str:
         max(latency * 1000 - total, 0) if isinstance(latency, (int, float)) else None
     )
 
-    # The Critic segment above is the request-wide HHEM time. The single
-    # grounding pass is shown as a diagnostic only, so it is never counted twice.
-    grounding_ms = trace.get("grounding_ms")
+    # HHEM time is request-wide and overlaps the stages above, so it is shown
+    # as a diagnostic only and never added to the bar.
+    grounding_ms = safe_float(trace.get("grounding_ms"))
+    hhem_total = safe_float(trace.get("request_hhem_total_ms"))
     hhem_calls = trace.get("request_hhem_call_count")
 
-    grounding_detail = ""
-    if isinstance(grounding_ms, (int, float)) and grounding_ms >= 0:
-        grounding_detail = (
-            f'<div class="km-lat-note">Last grounding pass: '
-            f"{esc(format_ms(float(grounding_ms)))}"
-        )
+    parts = []
+
+    if grounding_ms is not None and grounding_ms >= 0:
+        parts.append(f"Last grounding pass: {esc(format_ms(grounding_ms))}")
+
+    if hhem_total is not None and hhem_total >= 0:
+        text = f"HHEM across request: {esc(format_ms(hhem_total))}"
+
         if isinstance(hhem_calls, int) and hhem_calls >= 0:
-            grounding_detail += f" &middot; {hhem_calls} HHEM calls in this request"
-        grounding_detail += "</div>"
+            text += f" ({hhem_calls} HHEM calls)"
+
+        parts.append(text)
+
+    grounding_detail = (
+        f'<div class="km-lat-note">{" &middot; ".join(parts)}</div>' if parts else ""
+    )
 
     note = ""
 
@@ -2518,7 +2536,11 @@ def parse_response(data: dict, elapsed: float, http_status: int):
         }
     )
 
-    answer = data.get("answer", "No response was returned.")
+    answer = data.get("answer") or (
+        "I couldn't find enough support in the sources to answer this."
+        if abstained
+        else "No response was returned."
+    )
 
     return answer, trace, completion_state, completion_label
 
@@ -2847,9 +2869,12 @@ KB_TOPICS = (
 )
 
 STARTERS = (
-    "What is loop engineering?",
-    "What are the main components of an LLM-based agent?",
-    "How do workflows differ from agents?",
+    # Knowledge base only
+    "Explain loop engineering for LLM-based agents: how the agent loop works step by step, what happens in each iteration, and what makes a loop reliable.",
+    # KB + web
+    "How does harness engineering improve the reliability of LLM-based agents, and how do current tools like LangGraph and the OpenAI Agents SDK put those ideas into practice?",
+    # Off-topic
+    "Give me a detailed step-by-step plan to brew pour-over coffee at home, with ratios, grind size, and timing.",
 )
 
 

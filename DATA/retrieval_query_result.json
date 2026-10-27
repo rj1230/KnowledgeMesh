@@ -1,0 +1,1976 @@
+{
+  "question": "What information is available in the knowledge base?",
+  "answer": "- Core metadata elements defined by the Dublin Core standard: Title, Subject, Description, Type, Source, Relations, Coverage, Creator, Publisher, Contributor, Rights, Date, Format, Identifier, Language [chunk_1]\n- Additional metadata fields often used as taxonomies or controlled vocabularies include Topic, Activity, Location, Organization Name, People/Role Type, Document Type, Content Language, etc. [chunk_1]\n- A knowledge base stores internal documents such as policies, updates, onboarding materials, strategies, summaries, company values, and Standard Operating Procedures. [chunk_3]\n- It can also contain external/customer‑facing content such as answers to common questions and product or service information. [chunk_3]\n- Product‑documentation knowledge bases hold technical information about how software, applications, or digital products function and provide product‑specific technical details. [chunk_5]\n- Customer‑facing knowledge base platforms are public self‑service portals that provide information about products and services to anyone. [chunk_5]\n- A domain schema is a schematic description of domain‑specific knowledge that defines the types and structure used in the knowledge base. [chunk_2]\n- A knowledge base accommodates the instances of the types specified in the domain schema. [chunk_2]",
+  "candidate_answer": "- Core metadata elements defined by the Dublin Core standard: Title, Subject, Description, Type, Source, Relations, Coverage, Creator, Publisher, Contributor, Rights, Date, Format, Identifier, Language [chunk_1]\n- Additional metadata fields often used as taxonomies or controlled vocabularies include Topic, Activity, Location, Organization Name, People/Role Type, Document Type, Content Language, etc. [chunk_1]\n- A knowledge base stores internal documents such as policies, updates, onboarding materials, strategies, summaries, company values, and Standard Operating Procedures. [chunk_3]\n- It can also contain external/customer‑facing content such as answers to common questions and product or service information. [chunk_3]\n- Product‑documentation knowledge bases hold technical information about how software, applications, or digital products function and provide product‑specific technical details. [chunk_5]\n- Customer‑facing knowledge base platforms are public self‑service portals that provide information about products and services to anyone. [chunk_5]\n- A domain schema is a schematic description of domain‑specific knowledge that defines the types and structure used in the knowledge base. [chunk_2]\n- A knowledge base accommodates the instances of the types specified in the domain schema. [chunk_2]",
+  "answer_available": true,
+  "answer_source": "final_answer",
+  "status": "Answer relevance validation passed.",
+  "validation_status": "validated",
+  "thought_process": [
+    "Intent: Technical",
+    "Search Term: knowledge base contents information types documents metadata schema topics domains",
+    "Internal Dense Retrieval: 50/50 candidates",
+    "Internal Semantic Reranking: 50/50 scored",
+    "Internal Dense Recovery: top 20, threshold 0.68",
+    "Internal Evidence Selection: 0/5 documents",
+    "Retrieval Time: 1678 ms",
+    "Rerank Time: 1164 ms",
+    "Document Grade: 0/0 relevant",
+    "Evidence Quality: no documents",
+    "Context Quality: empty",
+    "Context Quality: empty",
+    "Web Search Required: True",
+    "Web Search: 5 external sources",
+    "Web Evidence: sent to document grader",
+    "Document Grade: 5/5 usable",
+    "Evidence Quality: 5 content / 0 reference / 0 navigation",
+    "Generation Evidence: 5 content / 0 reference",
+    "Generation Context: 5/5",
+    "Context Quality: strong",
+    "Grader Time: 2688 ms",
+    "Context Quality: strong",
+    "Web Search Required: False",
+    "Citation Check: PASS",
+    "Citation Check: PASS"
+  ],
+  "trajectory": {
+    "status": "recovered",
+    "hop_count": 0,
+    "required_hops": 1,
+    "failure_taxonomy": [
+      "RETRIEVAL_FAILURE",
+      "GROUNDING_FAILURE"
+    ],
+    "metrics": {
+      "hop_success_rate": 0.0,
+      "required_hop_completion": 0.0,
+      "retrieval_success_rate": 0.0,
+      "evidence_acquisition_rate": 0.0,
+      "web_fallback_rate": 1.0,
+      "citation_support_rate": 1.0,
+      "unsupported_claim_rate": 0.25,
+      "revision_rate": 1.0,
+      "revision_success_rate": 1.0,
+      "recovery_after_grounding_failure": 1.0,
+      "recovery_after_citation_failure": 1.0
+    },
+    "trace": [
+      {
+        "step": "planner",
+        "status": "technical",
+        "details": {
+          "route": "knowledge",
+          "retrieval_required": true,
+          "query": "knowledge base contents information types documents metadata schema topics domains"
+        }
+      },
+      {
+        "step": "private_retrieval",
+        "status": "empty",
+        "details": {
+          "candidate_count": 50,
+          "reranked_count": 50,
+          "selected_count": 0,
+          "query": "knowledge base contents information types documents metadata schema topics domains"
+        }
+      },
+      {
+        "step": "grader",
+        "status": "skipped",
+        "details": {
+          "document_count": 0,
+          "grading_mode": "no_documents",
+          "context_quality": "empty"
+        }
+      },
+      {
+        "step": "context_evaluator",
+        "status": "empty",
+        "details": {
+          "should_search_web": true,
+          "reason": "No internal documents were retrieved.",
+          "graded_documents": 0,
+          "generation_documents": 0
+        }
+      },
+      {
+        "step": "web_search",
+        "status": "recovered",
+        "details": {
+          "attempted": true,
+          "used": true,
+          "source_count": 5
+        }
+      },
+      {
+        "step": "grader",
+        "status": "success",
+        "details": {
+          "document_count": 5,
+          "graded_count": 5,
+          "generation_count": 5,
+          "content_count": 5,
+          "reference_count": 0,
+          "navigation_count": 0,
+          "context_quality": "strong"
+        }
+      },
+      {
+        "step": "context_evaluator",
+        "status": "strong",
+        "details": {
+          "should_search_web": false,
+          "reason": "5 relevant internal documents are available for generation.",
+          "graded_documents": 5,
+          "generation_documents": 5
+        }
+      },
+      {
+        "step": "responder",
+        "status": "generated",
+        "details": {
+          "generation_evidence_count": 5,
+          "revision_count": 0
+        }
+      },
+      {
+        "step": "citation_check",
+        "status": "passed",
+        "details": {
+          "citation_valid": true,
+          "uncited_claims": 0,
+          "invalid_citations": 0,
+          "citation_count": 7
+        }
+      },
+      {
+        "step": "grounding_critic",
+        "status": "failed",
+        "details": {
+          "is_grounded": false,
+          "answer_supported": false,
+          "support_score": 0.2729,
+          "claim_count": 7,
+          "atomic_claim_count": 8,
+          "unsupported_atomic_count": 2,
+          "uncited_claim_count": 0,
+          "invalid_citation_count": 0,
+          "grounding_ms": 10771.62,
+          "hhem_call_count": 13,
+          "hhem_total_ms": 10525.92
+        }
+      },
+      {
+        "step": "revision",
+        "status": "requested",
+        "details": {
+          "revision_count": 1,
+          "previous_revision_count": 0,
+          "max_answer_revisions": 2,
+          "trigger": [
+            "grounding_failure"
+          ],
+          "has_citation_feedback": false,
+          "grounding_feedback_count": 1,
+          "has_revision_prompt": true
+        }
+      },
+      {
+        "step": "responder",
+        "status": "revised_generated",
+        "details": {
+          "generation_evidence_count": 5,
+          "revision_count": 1
+        }
+      },
+      {
+        "step": "citation_check",
+        "status": "passed",
+        "details": {
+          "citation_valid": true,
+          "uncited_claims": 0,
+          "invalid_citations": 0,
+          "citation_count": 8
+        }
+      },
+      {
+        "step": "grounding_critic",
+        "status": "passed",
+        "details": {
+          "is_grounded": true,
+          "answer_supported": true,
+          "support_score": 0.5952,
+          "claim_count": 8,
+          "atomic_claim_count": 9,
+          "unsupported_atomic_count": 0,
+          "uncited_claim_count": 0,
+          "invalid_citation_count": 0,
+          "grounding_ms": 2981.69,
+          "hhem_call_count": 8,
+          "hhem_total_ms": 2809.73
+        }
+      },
+      {
+        "step": "answer_relevance",
+        "status": "passed",
+        "details": {
+          "answer_useful": true,
+          "usefulness_score": 0.95,
+          "reason": "The answer directly lists the types of information that can be found in a knowledge base, covering metadata, internal documents, external content, product documentation, customer-facing portals, and domain schema, which directly addresses the user's question.",
+          "relevance_ms": 4531.39
+        }
+      }
+    ]
+  },
+  "sources": [
+    {
+      "id": "web-1",
+      "content": "Domain schema: The domain schema is a schematic description of the domain-specific knowledge and information needed for a particular area or topic. It uses different types to define the structure of this knowledge. This schema shows how things are organized in that area, but it doesn’t change much over time. In the context of the knowledge base, the domain schema resembles a framework or structure that helps to organize and represent information in our AI system.\n Knowledge base: A knowledge base accommodates the instances of the types specified in the domain schema. In knowledge modeling, we often have different knowledge bases for different types of knowledge. For example, we might have one knowledge base for rules and another for other types of pieces of information.",
+      "source": "Role of Knowledge Bases in Intelligent Systems - GeeksforGeeks",
+      "source_type": "web",
+      "url": "https://www.geeksforgeeks.org/artificial-intelligence/role-of-knowledge-bases-in-intelligent-systems",
+      "score": 0.6158511,
+      "rerank_score": null,
+      "document_id": null,
+      "chunk_id": null,
+      "total_chunks": null,
+      "grader_score": null,
+      "grader_relevant": null,
+      "grader_reason": ""
+    },
+    {
+      "id": "web-2",
+      "content": "In the context of metadata schemas, there exist not only these custom metadata schemas, but also standard metadata sets of elements and their schemas. They provide predefined metadata elements that are intended to be sufficiently generic for various use cases. Perhaps the most widely used standard metadata schema in is Dublin Core, which is a set of 15 basic (core) elements intended for published documents. These elements are Title, Subject, Description, Type, Source, Relations, Coverage, Creator, Publisher, Contributor, Rights, Date, Format, Identifier, and Language. There are other standard metadata schema that are somewhat more specific for a subject domain, such as IPTC (International Press Telecommunications Council) metadata which is intended for images. When standard data notation, [...] The value type for the metadata element (For example, controlled vocabulary terms, uncontrolled keywords, free text, date, integers, Boolean yes/no, etc.)\n Whether assignment of a value from the metadata element is required or optional for each content item (or depends on the specific type of content item).\n Whether the assignment of the values from the metadata element is limited to just one or can be multiple, which is referred to as “cardinality.” (For example, the assignment of only one Document Type but up to four Topics per content item.)\n\nExample of a custom metadata schema\n\nStandard Metadata Element Sets and Schemas [...] # Types of Metadata Schemas\n\nHeather Hedden\n\nTaxonomies or sets of controlled vocabularies are typically implemented as values for  various metadata elements (also called metadata properties or fields). Metadata elements that contain controlled vocabularies could be Topic, Activity, Location, Organization Name, People/Role Type, Document Type, Content Language, etc. These are often implemented as facets in faceted search, although they do not have to be. There may be additional metadata elements for non-taxonomy values, such as Document Title, Image Caption, Creator/Author, Creation Date, Rights Status, etc. In addition to designing taxonomies, in my consulting projects I often also design such broader metadata schemas.\n\n## Custom Metadata Schemas",
+      "source": "Types of Metadata Schemas – Hedden Information Management",
+      "source_type": "web",
+      "url": "https://www.hedden-information.com/types-of-metadata-schemas",
+      "score": 0.5832277,
+      "rerank_score": null,
+      "document_id": null,
+      "chunk_id": null,
+      "total_chunks": null,
+      "grader_score": null,
+      "grader_relevant": null,
+      "grader_reason": ""
+    },
+    {
+      "id": "web-3",
+      "content": "### SEO-Optimized Knowledge Base Content\n\nDigital knowledge bases can help generate organic traffic and boost the results rankings of your documents. To do this, the content hub must be optimized for search engines like Google and Bing. With features like custom metadata options, your knowledge base will help search engine bots crawl and index your content.\n\n### AI-Powered Support Assistant\n\nEnhance knowledge base search tools with Generative AI (GenAI) to turn a normal quest for information into a conversational experience. Users enter their questions in natural language into a self-service chatbot or search bar interface and automatically receive accurate responses. [...] Documentation trends: Identify the most popular content and search terms to prioritize content work. Look at the least-read content to discover which topics aren’t as critical for users.  Are they less popular due to a lack of questions on the topic or because users search for different keywords?\n Content findability: With keyword analytics, see what customers search for. If they use different terms than those in the content, enhance your knowledge base with new metadata, taxonomies, and synonyms. This will improve your content findability and usefulness.\n No-results searches: Identify content gaps with “Searches with no results”. When results are lacking, documentation teams need to produce or update content. [...] Cover of KMWorld Report AI\n\nKnowledge Base FAQs\n\nTeams should organize content in a knowledge base around the questions and tasks users need to complete, using clear categories, metadata, navigation, and search. Regular content audits and updates are also important for keeping information easy to find and trustworthy.\n\nKnowledge management is typically a cross-functional responsibility involving technical writers, knowledge teams, subject matter experts, support teams, product teams, and other content owners. It may also include HR and Legal if the knowledge base includes internal process information. IT may be involved in creating the hub and connecting it to different content sources. Clear ownership and review processes help ensure that information remains accurate and current.",
+      "source": "What Is a Knowledge Base? Definition, Types & Benefits",
+      "source_type": "web",
+      "url": "https://www.fluidtopics.com/blog/content-ops/what-is-a-knowledge-base",
+      "score": 0.46162403,
+      "rerank_score": null,
+      "document_id": null,
+      "chunk_id": null,
+      "total_chunks": null,
+      "grader_score": null,
+      "grader_relevant": null,
+      "grader_reason": ""
+    },
+    {
+      "id": "web-4",
+      "content": "###### Modernize Your Knowledge Base\n\nReplace static folders with a dynamic, searchable home for all your company data.\n\nBook a FREE Demo\n\nEnterprise Intelligence\n\n## 3. Product Documentation Knowledge Base\n\nProduct documentation knowledge bases house technical information about how your software, application, or digital product functions. This knowledge base type is fundamentally different from general support content. It focuses on product-specific technical details rather than company policies or broad customer service topics. You create reference material that explains what each feature does, how users interact with specific functionality, and technical specifications that developers need for integration. [...] Learn More\n\nEnterprise Intelligence\n\n  A list of the different types of knowledge bases  \n\n## 1. Customer-Facing Knowledge Base Platforms\n\nCustomer-facing knowledge base platforms function as public self-service portals where customers access information about your products and services without restrictions. These external types of knowledge bases remain available to anyone seeking answers, unlike internal systems reserved for employees. You’ll find them embedded on company websites, within products, or hosted at dedicated domains like support.company.com. [...] ## 7. Community-Driven or Collaborative Knowledge Base\n\nHigh levels of community engagement and collaboration see a 10% increase in customer loyalty. Many organizations are shifting toward a collaborative model in which users contribute to the documentation. This type functions as a peer-to-peer repository where long-time customers or power users share workarounds, creative use cases, and localized solutions that a corporate team might miss.\n\nCrowdsourcing information ensures that the library remains dynamic and reflects real-world applications. Moderation tools allow your staff to verify community answers, turning a simple forum into a trusted, authoritative source. This reduces the burden on your content team while fostering a sense of ownership among your most loyal brand advocates.",
+      "source": "The 7 Essential Types of Knowledge Bases - Bloomfire",
+      "source_type": "web",
+      "url": "https://bloomfire.com/blog/types-of-knowledge-bases",
+      "score": 0.45449692,
+      "rerank_score": null,
+      "document_id": null,
+      "chunk_id": null,
+      "total_chunks": null,
+      "grader_score": null,
+      "grader_relevant": null,
+      "grader_reason": ""
+    },
+    {
+      "id": "web-5",
+      "content": "## Frequently Asked Questions\n\nA knowledge base is a centralized and structured repository of information and data that serves as a source of knowledge within an organization and outside of it.   \n   \n When it comes to internal use, a knowledge base can store different types of information: internal policies, updates, onboarding materials, strategies, summaries, company values, Standard Operating Procedures, and more.   \n   \n On the outside, a knowledge base can also supplement customer support. A self service customer knowledge base is available 24/7 and can contain answers to common questions or information about a product, service, or a particular topic.\n\nTo create a knowledge base, follow these steps: [...] 1. Identify the key topics and information that employees need for their roles.\n2. Include essential company policies, procedures, and guidelines.\n3. Organize the content into categories, such as HR, IT, product information, etc.\n4. Ensure the knowledge base is easily searchable and accessible to all employees.\n5. Encourage feedback and contributions from employees to keep the knowledge base up-to-date and relevant. [...] A knowledge base article is a standalone piece of content in a knowledge base. The article addresses a specific topic, question, or problem. It provides in-depth information, step-by-step instructions, troubleshooting tips, or solutions to help users resolve their issues independently.\n\nThere are a few things to keep in mind when writing a knowledge base article. To write an effective knowledge base article:",
+      "source": "📚 Knowledge Base Software & Hosted Help Center for Your Customers",
+      "source_type": "web",
+      "url": "https://www.knowledgebase.com",
+      "score": 0.4526091,
+      "rerank_score": null,
+      "document_id": null,
+      "chunk_id": null,
+      "total_chunks": null,
+      "grader_score": null,
+      "grader_relevant": null,
+      "grader_reason": ""
+    }
+  ],
+  "private_sources": [],
+  "answer_sources": [
+    {
+      "id": "web-1",
+      "content": "Domain schema: The domain schema is a schematic description of the domain-specific knowledge and information needed for a particular area or topic. It uses different types to define the structure of this knowledge. This schema shows how things are organized in that area, but it doesn’t change much over time. In the context of the knowledge base, the domain schema resembles a framework or structure that helps to organize and represent information in our AI system.\n Knowledge base: A knowledge base accommodates the instances of the types specified in the domain schema. In knowledge modeling, we often have different knowledge bases for different types of knowledge. For example, we might have one knowledge base for rules and another for other types of pieces of information.",
+      "source": "Role of Knowledge Bases in Intelligent Systems - GeeksforGeeks",
+      "source_type": "web",
+      "url": "https://www.geeksforgeeks.org/artificial-intelligence/role-of-knowledge-bases-in-intelligent-systems",
+      "score": 0.6158511,
+      "rerank_score": null,
+      "document_id": null,
+      "chunk_id": null,
+      "total_chunks": null,
+      "grader_score": null,
+      "grader_relevant": null,
+      "grader_reason": ""
+    },
+    {
+      "id": "web-2",
+      "content": "In the context of metadata schemas, there exist not only these custom metadata schemas, but also standard metadata sets of elements and their schemas. They provide predefined metadata elements that are intended to be sufficiently generic for various use cases. Perhaps the most widely used standard metadata schema in is Dublin Core, which is a set of 15 basic (core) elements intended for published documents. These elements are Title, Subject, Description, Type, Source, Relations, Coverage, Creator, Publisher, Contributor, Rights, Date, Format, Identifier, and Language. There are other standard metadata schema that are somewhat more specific for a subject domain, such as IPTC (International Press Telecommunications Council) metadata which is intended for images. When standard data notation, [...] The value type for the metadata element (For example, controlled vocabulary terms, uncontrolled keywords, free text, date, integers, Boolean yes/no, etc.)\n Whether assignment of a value from the metadata element is required or optional for each content item (or depends on the specific type of content item).\n Whether the assignment of the values from the metadata element is limited to just one or can be multiple, which is referred to as “cardinality.” (For example, the assignment of only one Document Type but up to four Topics per content item.)\n\nExample of a custom metadata schema\n\nStandard Metadata Element Sets and Schemas [...] # Types of Metadata Schemas\n\nHeather Hedden\n\nTaxonomies or sets of controlled vocabularies are typically implemented as values for  various metadata elements (also called metadata properties or fields). Metadata elements that contain controlled vocabularies could be Topic, Activity, Location, Organization Name, People/Role Type, Document Type, Content Language, etc. These are often implemented as facets in faceted search, although they do not have to be. There may be additional metadata elements for non-taxonomy values, such as Document Title, Image Caption, Creator/Author, Creation Date, Rights Status, etc. In addition to designing taxonomies, in my consulting projects I often also design such broader metadata schemas.\n\n## Custom Metadata Schemas",
+      "source": "Types of Metadata Schemas – Hedden Information Management",
+      "source_type": "web",
+      "url": "https://www.hedden-information.com/types-of-metadata-schemas",
+      "score": 0.5832277,
+      "rerank_score": null,
+      "document_id": null,
+      "chunk_id": null,
+      "total_chunks": null,
+      "grader_score": null,
+      "grader_relevant": null,
+      "grader_reason": ""
+    },
+    {
+      "id": "web-3",
+      "content": "### SEO-Optimized Knowledge Base Content\n\nDigital knowledge bases can help generate organic traffic and boost the results rankings of your documents. To do this, the content hub must be optimized for search engines like Google and Bing. With features like custom metadata options, your knowledge base will help search engine bots crawl and index your content.\n\n### AI-Powered Support Assistant\n\nEnhance knowledge base search tools with Generative AI (GenAI) to turn a normal quest for information into a conversational experience. Users enter their questions in natural language into a self-service chatbot or search bar interface and automatically receive accurate responses. [...] Documentation trends: Identify the most popular content and search terms to prioritize content work. Look at the least-read content to discover which topics aren’t as critical for users.  Are they less popular due to a lack of questions on the topic or because users search for different keywords?\n Content findability: With keyword analytics, see what customers search for. If they use different terms than those in the content, enhance your knowledge base with new metadata, taxonomies, and synonyms. This will improve your content findability and usefulness.\n No-results searches: Identify content gaps with “Searches with no results”. When results are lacking, documentation teams need to produce or update content. [...] Cover of KMWorld Report AI\n\nKnowledge Base FAQs\n\nTeams should organize content in a knowledge base around the questions and tasks users need to complete, using clear categories, metadata, navigation, and search. Regular content audits and updates are also important for keeping information easy to find and trustworthy.\n\nKnowledge management is typically a cross-functional responsibility involving technical writers, knowledge teams, subject matter experts, support teams, product teams, and other content owners. It may also include HR and Legal if the knowledge base includes internal process information. IT may be involved in creating the hub and connecting it to different content sources. Clear ownership and review processes help ensure that information remains accurate and current.",
+      "source": "What Is a Knowledge Base? Definition, Types & Benefits",
+      "source_type": "web",
+      "url": "https://www.fluidtopics.com/blog/content-ops/what-is-a-knowledge-base",
+      "score": 0.46162403,
+      "rerank_score": null,
+      "document_id": null,
+      "chunk_id": null,
+      "total_chunks": null,
+      "grader_score": null,
+      "grader_relevant": null,
+      "grader_reason": ""
+    },
+    {
+      "id": "web-4",
+      "content": "###### Modernize Your Knowledge Base\n\nReplace static folders with a dynamic, searchable home for all your company data.\n\nBook a FREE Demo\n\nEnterprise Intelligence\n\n## 3. Product Documentation Knowledge Base\n\nProduct documentation knowledge bases house technical information about how your software, application, or digital product functions. This knowledge base type is fundamentally different from general support content. It focuses on product-specific technical details rather than company policies or broad customer service topics. You create reference material that explains what each feature does, how users interact with specific functionality, and technical specifications that developers need for integration. [...] Learn More\n\nEnterprise Intelligence\n\n  A list of the different types of knowledge bases  \n\n## 1. Customer-Facing Knowledge Base Platforms\n\nCustomer-facing knowledge base platforms function as public self-service portals where customers access information about your products and services without restrictions. These external types of knowledge bases remain available to anyone seeking answers, unlike internal systems reserved for employees. You’ll find them embedded on company websites, within products, or hosted at dedicated domains like support.company.com. [...] ## 7. Community-Driven or Collaborative Knowledge Base\n\nHigh levels of community engagement and collaboration see a 10% increase in customer loyalty. Many organizations are shifting toward a collaborative model in which users contribute to the documentation. This type functions as a peer-to-peer repository where long-time customers or power users share workarounds, creative use cases, and localized solutions that a corporate team might miss.\n\nCrowdsourcing information ensures that the library remains dynamic and reflects real-world applications. Moderation tools allow your staff to verify community answers, turning a simple forum into a trusted, authoritative source. This reduces the burden on your content team while fostering a sense of ownership among your most loyal brand advocates.",
+      "source": "The 7 Essential Types of Knowledge Bases - Bloomfire",
+      "source_type": "web",
+      "url": "https://bloomfire.com/blog/types-of-knowledge-bases",
+      "score": 0.45449692,
+      "rerank_score": null,
+      "document_id": null,
+      "chunk_id": null,
+      "total_chunks": null,
+      "grader_score": null,
+      "grader_relevant": null,
+      "grader_reason": ""
+    },
+    {
+      "id": "web-5",
+      "content": "## Frequently Asked Questions\n\nA knowledge base is a centralized and structured repository of information and data that serves as a source of knowledge within an organization and outside of it.   \n   \n When it comes to internal use, a knowledge base can store different types of information: internal policies, updates, onboarding materials, strategies, summaries, company values, Standard Operating Procedures, and more.   \n   \n On the outside, a knowledge base can also supplement customer support. A self service customer knowledge base is available 24/7 and can contain answers to common questions or information about a product, service, or a particular topic.\n\nTo create a knowledge base, follow these steps: [...] 1. Identify the key topics and information that employees need for their roles.\n2. Include essential company policies, procedures, and guidelines.\n3. Organize the content into categories, such as HR, IT, product information, etc.\n4. Ensure the knowledge base is easily searchable and accessible to all employees.\n5. Encourage feedback and contributions from employees to keep the knowledge base up-to-date and relevant. [...] A knowledge base article is a standalone piece of content in a knowledge base. The article addresses a specific topic, question, or problem. It provides in-depth information, step-by-step instructions, troubleshooting tips, or solutions to help users resolve their issues independently.\n\nThere are a few things to keep in mind when writing a knowledge base article. To write an effective knowledge base article:",
+      "source": "📚 Knowledge Base Software & Hosted Help Center for Your Customers",
+      "source_type": "web",
+      "url": "https://www.knowledgebase.com",
+      "score": 0.4526091,
+      "rerank_score": null,
+      "document_id": null,
+      "chunk_id": null,
+      "total_chunks": null,
+      "grader_score": null,
+      "grader_relevant": null,
+      "grader_reason": ""
+    }
+  ],
+  "retrieved_private_sources": [],
+  "web_sources": [
+    {
+      "id": "web-1",
+      "content": "Domain schema: The domain schema is a schematic description of the domain-specific knowledge and information needed for a particular area or topic. It uses different types to define the structure of this knowledge. This schema shows how things are organized in that area, but it doesn’t change much over time. In the context of the knowledge base, the domain schema resembles a framework or structure that helps to organize and represent information in our AI system.\n Knowledge base: A knowledge base accommodates the instances of the types specified in the domain schema. In knowledge modeling, we often have different knowledge bases for different types of knowledge. For example, we might have one knowledge base for rules and another for other types of pieces of information.",
+      "source": "Role of Knowledge Bases in Intelligent Systems - GeeksforGeeks",
+      "source_type": "web",
+      "url": "https://www.geeksforgeeks.org/artificial-intelligence/role-of-knowledge-bases-in-intelligent-systems",
+      "score": 0.6158511,
+      "rerank_score": null,
+      "document_id": null,
+      "chunk_id": null,
+      "total_chunks": null,
+      "grader_score": null,
+      "grader_relevant": null,
+      "grader_reason": ""
+    },
+    {
+      "id": "web-2",
+      "content": "In the context of metadata schemas, there exist not only these custom metadata schemas, but also standard metadata sets of elements and their schemas. They provide predefined metadata elements that are intended to be sufficiently generic for various use cases. Perhaps the most widely used standard metadata schema in is Dublin Core, which is a set of 15 basic (core) elements intended for published documents. These elements are Title, Subject, Description, Type, Source, Relations, Coverage, Creator, Publisher, Contributor, Rights, Date, Format, Identifier, and Language. There are other standard metadata schema that are somewhat more specific for a subject domain, such as IPTC (International Press Telecommunications Council) metadata which is intended for images. When standard data notation, [...] The value type for the metadata element (For example, controlled vocabulary terms, uncontrolled keywords, free text, date, integers, Boolean yes/no, etc.)\n Whether assignment of a value from the metadata element is required or optional for each content item (or depends on the specific type of content item).\n Whether the assignment of the values from the metadata element is limited to just one or can be multiple, which is referred to as “cardinality.” (For example, the assignment of only one Document Type but up to four Topics per content item.)\n\nExample of a custom metadata schema\n\nStandard Metadata Element Sets and Schemas [...] # Types of Metadata Schemas\n\nHeather Hedden\n\nTaxonomies or sets of controlled vocabularies are typically implemented as values for  various metadata elements (also called metadata properties or fields). Metadata elements that contain controlled vocabularies could be Topic, Activity, Location, Organization Name, People/Role Type, Document Type, Content Language, etc. These are often implemented as facets in faceted search, although they do not have to be. There may be additional metadata elements for non-taxonomy values, such as Document Title, Image Caption, Creator/Author, Creation Date, Rights Status, etc. In addition to designing taxonomies, in my consulting projects I often also design such broader metadata schemas.\n\n## Custom Metadata Schemas",
+      "source": "Types of Metadata Schemas – Hedden Information Management",
+      "source_type": "web",
+      "url": "https://www.hedden-information.com/types-of-metadata-schemas",
+      "score": 0.5832277,
+      "rerank_score": null,
+      "document_id": null,
+      "chunk_id": null,
+      "total_chunks": null,
+      "grader_score": null,
+      "grader_relevant": null,
+      "grader_reason": ""
+    },
+    {
+      "id": "web-3",
+      "content": "### SEO-Optimized Knowledge Base Content\n\nDigital knowledge bases can help generate organic traffic and boost the results rankings of your documents. To do this, the content hub must be optimized for search engines like Google and Bing. With features like custom metadata options, your knowledge base will help search engine bots crawl and index your content.\n\n### AI-Powered Support Assistant\n\nEnhance knowledge base search tools with Generative AI (GenAI) to turn a normal quest for information into a conversational experience. Users enter their questions in natural language into a self-service chatbot or search bar interface and automatically receive accurate responses. [...] Documentation trends: Identify the most popular content and search terms to prioritize content work. Look at the least-read content to discover which topics aren’t as critical for users.  Are they less popular due to a lack of questions on the topic or because users search for different keywords?\n Content findability: With keyword analytics, see what customers search for. If they use different terms than those in the content, enhance your knowledge base with new metadata, taxonomies, and synonyms. This will improve your content findability and usefulness.\n No-results searches: Identify content gaps with “Searches with no results”. When results are lacking, documentation teams need to produce or update content. [...] Cover of KMWorld Report AI\n\nKnowledge Base FAQs\n\nTeams should organize content in a knowledge base around the questions and tasks users need to complete, using clear categories, metadata, navigation, and search. Regular content audits and updates are also important for keeping information easy to find and trustworthy.\n\nKnowledge management is typically a cross-functional responsibility involving technical writers, knowledge teams, subject matter experts, support teams, product teams, and other content owners. It may also include HR and Legal if the knowledge base includes internal process information. IT may be involved in creating the hub and connecting it to different content sources. Clear ownership and review processes help ensure that information remains accurate and current.",
+      "source": "What Is a Knowledge Base? Definition, Types & Benefits",
+      "source_type": "web",
+      "url": "https://www.fluidtopics.com/blog/content-ops/what-is-a-knowledge-base",
+      "score": 0.46162403,
+      "rerank_score": null,
+      "document_id": null,
+      "chunk_id": null,
+      "total_chunks": null,
+      "grader_score": null,
+      "grader_relevant": null,
+      "grader_reason": ""
+    },
+    {
+      "id": "web-4",
+      "content": "###### Modernize Your Knowledge Base\n\nReplace static folders with a dynamic, searchable home for all your company data.\n\nBook a FREE Demo\n\nEnterprise Intelligence\n\n## 3. Product Documentation Knowledge Base\n\nProduct documentation knowledge bases house technical information about how your software, application, or digital product functions. This knowledge base type is fundamentally different from general support content. It focuses on product-specific technical details rather than company policies or broad customer service topics. You create reference material that explains what each feature does, how users interact with specific functionality, and technical specifications that developers need for integration. [...] Learn More\n\nEnterprise Intelligence\n\n  A list of the different types of knowledge bases  \n\n## 1. Customer-Facing Knowledge Base Platforms\n\nCustomer-facing knowledge base platforms function as public self-service portals where customers access information about your products and services without restrictions. These external types of knowledge bases remain available to anyone seeking answers, unlike internal systems reserved for employees. You’ll find them embedded on company websites, within products, or hosted at dedicated domains like support.company.com. [...] ## 7. Community-Driven or Collaborative Knowledge Base\n\nHigh levels of community engagement and collaboration see a 10% increase in customer loyalty. Many organizations are shifting toward a collaborative model in which users contribute to the documentation. This type functions as a peer-to-peer repository where long-time customers or power users share workarounds, creative use cases, and localized solutions that a corporate team might miss.\n\nCrowdsourcing information ensures that the library remains dynamic and reflects real-world applications. Moderation tools allow your staff to verify community answers, turning a simple forum into a trusted, authoritative source. This reduces the burden on your content team while fostering a sense of ownership among your most loyal brand advocates.",
+      "source": "The 7 Essential Types of Knowledge Bases - Bloomfire",
+      "source_type": "web",
+      "url": "https://bloomfire.com/blog/types-of-knowledge-bases",
+      "score": 0.45449692,
+      "rerank_score": null,
+      "document_id": null,
+      "chunk_id": null,
+      "total_chunks": null,
+      "grader_score": null,
+      "grader_relevant": null,
+      "grader_reason": ""
+    },
+    {
+      "id": "web-5",
+      "content": "## Frequently Asked Questions\n\nA knowledge base is a centralized and structured repository of information and data that serves as a source of knowledge within an organization and outside of it.   \n   \n When it comes to internal use, a knowledge base can store different types of information: internal policies, updates, onboarding materials, strategies, summaries, company values, Standard Operating Procedures, and more.   \n   \n On the outside, a knowledge base can also supplement customer support. A self service customer knowledge base is available 24/7 and can contain answers to common questions or information about a product, service, or a particular topic.\n\nTo create a knowledge base, follow these steps: [...] 1. Identify the key topics and information that employees need for their roles.\n2. Include essential company policies, procedures, and guidelines.\n3. Organize the content into categories, such as HR, IT, product information, etc.\n4. Ensure the knowledge base is easily searchable and accessible to all employees.\n5. Encourage feedback and contributions from employees to keep the knowledge base up-to-date and relevant. [...] A knowledge base article is a standalone piece of content in a knowledge base. The article addresses a specific topic, question, or problem. It provides in-depth information, step-by-step instructions, troubleshooting tips, or solutions to help users resolve their issues independently.\n\nThere are a few things to keep in mind when writing a knowledge base article. To write an effective knowledge base article:",
+      "source": "📚 Knowledge Base Software & Hosted Help Center for Your Customers",
+      "source_type": "web",
+      "url": "https://www.knowledgebase.com",
+      "score": 0.4526091,
+      "rerank_score": null,
+      "document_id": null,
+      "chunk_id": null,
+      "total_chunks": null,
+      "grader_score": null,
+      "grader_relevant": null,
+      "grader_reason": ""
+    }
+  ],
+  "generation_documents": [
+    {
+      "id": "web-2",
+      "content": "In the context of metadata schemas, there exist not only these custom metadata schemas, but also standard metadata sets of elements and their schemas. They provide predefined metadata elements that are intended to be sufficiently generic for various use cases. Perhaps the most widely used standard metadata schema in is Dublin Core, which is a set of 15 basic (core) elements intended for published documents. These elements are Title, Subject, Description, Type, Source, Relations, Coverage, Creator, Publisher, Contributor, Rights, Date, Format, Identifier, and Language. There are other standard metadata schema that are somewhat more specific for a subject domain, such as IPTC (International Press Telecommunications Council) metadata which is intended for images. When standard data notation, [...] The value type for the metadata element (For example, controlled vocabulary terms, uncontrolled keywords, free text, date, integers, Boolean yes/no, etc.)\n Whether assignment of a value from the metadata element is required or optional for each content item (or depends on the specific type of content item).\n Whether the assignment of the values from the metadata element is limited to just one or can be multiple, which is referred to as “cardinality.” (For example, the assignment of only one Document Type but up to four Topics per content item.)\n\nExample of a custom metadata schema\n\nStandard Metadata Element Sets and Schemas [...] # Types of Metadata Schemas\n\nHeather Hedden\n\nTaxonomies or sets of controlled vocabularies are typically implemented as values for  various metadata elements (also called metadata properties or fields). Metadata elements that contain controlled vocabularies could be Topic, Activity, Location, Organization Name, People/Role Type, Document Type, Content Language, etc. These are often implemented as facets in faceted search, although they do not have to be. There may be additional metadata elements for non-taxonomy values, such as Document Title, Image Caption, Creator/Author, Creation Date, Rights Status, etc. In addition to designing taxonomies, in my consulting projects I often also design such broader metadata schemas.\n\n## Custom Metadata Schemas",
+      "source": "Types of Metadata Schemas – Hedden Information Management",
+      "source_type": "web",
+      "url": "https://www.hedden-information.com/types-of-metadata-schemas",
+      "score": 0.5832277,
+      "rerank_score": null,
+      "grader_score": 0.94,
+      "grader_relevant": true,
+      "grader_reason": "Provides detailed discussion of metadata schemas, standard elements, custom schemas, and how topics, document types, and other fields are modeled—highly pertinent to the query.",
+      "evidence_type": "CONTENT",
+      "evidence_score": 1.0,
+      "reference_dominated": false,
+      "evidence_reason": "Normal explanatory content.",
+      "evidence_metrics": {
+        "citation_count": 0,
+        "corr_count": 0,
+        "proceedings_count": 0,
+        "pages_count": 0,
+        "doi_count": 0,
+        "arxiv_count": 0,
+        "year_count": 0,
+        "reference_entry_count": 0,
+        "strong_reference_signals": 0
+      }
+    },
+    {
+      "id": "web-1",
+      "content": "Domain schema: The domain schema is a schematic description of the domain-specific knowledge and information needed for a particular area or topic. It uses different types to define the structure of this knowledge. This schema shows how things are organized in that area, but it doesn’t change much over time. In the context of the knowledge base, the domain schema resembles a framework or structure that helps to organize and represent information in our AI system.\n Knowledge base: A knowledge base accommodates the instances of the types specified in the domain schema. In knowledge modeling, we often have different knowledge bases for different types of knowledge. For example, we might have one knowledge base for rules and another for other types of pieces of information.",
+      "source": "Role of Knowledge Bases in Intelligent Systems - GeeksforGeeks",
+      "source_type": "web",
+      "url": "https://www.geeksforgeeks.org/artificial-intelligence/role-of-knowledge-bases-in-intelligent-systems",
+      "score": 0.6158511,
+      "rerank_score": null,
+      "grader_score": 0.92,
+      "grader_relevant": true,
+      "grader_reason": "Explains domain schema and how a knowledge base stores instances of typed information, directly addressing the query about domains, types, and schema.",
+      "evidence_type": "CONTENT",
+      "evidence_score": 1.0,
+      "reference_dominated": false,
+      "evidence_reason": "Normal explanatory content.",
+      "evidence_metrics": {
+        "citation_count": 0,
+        "corr_count": 0,
+        "proceedings_count": 0,
+        "pages_count": 0,
+        "doi_count": 0,
+        "arxiv_count": 0,
+        "year_count": 0,
+        "reference_entry_count": 0,
+        "strong_reference_signals": 0
+      }
+    },
+    {
+      "id": "web-5",
+      "content": "## Frequently Asked Questions\n\nA knowledge base is a centralized and structured repository of information and data that serves as a source of knowledge within an organization and outside of it.   \n   \n When it comes to internal use, a knowledge base can store different types of information: internal policies, updates, onboarding materials, strategies, summaries, company values, Standard Operating Procedures, and more.   \n   \n On the outside, a knowledge base can also supplement customer support. A self service customer knowledge base is available 24/7 and can contain answers to common questions or information about a product, service, or a particular topic.\n\nTo create a knowledge base, follow these steps: [...] 1. Identify the key topics and information that employees need for their roles.\n2. Include essential company policies, procedures, and guidelines.\n3. Organize the content into categories, such as HR, IT, product information, etc.\n4. Ensure the knowledge base is easily searchable and accessible to all employees.\n5. Encourage feedback and contributions from employees to keep the knowledge base up-to-date and relevant. [...] A knowledge base article is a standalone piece of content in a knowledge base. The article addresses a specific topic, question, or problem. It provides in-depth information, step-by-step instructions, troubleshooting tips, or solutions to help users resolve their issues independently.\n\nThere are a few things to keep in mind when writing a knowledge base article. To write an effective knowledge base article:",
+      "source": "📚 Knowledge Base Software & Hosted Help Center for Your Customers",
+      "source_type": "web",
+      "url": "https://www.knowledgebase.com",
+      "score": 0.4526091,
+      "rerank_score": null,
+      "grader_score": 0.78,
+      "grader_relevant": true,
+      "grader_reason": "Outlines the types of information stored in a knowledge base (policies, SOPs, product info, etc.) and how content is organized, directly supporting the query.",
+      "evidence_type": "CONTENT",
+      "evidence_score": 1.0,
+      "reference_dominated": false,
+      "evidence_reason": "Normal explanatory content.",
+      "evidence_metrics": {
+        "citation_count": 0,
+        "corr_count": 0,
+        "proceedings_count": 0,
+        "pages_count": 0,
+        "doi_count": 0,
+        "arxiv_count": 0,
+        "year_count": 0,
+        "reference_entry_count": 0,
+        "strong_reference_signals": 0
+      }
+    },
+    {
+      "id": "web-3",
+      "content": "### SEO-Optimized Knowledge Base Content\n\nDigital knowledge bases can help generate organic traffic and boost the results rankings of your documents. To do this, the content hub must be optimized for search engines like Google and Bing. With features like custom metadata options, your knowledge base will help search engine bots crawl and index your content.\n\n### AI-Powered Support Assistant\n\nEnhance knowledge base search tools with Generative AI (GenAI) to turn a normal quest for information into a conversational experience. Users enter their questions in natural language into a self-service chatbot or search bar interface and automatically receive accurate responses. [...] Documentation trends: Identify the most popular content and search terms to prioritize content work. Look at the least-read content to discover which topics aren’t as critical for users.  Are they less popular due to a lack of questions on the topic or because users search for different keywords?\n Content findability: With keyword analytics, see what customers search for. If they use different terms than those in the content, enhance your knowledge base with new metadata, taxonomies, and synonyms. This will improve your content findability and usefulness.\n No-results searches: Identify content gaps with “Searches with no results”. When results are lacking, documentation teams need to produce or update content. [...] Cover of KMWorld Report AI\n\nKnowledge Base FAQs\n\nTeams should organize content in a knowledge base around the questions and tasks users need to complete, using clear categories, metadata, navigation, and search. Regular content audits and updates are also important for keeping information easy to find and trustworthy.\n\nKnowledge management is typically a cross-functional responsibility involving technical writers, knowledge teams, subject matter experts, support teams, product teams, and other content owners. It may also include HR and Legal if the knowledge base includes internal process information. IT may be involved in creating the hub and connecting it to different content sources. Clear ownership and review processes help ensure that information remains accurate and current.",
+      "source": "What Is a Knowledge Base? Definition, Types & Benefits",
+      "source_type": "web",
+      "url": "https://www.fluidtopics.com/blog/content-ops/what-is-a-knowledge-base",
+      "score": 0.46162403,
+      "rerank_score": null,
+      "grader_score": 0.68,
+      "grader_relevant": true,
+      "grader_reason": "Mentions metadata, taxonomies, and content organization for findability, offering partial but useful insight into knowledge‑base contents and schema.",
+      "evidence_type": "CONTENT",
+      "evidence_score": 1.0,
+      "reference_dominated": false,
+      "evidence_reason": "Normal explanatory content.",
+      "evidence_metrics": {
+        "citation_count": 0,
+        "corr_count": 0,
+        "proceedings_count": 0,
+        "pages_count": 0,
+        "doi_count": 0,
+        "arxiv_count": 0,
+        "year_count": 0,
+        "reference_entry_count": 0,
+        "strong_reference_signals": 0
+      }
+    },
+    {
+      "id": "web-4",
+      "content": "###### Modernize Your Knowledge Base\n\nReplace static folders with a dynamic, searchable home for all your company data.\n\nBook a FREE Demo\n\nEnterprise Intelligence\n\n## 3. Product Documentation Knowledge Base\n\nProduct documentation knowledge bases house technical information about how your software, application, or digital product functions. This knowledge base type is fundamentally different from general support content. It focuses on product-specific technical details rather than company policies or broad customer service topics. You create reference material that explains what each feature does, how users interact with specific functionality, and technical specifications that developers need for integration. [...] Learn More\n\nEnterprise Intelligence\n\n  A list of the different types of knowledge bases  \n\n## 1. Customer-Facing Knowledge Base Platforms\n\nCustomer-facing knowledge base platforms function as public self-service portals where customers access information about your products and services without restrictions. These external types of knowledge bases remain available to anyone seeking answers, unlike internal systems reserved for employees. You’ll find them embedded on company websites, within products, or hosted at dedicated domains like support.company.com. [...] ## 7. Community-Driven or Collaborative Knowledge Base\n\nHigh levels of community engagement and collaboration see a 10% increase in customer loyalty. Many organizations are shifting toward a collaborative model in which users contribute to the documentation. This type functions as a peer-to-peer repository where long-time customers or power users share workarounds, creative use cases, and localized solutions that a corporate team might miss.\n\nCrowdsourcing information ensures that the library remains dynamic and reflects real-world applications. Moderation tools allow your staff to verify community answers, turning a simple forum into a trusted, authoritative source. This reduces the burden on your content team while fostering a sense of ownership among your most loyal brand advocates.",
+      "source": "The 7 Essential Types of Knowledge Bases - Bloomfire",
+      "source_type": "web",
+      "url": "https://bloomfire.com/blog/types-of-knowledge-bases",
+      "score": 0.45449692,
+      "rerank_score": null,
+      "grader_score": 0.66,
+      "grader_relevant": true,
+      "grader_reason": "Describes different categories of knowledge bases and the kinds of documentation they contain, giving some relevance to information types and domains.",
+      "evidence_type": "CONTENT",
+      "evidence_score": 1.0,
+      "reference_dominated": false,
+      "evidence_reason": "Normal explanatory content.",
+      "evidence_metrics": {
+        "citation_count": 0,
+        "corr_count": 0,
+        "proceedings_count": 0,
+        "pages_count": 0,
+        "doi_count": 0,
+        "arxiv_count": 0,
+        "year_count": 0,
+        "reference_entry_count": 0,
+        "strong_reference_signals": 0
+      }
+    }
+  ],
+  "graded_documents": [
+    {
+      "id": "web-2",
+      "content": "In the context of metadata schemas, there exist not only these custom metadata schemas, but also standard metadata sets of elements and their schemas. They provide predefined metadata elements that are intended to be sufficiently generic for various use cases. Perhaps the most widely used standard metadata schema in is Dublin Core, which is a set of 15 basic (core) elements intended for published documents. These elements are Title, Subject, Description, Type, Source, Relations, Coverage, Creator, Publisher, Contributor, Rights, Date, Format, Identifier, and Language. There are other standard metadata schema that are somewhat more specific for a subject domain, such as IPTC (International Press Telecommunications Council) metadata which is intended for images. When standard data notation, [...] The value type for the metadata element (For example, controlled vocabulary terms, uncontrolled keywords, free text, date, integers, Boolean yes/no, etc.)\n Whether assignment of a value from the metadata element is required or optional for each content item (or depends on the specific type of content item).\n Whether the assignment of the values from the metadata element is limited to just one or can be multiple, which is referred to as “cardinality.” (For example, the assignment of only one Document Type but up to four Topics per content item.)\n\nExample of a custom metadata schema\n\nStandard Metadata Element Sets and Schemas [...] # Types of Metadata Schemas\n\nHeather Hedden\n\nTaxonomies or sets of controlled vocabularies are typically implemented as values for  various metadata elements (also called metadata properties or fields). Metadata elements that contain controlled vocabularies could be Topic, Activity, Location, Organization Name, People/Role Type, Document Type, Content Language, etc. These are often implemented as facets in faceted search, although they do not have to be. There may be additional metadata elements for non-taxonomy values, such as Document Title, Image Caption, Creator/Author, Creation Date, Rights Status, etc. In addition to designing taxonomies, in my consulting projects I often also design such broader metadata schemas.\n\n## Custom Metadata Schemas",
+      "source": "Types of Metadata Schemas – Hedden Information Management",
+      "source_type": "web",
+      "url": "https://www.hedden-information.com/types-of-metadata-schemas",
+      "score": 0.5832277,
+      "rerank_score": null,
+      "grader_score": 0.94,
+      "grader_relevant": true,
+      "grader_reason": "Provides detailed discussion of metadata schemas, standard elements, custom schemas, and how topics, document types, and other fields are modeled—highly pertinent to the query.",
+      "evidence_type": "CONTENT",
+      "evidence_score": 1.0,
+      "reference_dominated": false,
+      "evidence_reason": "Normal explanatory content.",
+      "evidence_metrics": {
+        "citation_count": 0,
+        "corr_count": 0,
+        "proceedings_count": 0,
+        "pages_count": 0,
+        "doi_count": 0,
+        "arxiv_count": 0,
+        "year_count": 0,
+        "reference_entry_count": 0,
+        "strong_reference_signals": 0
+      }
+    },
+    {
+      "id": "web-1",
+      "content": "Domain schema: The domain schema is a schematic description of the domain-specific knowledge and information needed for a particular area or topic. It uses different types to define the structure of this knowledge. This schema shows how things are organized in that area, but it doesn’t change much over time. In the context of the knowledge base, the domain schema resembles a framework or structure that helps to organize and represent information in our AI system.\n Knowledge base: A knowledge base accommodates the instances of the types specified in the domain schema. In knowledge modeling, we often have different knowledge bases for different types of knowledge. For example, we might have one knowledge base for rules and another for other types of pieces of information.",
+      "source": "Role of Knowledge Bases in Intelligent Systems - GeeksforGeeks",
+      "source_type": "web",
+      "url": "https://www.geeksforgeeks.org/artificial-intelligence/role-of-knowledge-bases-in-intelligent-systems",
+      "score": 0.6158511,
+      "rerank_score": null,
+      "grader_score": 0.92,
+      "grader_relevant": true,
+      "grader_reason": "Explains domain schema and how a knowledge base stores instances of typed information, directly addressing the query about domains, types, and schema.",
+      "evidence_type": "CONTENT",
+      "evidence_score": 1.0,
+      "reference_dominated": false,
+      "evidence_reason": "Normal explanatory content.",
+      "evidence_metrics": {
+        "citation_count": 0,
+        "corr_count": 0,
+        "proceedings_count": 0,
+        "pages_count": 0,
+        "doi_count": 0,
+        "arxiv_count": 0,
+        "year_count": 0,
+        "reference_entry_count": 0,
+        "strong_reference_signals": 0
+      }
+    },
+    {
+      "id": "web-5",
+      "content": "## Frequently Asked Questions\n\nA knowledge base is a centralized and structured repository of information and data that serves as a source of knowledge within an organization and outside of it.   \n   \n When it comes to internal use, a knowledge base can store different types of information: internal policies, updates, onboarding materials, strategies, summaries, company values, Standard Operating Procedures, and more.   \n   \n On the outside, a knowledge base can also supplement customer support. A self service customer knowledge base is available 24/7 and can contain answers to common questions or information about a product, service, or a particular topic.\n\nTo create a knowledge base, follow these steps: [...] 1. Identify the key topics and information that employees need for their roles.\n2. Include essential company policies, procedures, and guidelines.\n3. Organize the content into categories, such as HR, IT, product information, etc.\n4. Ensure the knowledge base is easily searchable and accessible to all employees.\n5. Encourage feedback and contributions from employees to keep the knowledge base up-to-date and relevant. [...] A knowledge base article is a standalone piece of content in a knowledge base. The article addresses a specific topic, question, or problem. It provides in-depth information, step-by-step instructions, troubleshooting tips, or solutions to help users resolve their issues independently.\n\nThere are a few things to keep in mind when writing a knowledge base article. To write an effective knowledge base article:",
+      "source": "📚 Knowledge Base Software & Hosted Help Center for Your Customers",
+      "source_type": "web",
+      "url": "https://www.knowledgebase.com",
+      "score": 0.4526091,
+      "rerank_score": null,
+      "grader_score": 0.78,
+      "grader_relevant": true,
+      "grader_reason": "Outlines the types of information stored in a knowledge base (policies, SOPs, product info, etc.) and how content is organized, directly supporting the query.",
+      "evidence_type": "CONTENT",
+      "evidence_score": 1.0,
+      "reference_dominated": false,
+      "evidence_reason": "Normal explanatory content.",
+      "evidence_metrics": {
+        "citation_count": 0,
+        "corr_count": 0,
+        "proceedings_count": 0,
+        "pages_count": 0,
+        "doi_count": 0,
+        "arxiv_count": 0,
+        "year_count": 0,
+        "reference_entry_count": 0,
+        "strong_reference_signals": 0
+      }
+    },
+    {
+      "id": "web-3",
+      "content": "### SEO-Optimized Knowledge Base Content\n\nDigital knowledge bases can help generate organic traffic and boost the results rankings of your documents. To do this, the content hub must be optimized for search engines like Google and Bing. With features like custom metadata options, your knowledge base will help search engine bots crawl and index your content.\n\n### AI-Powered Support Assistant\n\nEnhance knowledge base search tools with Generative AI (GenAI) to turn a normal quest for information into a conversational experience. Users enter their questions in natural language into a self-service chatbot or search bar interface and automatically receive accurate responses. [...] Documentation trends: Identify the most popular content and search terms to prioritize content work. Look at the least-read content to discover which topics aren’t as critical for users.  Are they less popular due to a lack of questions on the topic or because users search for different keywords?\n Content findability: With keyword analytics, see what customers search for. If they use different terms than those in the content, enhance your knowledge base with new metadata, taxonomies, and synonyms. This will improve your content findability and usefulness.\n No-results searches: Identify content gaps with “Searches with no results”. When results are lacking, documentation teams need to produce or update content. [...] Cover of KMWorld Report AI\n\nKnowledge Base FAQs\n\nTeams should organize content in a knowledge base around the questions and tasks users need to complete, using clear categories, metadata, navigation, and search. Regular content audits and updates are also important for keeping information easy to find and trustworthy.\n\nKnowledge management is typically a cross-functional responsibility involving technical writers, knowledge teams, subject matter experts, support teams, product teams, and other content owners. It may also include HR and Legal if the knowledge base includes internal process information. IT may be involved in creating the hub and connecting it to different content sources. Clear ownership and review processes help ensure that information remains accurate and current.",
+      "source": "What Is a Knowledge Base? Definition, Types & Benefits",
+      "source_type": "web",
+      "url": "https://www.fluidtopics.com/blog/content-ops/what-is-a-knowledge-base",
+      "score": 0.46162403,
+      "rerank_score": null,
+      "grader_score": 0.68,
+      "grader_relevant": true,
+      "grader_reason": "Mentions metadata, taxonomies, and content organization for findability, offering partial but useful insight into knowledge‑base contents and schema.",
+      "evidence_type": "CONTENT",
+      "evidence_score": 1.0,
+      "reference_dominated": false,
+      "evidence_reason": "Normal explanatory content.",
+      "evidence_metrics": {
+        "citation_count": 0,
+        "corr_count": 0,
+        "proceedings_count": 0,
+        "pages_count": 0,
+        "doi_count": 0,
+        "arxiv_count": 0,
+        "year_count": 0,
+        "reference_entry_count": 0,
+        "strong_reference_signals": 0
+      }
+    },
+    {
+      "id": "web-4",
+      "content": "###### Modernize Your Knowledge Base\n\nReplace static folders with a dynamic, searchable home for all your company data.\n\nBook a FREE Demo\n\nEnterprise Intelligence\n\n## 3. Product Documentation Knowledge Base\n\nProduct documentation knowledge bases house technical information about how your software, application, or digital product functions. This knowledge base type is fundamentally different from general support content. It focuses on product-specific technical details rather than company policies or broad customer service topics. You create reference material that explains what each feature does, how users interact with specific functionality, and technical specifications that developers need for integration. [...] Learn More\n\nEnterprise Intelligence\n\n  A list of the different types of knowledge bases  \n\n## 1. Customer-Facing Knowledge Base Platforms\n\nCustomer-facing knowledge base platforms function as public self-service portals where customers access information about your products and services without restrictions. These external types of knowledge bases remain available to anyone seeking answers, unlike internal systems reserved for employees. You’ll find them embedded on company websites, within products, or hosted at dedicated domains like support.company.com. [...] ## 7. Community-Driven or Collaborative Knowledge Base\n\nHigh levels of community engagement and collaboration see a 10% increase in customer loyalty. Many organizations are shifting toward a collaborative model in which users contribute to the documentation. This type functions as a peer-to-peer repository where long-time customers or power users share workarounds, creative use cases, and localized solutions that a corporate team might miss.\n\nCrowdsourcing information ensures that the library remains dynamic and reflects real-world applications. Moderation tools allow your staff to verify community answers, turning a simple forum into a trusted, authoritative source. This reduces the burden on your content team while fostering a sense of ownership among your most loyal brand advocates.",
+      "source": "The 7 Essential Types of Knowledge Bases - Bloomfire",
+      "source_type": "web",
+      "url": "https://bloomfire.com/blog/types-of-knowledge-bases",
+      "score": 0.45449692,
+      "rerank_score": null,
+      "grader_score": 0.66,
+      "grader_relevant": true,
+      "grader_reason": "Describes different categories of knowledge bases and the kinds of documentation they contain, giving some relevance to information types and domains.",
+      "evidence_type": "CONTENT",
+      "evidence_score": 1.0,
+      "reference_dominated": false,
+      "evidence_reason": "Normal explanatory content.",
+      "evidence_metrics": {
+        "citation_count": 0,
+        "corr_count": 0,
+        "proceedings_count": 0,
+        "pages_count": 0,
+        "doi_count": 0,
+        "arxiv_count": 0,
+        "year_count": 0,
+        "reference_entry_count": 0,
+        "strong_reference_signals": 0
+      }
+    }
+  ],
+  "grader_status": "success",
+  "grading_mode": "graded",
+  "grader_error_type": null,
+  "citations": {
+    "chunk_1": {
+      "citation_id": "chunk_1",
+      "point_id": "web-2",
+      "document_id": null,
+      "chunk_id": null,
+      "total_chunks": null,
+      "source": "Types of Metadata Schemas – Hedden Information Management",
+      "source_type": "web",
+      "url": "https://www.hedden-information.com/types-of-metadata-schemas",
+      "text": "In the context of metadata schemas, there exist not only these custom metadata schemas, but also standard metadata sets of elements and their schemas. They provide predefined metadata elements that are intended to be sufficiently generic for various use cases. Perhaps the most widely used standard metadata schema in is Dublin Core, which is a set of 15 basic (core) elements intended for published documents. These elements are Title, Subject, Description, Type, Source, Relations, Coverage, Creator, Publisher, Contributor, Rights, Date, Format, Identifier, and Language. There are other standard metadata schema that are somewhat more specific for a subject domain, such as IPTC (International Press Telecommunications Council) metadata which is intended for images. When standard data notation, The value type for the metadata element (For example, controlled vocabulary terms, uncontrolled keywords, free text, date, integers, Boolean yes/no, etc.) Whether assignment of a value from the metadata element is required or optional for each content item (or depends on the specific type of content item). Whether the assignment of the values from the metadata element is limited to just one or can be multiple, which is referred to as “cardinality.” (For example, the assignment of only one Document Type but up to four Topics per content item.) Example of a custom metadata schema Standard Metadata Element Sets and Schemas # Types of Metadata Schemas Heather Hedden Taxonomies or sets of controlled vocabularies are typically implemented as values for various metadata elements (also called metadata properties or fields). Metadata elements that contain controlled vocabularies could be Topic, Activity, Location, Organization Name, People/Role Type, Document Type, Content Language, etc. These are often implemented as facets in faceted search, although they do not have to be. There may be additional metadata elements for non-taxonomy values, such as Document Title, Image Caption, Creator/Author, Creation Date, Rights Status, etc. In addition to designing taxonomies, in my consulting projects I often also design such broader metadata schemas. ## Custom Metadata Schemas",
+      "evidence": "In the context of metadata schemas, there exist not only these custom metadata schemas, but also standard metadata sets of elements and their schemas. They provide predefined metadata elements that are intended to be sufficiently generic for various use cases. Perhaps the most widely used standard metadata schema in is Dublin Core, which is a set of 15 basic (core) elements intended for published documents. These elements are Title, Subject, Description, Type, Source, Relations, Coverage, Creator, Publisher, Contributor, Rights, Date, Format, Identifier, and Language. There are other standard metadata schema that are somewhat more specific for a subject domain, such as IPTC (International Press Telecommunications Council) metadata which is intended for images. When standard data notation, The value type for the metadata element (For example, controlled vocabulary terms, uncontrolled keywords, free text, date, integers, Boolean yes/no, etc.) Whether assignment of a value from the metadata element is required or optional for each content item (or depends on the specific type of content item). Whether the assignment of the values from the metadata element is limited to just one or can be multiple, which is referred to as “cardinality.” (For example, the assignment of only one Document Type but up to four Topics per content item.) Example of a custom metadata schema Standard Metadata Element Sets and Schemas # Types of Metadata Schemas Heather Hedden Taxonomies or sets of controlled vocabularies are typically implemented as values for various metadata elements (also called metadata properties or fields). Metadata elements that contain controlled vocabularies could be Topic, Activity, Location, Organization Name, People/Role Type, Document Type, Content Language, etc. These are often implemented as facets in faceted search, although they do not have to be. There may be additional metadata elements for non-taxonomy values, such as Document Title, Image Caption, Creator/Author, Creation Date, Rights Status, etc. In addition to designing taxonomies, in my consulting projects I often also design such broader metadata schemas. ## Custom Metadata Schemas",
+      "metadata": {}
+    },
+    "chunk_2": {
+      "citation_id": "chunk_2",
+      "point_id": "web-1",
+      "document_id": null,
+      "chunk_id": null,
+      "total_chunks": null,
+      "source": "Role of Knowledge Bases in Intelligent Systems - GeeksforGeeks",
+      "source_type": "web",
+      "url": "https://www.geeksforgeeks.org/artificial-intelligence/role-of-knowledge-bases-in-intelligent-systems",
+      "text": "Domain schema: The domain schema is a schematic description of the domain-specific knowledge and information needed for a particular area or topic. It uses different types to define the structure of this knowledge. This schema shows how things are organized in that area, but it doesn’t change much over time. In the context of the knowledge base, the domain schema resembles a framework or structure that helps to organize and represent information in our AI system. Knowledge base: A knowledge base accommodates the instances of the types specified in the domain schema. In knowledge modeling, we often have different knowledge bases for different types of knowledge. For example, we might have one knowledge base for rules and another for other types of pieces of information.",
+      "evidence": "Domain schema: The domain schema is a schematic description of the domain-specific knowledge and information needed for a particular area or topic. It uses different types to define the structure of this knowledge. This schema shows how things are organized in that area, but it doesn’t change much over time. In the context of the knowledge base, the domain schema resembles a framework or structure that helps to organize and represent information in our AI system. Knowledge base: A knowledge base accommodates the instances of the types specified in the domain schema. In knowledge modeling, we often have different knowledge bases for different types of knowledge. For example, we might have one knowledge base for rules and another for other types of pieces of information.",
+      "metadata": {}
+    },
+    "chunk_3": {
+      "citation_id": "chunk_3",
+      "point_id": "web-5",
+      "document_id": null,
+      "chunk_id": null,
+      "total_chunks": null,
+      "source": "📚 Knowledge Base Software & Hosted Help Center for Your Customers",
+      "source_type": "web",
+      "url": "https://www.knowledgebase.com",
+      "text": "## Frequently Asked Questions A knowledge base is a centralized and structured repository of information and data that serves as a source of knowledge within an organization and outside of it. When it comes to internal use, a knowledge base can store different types of information: internal policies, updates, onboarding materials, strategies, summaries, company values, Standard Operating Procedures, and more. On the outside, a knowledge base can also supplement customer support. A self service customer knowledge base is available 24/7 and can contain answers to common questions or information about a product, service, or a particular topic. To create a knowledge base, follow these steps: 1. Identify the key topics and information that employees need for their roles. 2. Include essential company policies, procedures, and guidelines. 3. Organize the content into categories, such as HR, IT, product information, etc. 4. Ensure the knowledge base is easily searchable and accessible to all employees. 5. Encourage feedback and contributions from employees to keep the knowledge base up-to-date and relevant. A knowledge base article is a standalone piece of content in a knowledge base. The article addresses a specific topic, question, or problem. It provides in-depth information, step-by-step instructions, troubleshooting tips, or solutions to help users resolve their issues independently. There are a few things to keep in mind when writing a knowledge base article. To write an effective knowledge base article:",
+      "evidence": "## Frequently Asked Questions A knowledge base is a centralized and structured repository of information and data that serves as a source of knowledge within an organization and outside of it. When it comes to internal use, a knowledge base can store different types of information: internal policies, updates, onboarding materials, strategies, summaries, company values, Standard Operating Procedures, and more. On the outside, a knowledge base can also supplement customer support. A self service customer knowledge base is available 24/7 and can contain answers to common questions or information about a product, service, or a particular topic. To create a knowledge base, follow these steps: 1. Identify the key topics and information that employees need for their roles. 2. Include essential company policies, procedures, and guidelines. 3. Organize the content into categories, such as HR, IT, product information, etc. 4. Ensure the knowledge base is easily searchable and accessible to all employees. 5. Encourage feedback and contributions from employees to keep the knowledge base up-to-date and relevant. A knowledge base article is a standalone piece of content in a knowledge base. The article addresses a specific topic, question, or problem. It provides in-depth information, step-by-step instructions, troubleshooting tips, or solutions to help users resolve their issues independently. There are a few things to keep in mind when writing a knowledge base article. To write an effective knowledge base article:",
+      "metadata": {}
+    },
+    "chunk_4": {
+      "citation_id": "chunk_4",
+      "point_id": "web-3",
+      "document_id": null,
+      "chunk_id": null,
+      "total_chunks": null,
+      "source": "What Is a Knowledge Base? Definition, Types & Benefits",
+      "source_type": "web",
+      "url": "https://www.fluidtopics.com/blog/content-ops/what-is-a-knowledge-base",
+      "text": "### SEO-Optimized Knowledge Base Content Digital knowledge bases can help generate organic traffic and boost the results rankings of your documents. To do this, the content hub must be optimized for search engines like Google and Bing. With features like custom metadata options, your knowledge base will help search engine bots crawl and index your content. ### AI-Powered Support Assistant Enhance knowledge base search tools with Generative AI (GenAI) to turn a normal quest for information into a conversational experience. Users enter their questions in natural language into a self-service chatbot or search bar interface and automatically receive accurate responses. Documentation trends: Identify the most popular content and search terms to prioritize content work. Look at the least-read content to discover which topics aren’t as critical for users. Are they less popular due to a lack of questions on the topic or because users search for different keywords? Content findability: With keyword analytics, see what customers search for. If they use different terms than those in the content, enhance your knowledge base with new metadata, taxonomies, and synonyms. This will improve your content findability and usefulness. No-results searches: Identify content gaps with “Searches with no results”. When results are lacking, documentation teams need to produce or update content. Cover of KMWorld Report AI Knowledge Base FAQs Teams should organize content in a knowledge base around the questions and tasks users need to complete, using clear categories, metadata, navigation, and search. Regular content audits and updates are also important for keeping information easy to find and trustworthy. Knowledge management is typically a cross-functional responsibility involving technical writers, knowledge teams, subject matter experts, support teams, product teams, and other content owners. It may also include HR and Legal if the knowledge base includes internal process information. IT may be involved in creating the hub and connecting it to different content sources. Clear ownership and review processes help ensure that information remains accurate and current.",
+      "evidence": "### SEO-Optimized Knowledge Base Content Digital knowledge bases can help generate organic traffic and boost the results rankings of your documents. To do this, the content hub must be optimized for search engines like Google and Bing. With features like custom metadata options, your knowledge base will help search engine bots crawl and index your content. ### AI-Powered Support Assistant Enhance knowledge base search tools with Generative AI (GenAI) to turn a normal quest for information into a conversational experience. Users enter their questions in natural language into a self-service chatbot or search bar interface and automatically receive accurate responses. Documentation trends: Identify the most popular content and search terms to prioritize content work. Look at the least-read content to discover which topics aren’t as critical for users. Are they less popular due to a lack of questions on the topic or because users search for different keywords? Content findability: With keyword analytics, see what customers search for. If they use different terms than those in the content, enhance your knowledge base with new metadata, taxonomies, and synonyms. This will improve your content findability and usefulness. No-results searches: Identify content gaps with “Searches with no results”. When results are lacking, documentation teams need to produce or update content. Cover of KMWorld Report AI Knowledge Base FAQs Teams should organize content in a knowledge base around the questions and tasks users need to complete, using clear categories, metadata, navigation, and search. Regular content audits and updates are also important for keeping information easy to find and trustworthy. Knowledge management is typically a cross-functional responsibility involving technical writers, knowledge teams, subject matter experts, support teams, product teams, and other content owners. It may also include HR and Legal if the knowledge base includes internal process information. IT may be involved in creating the hub and connecting it to different content sources. Clear ownership and review processes help ensure that information remains accurate and current.",
+      "metadata": {}
+    },
+    "chunk_5": {
+      "citation_id": "chunk_5",
+      "point_id": "web-4",
+      "document_id": null,
+      "chunk_id": null,
+      "total_chunks": null,
+      "source": "The 7 Essential Types of Knowledge Bases - Bloomfire",
+      "source_type": "web",
+      "url": "https://bloomfire.com/blog/types-of-knowledge-bases",
+      "text": "###### Modernize Your Knowledge Base Replace static folders with a dynamic, searchable home for all your company data. Book a FREE Demo Enterprise Intelligence ## 3. Product Documentation Knowledge Base Product documentation knowledge bases house technical information about how your software, application, or digital product functions. This knowledge base type is fundamentally different from general support content. It focuses on product-specific technical details rather than company policies or broad customer service topics. You create reference material that explains what each feature does, how users interact with specific functionality, and technical specifications that developers need for integration. Learn More Enterprise Intelligence A list of the different types of knowledge bases ## 1. Customer-Facing Knowledge Base Platforms Customer-facing knowledge base platforms function as public self-service portals where customers access information about your products and services without restrictions. These external types of knowledge bases remain available to anyone seeking answers, unlike internal systems reserved for employees. You’ll find them embedded on company websites, within products, or hosted at dedicated domains like support.company.com. ## 7. Community-Driven or Collaborative Knowledge Base High levels of community engagement and collaboration see a 10% increase in customer loyalty. Many organizations are shifting toward a collaborative model in which users contribute to the documentation. This type functions as a peer-to-peer repository where long-time customers or power users share workarounds, creative use cases, and localized solutions that a corporate team might miss. Crowdsourcing information ensures that the library remains dynamic and reflects real-world applications. Moderation tools allow your staff to verify community answers, turning a simple forum into a trusted, authoritative source. This reduces the burden on your content team while fostering a sense of ownership among your most loyal brand advocates.",
+      "evidence": "###### Modernize Your Knowledge Base Replace static folders with a dynamic, searchable home for all your company data. Book a FREE Demo Enterprise Intelligence ## 3. Product Documentation Knowledge Base Product documentation knowledge bases house technical information about how your software, application, or digital product functions. This knowledge base type is fundamentally different from general support content. It focuses on product-specific technical details rather than company policies or broad customer service topics. You create reference material that explains what each feature does, how users interact with specific functionality, and technical specifications that developers need for integration. Learn More Enterprise Intelligence A list of the different types of knowledge bases ## 1. Customer-Facing Knowledge Base Platforms Customer-facing knowledge base platforms function as public self-service portals where customers access information about your products and services without restrictions. These external types of knowledge bases remain available to anyone seeking answers, unlike internal systems reserved for employees. You’ll find them embedded on company websites, within products, or hosted at dedicated domains like support.company.com. ## 7. Community-Driven or Collaborative Knowledge Base High levels of community engagement and collaboration see a 10% increase in customer loyalty. Many organizations are shifting toward a collaborative model in which users contribute to the documentation. This type functions as a peer-to-peer repository where long-time customers or power users share workarounds, creative use cases, and localized solutions that a corporate team might miss. Crowdsourcing information ensures that the library remains dynamic and reflects real-world applications. Moderation tools allow your staff to verify community answers, turning a simple forum into a trusted, authoritative source. This reduces the burden on your content team while fostering a sense of ownership among your most loyal brand advocates.",
+      "metadata": {}
+    }
+  },
+  "citation_provenance": {
+    "chunk_1": {
+      "citation_id": "chunk_1",
+      "point_id": "web-2",
+      "document_id": null,
+      "chunk_id": null,
+      "total_chunks": null,
+      "source": "Types of Metadata Schemas – Hedden Information Management",
+      "source_type": "web",
+      "url": "https://www.hedden-information.com/types-of-metadata-schemas",
+      "text": "In the context of metadata schemas, there exist not only these custom metadata schemas, but also standard metadata sets of elements and their schemas. They provide predefined metadata elements that are intended to be sufficiently generic for various use cases. Perhaps the most widely used standard metadata schema in is Dublin Core, which is a set of 15 basic (core) elements intended for published documents. These elements are Title, Subject, Description, Type, Source, Relations, Coverage, Creator, Publisher, Contributor, Rights, Date, Format, Identifier, and Language. There are other standard metadata schema that are somewhat more specific for a subject domain, such as IPTC (International Press Telecommunications Council) metadata which is intended for images. When standard data notation, The value type for the metadata element (For example, controlled vocabulary terms, uncontrolled keywords, free text, date, integers, Boolean yes/no, etc.) Whether assignment of a value from the metadata element is required or optional for each content item (or depends on the specific type of content item). Whether the assignment of the values from the metadata element is limited to just one or can be multiple, which is referred to as “cardinality.” (For example, the assignment of only one Document Type but up to four Topics per content item.) Example of a custom metadata schema Standard Metadata Element Sets and Schemas # Types of Metadata Schemas Heather Hedden Taxonomies or sets of controlled vocabularies are typically implemented as values for various metadata elements (also called metadata properties or fields). Metadata elements that contain controlled vocabularies could be Topic, Activity, Location, Organization Name, People/Role Type, Document Type, Content Language, etc. These are often implemented as facets in faceted search, although they do not have to be. There may be additional metadata elements for non-taxonomy values, such as Document Title, Image Caption, Creator/Author, Creation Date, Rights Status, etc. In addition to designing taxonomies, in my consulting projects I often also design such broader metadata schemas. ## Custom Metadata Schemas",
+      "evidence": "In the context of metadata schemas, there exist not only these custom metadata schemas, but also standard metadata sets of elements and their schemas. They provide predefined metadata elements that are intended to be sufficiently generic for various use cases. Perhaps the most widely used standard metadata schema in is Dublin Core, which is a set of 15 basic (core) elements intended for published documents. These elements are Title, Subject, Description, Type, Source, Relations, Coverage, Creator, Publisher, Contributor, Rights, Date, Format, Identifier, and Language. There are other standard metadata schema that are somewhat more specific for a subject domain, such as IPTC (International Press Telecommunications Council) metadata which is intended for images. When standard data notation, The value type for the metadata element (For example, controlled vocabulary terms, uncontrolled keywords, free text, date, integers, Boolean yes/no, etc.) Whether assignment of a value from the metadata element is required or optional for each content item (or depends on the specific type of content item). Whether the assignment of the values from the metadata element is limited to just one or can be multiple, which is referred to as “cardinality.” (For example, the assignment of only one Document Type but up to four Topics per content item.) Example of a custom metadata schema Standard Metadata Element Sets and Schemas # Types of Metadata Schemas Heather Hedden Taxonomies or sets of controlled vocabularies are typically implemented as values for various metadata elements (also called metadata properties or fields). Metadata elements that contain controlled vocabularies could be Topic, Activity, Location, Organization Name, People/Role Type, Document Type, Content Language, etc. These are often implemented as facets in faceted search, although they do not have to be. There may be additional metadata elements for non-taxonomy values, such as Document Title, Image Caption, Creator/Author, Creation Date, Rights Status, etc. In addition to designing taxonomies, in my consulting projects I often also design such broader metadata schemas. ## Custom Metadata Schemas",
+      "metadata": {}
+    },
+    "chunk_2": {
+      "citation_id": "chunk_2",
+      "point_id": "web-1",
+      "document_id": null,
+      "chunk_id": null,
+      "total_chunks": null,
+      "source": "Role of Knowledge Bases in Intelligent Systems - GeeksforGeeks",
+      "source_type": "web",
+      "url": "https://www.geeksforgeeks.org/artificial-intelligence/role-of-knowledge-bases-in-intelligent-systems",
+      "text": "Domain schema: The domain schema is a schematic description of the domain-specific knowledge and information needed for a particular area or topic. It uses different types to define the structure of this knowledge. This schema shows how things are organized in that area, but it doesn’t change much over time. In the context of the knowledge base, the domain schema resembles a framework or structure that helps to organize and represent information in our AI system. Knowledge base: A knowledge base accommodates the instances of the types specified in the domain schema. In knowledge modeling, we often have different knowledge bases for different types of knowledge. For example, we might have one knowledge base for rules and another for other types of pieces of information.",
+      "evidence": "Domain schema: The domain schema is a schematic description of the domain-specific knowledge and information needed for a particular area or topic. It uses different types to define the structure of this knowledge. This schema shows how things are organized in that area, but it doesn’t change much over time. In the context of the knowledge base, the domain schema resembles a framework or structure that helps to organize and represent information in our AI system. Knowledge base: A knowledge base accommodates the instances of the types specified in the domain schema. In knowledge modeling, we often have different knowledge bases for different types of knowledge. For example, we might have one knowledge base for rules and another for other types of pieces of information.",
+      "metadata": {}
+    },
+    "chunk_3": {
+      "citation_id": "chunk_3",
+      "point_id": "web-5",
+      "document_id": null,
+      "chunk_id": null,
+      "total_chunks": null,
+      "source": "📚 Knowledge Base Software & Hosted Help Center for Your Customers",
+      "source_type": "web",
+      "url": "https://www.knowledgebase.com",
+      "text": "## Frequently Asked Questions A knowledge base is a centralized and structured repository of information and data that serves as a source of knowledge within an organization and outside of it. When it comes to internal use, a knowledge base can store different types of information: internal policies, updates, onboarding materials, strategies, summaries, company values, Standard Operating Procedures, and more. On the outside, a knowledge base can also supplement customer support. A self service customer knowledge base is available 24/7 and can contain answers to common questions or information about a product, service, or a particular topic. To create a knowledge base, follow these steps: 1. Identify the key topics and information that employees need for their roles. 2. Include essential company policies, procedures, and guidelines. 3. Organize the content into categories, such as HR, IT, product information, etc. 4. Ensure the knowledge base is easily searchable and accessible to all employees. 5. Encourage feedback and contributions from employees to keep the knowledge base up-to-date and relevant. A knowledge base article is a standalone piece of content in a knowledge base. The article addresses a specific topic, question, or problem. It provides in-depth information, step-by-step instructions, troubleshooting tips, or solutions to help users resolve their issues independently. There are a few things to keep in mind when writing a knowledge base article. To write an effective knowledge base article:",
+      "evidence": "## Frequently Asked Questions A knowledge base is a centralized and structured repository of information and data that serves as a source of knowledge within an organization and outside of it. When it comes to internal use, a knowledge base can store different types of information: internal policies, updates, onboarding materials, strategies, summaries, company values, Standard Operating Procedures, and more. On the outside, a knowledge base can also supplement customer support. A self service customer knowledge base is available 24/7 and can contain answers to common questions or information about a product, service, or a particular topic. To create a knowledge base, follow these steps: 1. Identify the key topics and information that employees need for their roles. 2. Include essential company policies, procedures, and guidelines. 3. Organize the content into categories, such as HR, IT, product information, etc. 4. Ensure the knowledge base is easily searchable and accessible to all employees. 5. Encourage feedback and contributions from employees to keep the knowledge base up-to-date and relevant. A knowledge base article is a standalone piece of content in a knowledge base. The article addresses a specific topic, question, or problem. It provides in-depth information, step-by-step instructions, troubleshooting tips, or solutions to help users resolve their issues independently. There are a few things to keep in mind when writing a knowledge base article. To write an effective knowledge base article:",
+      "metadata": {}
+    },
+    "chunk_4": {
+      "citation_id": "chunk_4",
+      "point_id": "web-3",
+      "document_id": null,
+      "chunk_id": null,
+      "total_chunks": null,
+      "source": "What Is a Knowledge Base? Definition, Types & Benefits",
+      "source_type": "web",
+      "url": "https://www.fluidtopics.com/blog/content-ops/what-is-a-knowledge-base",
+      "text": "### SEO-Optimized Knowledge Base Content Digital knowledge bases can help generate organic traffic and boost the results rankings of your documents. To do this, the content hub must be optimized for search engines like Google and Bing. With features like custom metadata options, your knowledge base will help search engine bots crawl and index your content. ### AI-Powered Support Assistant Enhance knowledge base search tools with Generative AI (GenAI) to turn a normal quest for information into a conversational experience. Users enter their questions in natural language into a self-service chatbot or search bar interface and automatically receive accurate responses. Documentation trends: Identify the most popular content and search terms to prioritize content work. Look at the least-read content to discover which topics aren’t as critical for users. Are they less popular due to a lack of questions on the topic or because users search for different keywords? Content findability: With keyword analytics, see what customers search for. If they use different terms than those in the content, enhance your knowledge base with new metadata, taxonomies, and synonyms. This will improve your content findability and usefulness. No-results searches: Identify content gaps with “Searches with no results”. When results are lacking, documentation teams need to produce or update content. Cover of KMWorld Report AI Knowledge Base FAQs Teams should organize content in a knowledge base around the questions and tasks users need to complete, using clear categories, metadata, navigation, and search. Regular content audits and updates are also important for keeping information easy to find and trustworthy. Knowledge management is typically a cross-functional responsibility involving technical writers, knowledge teams, subject matter experts, support teams, product teams, and other content owners. It may also include HR and Legal if the knowledge base includes internal process information. IT may be involved in creating the hub and connecting it to different content sources. Clear ownership and review processes help ensure that information remains accurate and current.",
+      "evidence": "### SEO-Optimized Knowledge Base Content Digital knowledge bases can help generate organic traffic and boost the results rankings of your documents. To do this, the content hub must be optimized for search engines like Google and Bing. With features like custom metadata options, your knowledge base will help search engine bots crawl and index your content. ### AI-Powered Support Assistant Enhance knowledge base search tools with Generative AI (GenAI) to turn a normal quest for information into a conversational experience. Users enter their questions in natural language into a self-service chatbot or search bar interface and automatically receive accurate responses. Documentation trends: Identify the most popular content and search terms to prioritize content work. Look at the least-read content to discover which topics aren’t as critical for users. Are they less popular due to a lack of questions on the topic or because users search for different keywords? Content findability: With keyword analytics, see what customers search for. If they use different terms than those in the content, enhance your knowledge base with new metadata, taxonomies, and synonyms. This will improve your content findability and usefulness. No-results searches: Identify content gaps with “Searches with no results”. When results are lacking, documentation teams need to produce or update content. Cover of KMWorld Report AI Knowledge Base FAQs Teams should organize content in a knowledge base around the questions and tasks users need to complete, using clear categories, metadata, navigation, and search. Regular content audits and updates are also important for keeping information easy to find and trustworthy. Knowledge management is typically a cross-functional responsibility involving technical writers, knowledge teams, subject matter experts, support teams, product teams, and other content owners. It may also include HR and Legal if the knowledge base includes internal process information. IT may be involved in creating the hub and connecting it to different content sources. Clear ownership and review processes help ensure that information remains accurate and current.",
+      "metadata": {}
+    },
+    "chunk_5": {
+      "citation_id": "chunk_5",
+      "point_id": "web-4",
+      "document_id": null,
+      "chunk_id": null,
+      "total_chunks": null,
+      "source": "The 7 Essential Types of Knowledge Bases - Bloomfire",
+      "source_type": "web",
+      "url": "https://bloomfire.com/blog/types-of-knowledge-bases",
+      "text": "###### Modernize Your Knowledge Base Replace static folders with a dynamic, searchable home for all your company data. Book a FREE Demo Enterprise Intelligence ## 3. Product Documentation Knowledge Base Product documentation knowledge bases house technical information about how your software, application, or digital product functions. This knowledge base type is fundamentally different from general support content. It focuses on product-specific technical details rather than company policies or broad customer service topics. You create reference material that explains what each feature does, how users interact with specific functionality, and technical specifications that developers need for integration. Learn More Enterprise Intelligence A list of the different types of knowledge bases ## 1. Customer-Facing Knowledge Base Platforms Customer-facing knowledge base platforms function as public self-service portals where customers access information about your products and services without restrictions. These external types of knowledge bases remain available to anyone seeking answers, unlike internal systems reserved for employees. You’ll find them embedded on company websites, within products, or hosted at dedicated domains like support.company.com. ## 7. Community-Driven or Collaborative Knowledge Base High levels of community engagement and collaboration see a 10% increase in customer loyalty. Many organizations are shifting toward a collaborative model in which users contribute to the documentation. This type functions as a peer-to-peer repository where long-time customers or power users share workarounds, creative use cases, and localized solutions that a corporate team might miss. Crowdsourcing information ensures that the library remains dynamic and reflects real-world applications. Moderation tools allow your staff to verify community answers, turning a simple forum into a trusted, authoritative source. This reduces the burden on your content team while fostering a sense of ownership among your most loyal brand advocates.",
+      "evidence": "###### Modernize Your Knowledge Base Replace static folders with a dynamic, searchable home for all your company data. Book a FREE Demo Enterprise Intelligence ## 3. Product Documentation Knowledge Base Product documentation knowledge bases house technical information about how your software, application, or digital product functions. This knowledge base type is fundamentally different from general support content. It focuses on product-specific technical details rather than company policies or broad customer service topics. You create reference material that explains what each feature does, how users interact with specific functionality, and technical specifications that developers need for integration. Learn More Enterprise Intelligence A list of the different types of knowledge bases ## 1. Customer-Facing Knowledge Base Platforms Customer-facing knowledge base platforms function as public self-service portals where customers access information about your products and services without restrictions. These external types of knowledge bases remain available to anyone seeking answers, unlike internal systems reserved for employees. You’ll find them embedded on company websites, within products, or hosted at dedicated domains like support.company.com. ## 7. Community-Driven or Collaborative Knowledge Base High levels of community engagement and collaboration see a 10% increase in customer loyalty. Many organizations are shifting toward a collaborative model in which users contribute to the documentation. This type functions as a peer-to-peer repository where long-time customers or power users share workarounds, creative use cases, and localized solutions that a corporate team might miss. Crowdsourcing information ensures that the library remains dynamic and reflects real-world applications. Moderation tools allow your staff to verify community answers, turning a simple forum into a trusted, authoritative source. This reduces the burden on your content team while fostering a sense of ownership among your most loyal brand advocates.",
+      "metadata": {}
+    }
+  },
+  "search_query": "knowledge base contents information types documents metadata schema topics domains",
+  "retrieval_used": true,
+  "web_search_used": true,
+  "should_search_web": false,
+  "context_quality": "strong",
+  "context_reason": "5 relevant internal documents are available for generation.",
+  "citation_valid": true,
+  "is_grounded": true,
+  "claims": [
+    {
+      "claim": "Core metadata elements defined by the Dublin Core standard: Title, Subject, Description, Type, Source, Relations, Coverage, Creator, Publisher, Contributor, Rights, Date, Format, Identifier, Language",
+      "score": 0.9637,
+      "supported": true,
+      "citations": [
+        "chunk_1"
+      ],
+      "atomic_claims": [
+        {
+          "claim": "Core metadata elements defined by the Dublin Core standard: Title, Subject, Description, Type, Source, Relations, Coverage, Creator, Publisher, Contributor, Rights, Date, Format, Identifier, Language",
+          "score": 0.9637,
+          "supported": true,
+          "best_evidence_unit": "They provide predefined metadata elements that are intended to be sufficiently generic for various use cases. Perhaps the most widely used standard metadata schema in is Dublin Core, which is a set of 15 basic (core) elements intended for published documents. These elements are Title, Subject, Description, Type, Source, Relations, Coverage, Creator, Publisher, Contributor, Rights, Date, Format, Identifier, and Language.",
+          "best_citation": "chunk_1",
+          "citations": [
+            "chunk_1"
+          ],
+          "support_method": "entailment",
+          "evidence_provenance": {
+            "citation_id": "chunk_1",
+            "document_id": null,
+            "chunk_id": null,
+            "point_id": "web-2",
+            "canonical_evidence_id": null
+          },
+          "parent_claim": "Core metadata elements defined by the Dublin Core standard: Title, Subject, Description, Type, Source, Relations, Coverage, Creator, Publisher, Contributor, Rights, Date, Format, Identifier, Language"
+        }
+      ],
+      "cited_chunk_id": "chunk_1",
+      "cited_chunk_ids": [
+        "chunk_1"
+      ],
+      "cited_chunk_key": "chunk_1"
+    },
+    {
+      "claim": "Additional metadata fields often used as taxonomies or controlled vocabularies include Topic, Activity, Location, Organization Name, People/Role Type, Document Type, Content Language, etc.",
+      "score": 0.939,
+      "supported": true,
+      "citations": [
+        "chunk_1"
+      ],
+      "atomic_claims": [
+        {
+          "claim": "Additional metadata fields often used as taxonomies or controlled vocabularies include Topic, Activity, Location, Organization Name, People/Role Type, Document Type, Content Language, etc.",
+          "score": 0.939,
+          "supported": true,
+          "best_evidence_unit": "In the context of metadata schemas, there exist not only these custom metadata schemas, but also standard metadata sets of elements and their schemas. They provide predefined metadata elements that are intended to be sufficiently generic for various use cases. Perhaps the most widely used standard metadata schema in is Dublin Core, which is a set of 15 basic (core) elements intended for published documents. These elements are Title, Subject, Description, Type, Source, Relations, Coverage, Creator, Publisher, Contributor, Rights, Date, Format, Identifier, and Language. There are other standard metadata schema that are somewhat more specific for a subject domain, such as IPTC (International Press Telecommunications Council) metadata which is intended for images. When standard data notation, The value type for the metadata element (For example, controlled vocabulary terms, uncontrolled keywords, free text, date, integers, Boolean yes/no, etc.) Whether assignment of a value from the metadata element is required or optional for each content item (or depends on the specific type of content item). Whether the assignment of the values from the metadata element is limited to just one or can be multiple, which is referred to as \"cardinality.\" (For example, the assignment of only one Document Type but up to four Topics per content item.) Example of a custom metadata schema Standard Metadata Element Sets and Schemas # Types of Metadata Schemas Heather Hedden Taxonomies or sets of controlled vocabularies are typically implemented as values for various metadata elements (also called metadata properties or fields). Metadata elements that contain controlled vocabularies could be Topic, Activity, Location, Organization Name, People/Role Type, Document Type, Content Language, etc. These are often implemented as facets in faceted search, although they do not have to be. There may be additional metadata elements for non-taxonomy values, such as Document Title, Image Caption, Creator/Author, Creation Date, Rights Status, etc. In addition to designing taxonomies, in my consulting projects I often also design such broader metadata schemas. ## Custom Metadata Schemas",
+          "best_citation": "chunk_1",
+          "citations": [
+            "chunk_1"
+          ],
+          "support_method": "entailment",
+          "evidence_provenance": {
+            "citation_id": "chunk_1",
+            "document_id": null,
+            "chunk_id": null,
+            "point_id": "web-2",
+            "canonical_evidence_id": null
+          },
+          "parent_claim": "Additional metadata fields often used as taxonomies or controlled vocabularies include Topic, Activity, Location, Organization Name, People/Role Type, Document Type, Content Language, etc."
+        }
+      ],
+      "cited_chunk_id": "chunk_1",
+      "cited_chunk_ids": [
+        "chunk_1"
+      ],
+      "cited_chunk_key": "chunk_1"
+    },
+    {
+      "claim": "A knowledge base stores internal documents such as policies, updates, onboarding materials, strategies, summaries, company values, and Standard Operating Procedures.",
+      "score": 0.9157,
+      "supported": true,
+      "citations": [
+        "chunk_3"
+      ],
+      "atomic_claims": [
+        {
+          "claim": "A knowledge base stores internal documents such as policies, updates, onboarding materials, strategies, summaries, company values, and Standard Operating Procedures.",
+          "score": 0.9157,
+          "supported": true,
+          "best_evidence_unit": "When it comes to internal use, a knowledge base can store different types of information: internal policies, updates, onboarding materials, strategies, summaries, company values, Standard Operating Procedures, and more.",
+          "best_citation": "chunk_3",
+          "citations": [
+            "chunk_3"
+          ],
+          "support_method": "entailment",
+          "evidence_provenance": {
+            "citation_id": "chunk_3",
+            "document_id": null,
+            "chunk_id": null,
+            "point_id": "web-5",
+            "canonical_evidence_id": null
+          },
+          "parent_claim": "A knowledge base stores internal documents such as policies, updates, onboarding materials, strategies, summaries, company values, and Standard Operating Procedures."
+        }
+      ],
+      "cited_chunk_id": "chunk_3",
+      "cited_chunk_ids": [
+        "chunk_3"
+      ],
+      "cited_chunk_key": "chunk_3"
+    },
+    {
+      "claim": "It can also contain external/customer‑facing content such as answers to common questions and product or service information.",
+      "score": 0.5952,
+      "supported": true,
+      "citations": [
+        "chunk_3"
+      ],
+      "atomic_claims": [
+        {
+          "claim": "It can also contain external/customer‑facing content such as answers to common questions and product or service information.",
+          "score": 0.5952,
+          "supported": true,
+          "best_evidence_unit": "A self service customer knowledge base is available 24/7 and can contain answers to common questions or information about a product, service, or a particular topic. To create a knowledge base, follow these steps: 1. Identify the key topics and information that employees need for their roles. 2. Include essential company policies, procedures, and guidelines. 3. Organize the content into categories, such as HR, IT, product information, etc. 4.",
+          "best_citation": "chunk_3",
+          "citations": [
+            "chunk_3"
+          ],
+          "support_method": "entailment",
+          "evidence_provenance": {
+            "citation_id": "chunk_3",
+            "document_id": null,
+            "chunk_id": null,
+            "point_id": "web-5",
+            "canonical_evidence_id": null
+          },
+          "parent_claim": "It can also contain external/customer‑facing content such as answers to common questions and product or service information."
+        }
+      ],
+      "cited_chunk_id": "chunk_3",
+      "cited_chunk_ids": [
+        "chunk_3"
+      ],
+      "cited_chunk_key": "chunk_3"
+    },
+    {
+      "claim": "Product‑documentation knowledge bases hold technical information about how software, applications, or digital products function and provide product‑specific technical details.",
+      "score": 0.888,
+      "supported": true,
+      "citations": [
+        "chunk_5"
+      ],
+      "atomic_claims": [
+        {
+          "claim": "Product‑documentation knowledge bases hold technical information about how software, applications, or digital products function and provide product‑specific technical details.",
+          "score": 0.888,
+          "supported": true,
+          "best_evidence_unit": "###### Modernize Your Knowledge Base Replace static folders with a dynamic, searchable home for all your company data. Book a FREE Demo Enterprise Intelligence ## 3. Product Documentation Knowledge Base Product documentation knowledge bases house technical information about how your software, application, or digital product functions. This knowledge base type is fundamentally different from general support content. It focuses on product-specific technical details rather than company policies or broad customer service topics. You create reference material that explains what each feature does, how users interact with specific functionality, and technical specifications that developers need for integration. Learn More Enterprise Intelligence A list of the different types of knowledge bases ## 1. Customer-Facing Knowledge Base Platforms Customer-facing knowledge base platforms function as public self-service portals where customers access information about your products and services without restrictions. These external types of knowledge bases remain available to anyone seeking answers, unlike internal systems reserved for employees. You'll find them embedded on company websites, within products, or hosted at dedicated domains like support.company.com. ## 7. Community-Driven or Collaborative Knowledge Base High levels of community engagement and collaboration see a 10% increase in customer loyalty. Many organizations are shifting toward a collaborative model in which users contribute to the documentation. This type functions as a peer-to-peer repository where long-time customers or power users share workarounds, creative use cases, and localized solutions that a corporate team might miss. Crowdsourcing information ensures that the library remains dynamic and reflects real-world applications. Moderation tools allow your staff to verify community answers, turning a simple forum into a trusted, authoritative source. This reduces the burden on your content team while fostering a sense of ownership among your most loyal brand advocates.",
+          "best_citation": "chunk_5",
+          "citations": [
+            "chunk_5"
+          ],
+          "support_method": "entailment",
+          "evidence_provenance": {
+            "citation_id": "chunk_5",
+            "document_id": null,
+            "chunk_id": null,
+            "point_id": "web-4",
+            "canonical_evidence_id": null
+          },
+          "parent_claim": "Product‑documentation knowledge bases hold technical information about how software, applications, or digital products function and provide product‑specific technical details."
+        }
+      ],
+      "cited_chunk_id": "chunk_5",
+      "cited_chunk_ids": [
+        "chunk_5"
+      ],
+      "cited_chunk_key": "chunk_5"
+    },
+    {
+      "claim": "Customer‑facing knowledge base platforms are public self‑service portals that provide information about products and services to anyone.",
+      "score": 0.7943,
+      "supported": true,
+      "citations": [
+        "chunk_5"
+      ],
+      "atomic_claims": [
+        {
+          "claim": "Customer‑facing knowledge base platforms are public self‑service portals that provide information about products and services to anyone.",
+          "score": 0.7943,
+          "supported": true,
+          "best_evidence_unit": "It focuses on product-specific technical details rather than company policies or broad customer service topics. You create reference material that explains what each feature does, how users interact with specific functionality, and technical specifications that developers need for integration. Learn More Enterprise Intelligence A list of the different types of knowledge bases ## 1. Customer-Facing Knowledge Base Platforms Customer-facing knowledge base platforms function as public self-service portals where customers access information about your products and services without restrictions. These external types of knowledge bases remain available to anyone seeking answers, unlike internal systems reserved for employees.",
+          "best_citation": "chunk_5",
+          "citations": [
+            "chunk_5"
+          ],
+          "support_method": "entailment",
+          "evidence_provenance": {
+            "citation_id": "chunk_5",
+            "document_id": null,
+            "chunk_id": null,
+            "point_id": "web-4",
+            "canonical_evidence_id": null
+          },
+          "parent_claim": "Customer‑facing knowledge base platforms are public self‑service portals that provide information about products and services to anyone."
+        }
+      ],
+      "cited_chunk_id": "chunk_5",
+      "cited_chunk_ids": [
+        "chunk_5"
+      ],
+      "cited_chunk_key": "chunk_5"
+    },
+    {
+      "claim": "A domain schema is a schematic description of domain‑specific knowledge that defines the types and structure used in the knowledge base.",
+      "score": 0.7946,
+      "supported": true,
+      "citations": [
+        "chunk_2"
+      ],
+      "atomic_claims": [
+        {
+          "claim": "A domain schema is a schematic description of domain‑specific knowledge that defines the types",
+          "score": 0.7946,
+          "supported": true,
+          "best_evidence_unit": "Domain schema: The domain schema is a schematic description of the domain-specific knowledge and information needed for a particular area or topic. It uses different types to define the structure of this knowledge.",
+          "best_citation": "chunk_2",
+          "citations": [
+            "chunk_2"
+          ],
+          "support_method": "entailment",
+          "evidence_provenance": {
+            "citation_id": "chunk_2",
+            "document_id": null,
+            "chunk_id": null,
+            "point_id": "web-1",
+            "canonical_evidence_id": null
+          },
+          "parent_claim": "A domain schema is a schematic description of domain‑specific knowledge that defines the types and structure used in the knowledge base."
+        },
+        {
+          "claim": "structure used in the knowledge base.",
+          "score": 0.9391,
+          "supported": true,
+          "best_evidence_unit": "In the context of the knowledge base, the domain schema resembles a framework or structure that helps to organize and represent information in our AI system.",
+          "best_citation": "chunk_2",
+          "citations": [
+            "chunk_2"
+          ],
+          "support_method": "entailment",
+          "evidence_provenance": {
+            "citation_id": "chunk_2",
+            "document_id": null,
+            "chunk_id": null,
+            "point_id": "web-1",
+            "canonical_evidence_id": null
+          },
+          "parent_claim": "A domain schema is a schematic description of domain‑specific knowledge that defines the types and structure used in the knowledge base."
+        }
+      ],
+      "cited_chunk_id": "chunk_2",
+      "cited_chunk_ids": [
+        "chunk_2"
+      ],
+      "cited_chunk_key": "chunk_2"
+    },
+    {
+      "claim": "A knowledge base accommodates the instances of the types specified in the domain schema.",
+      "score": 1.0,
+      "supported": true,
+      "citations": [
+        "chunk_2"
+      ],
+      "atomic_claims": [
+        {
+          "claim": "A knowledge base accommodates the instances of the types specified in the domain schema.",
+          "score": 1.0,
+          "supported": true,
+          "best_evidence_unit": "Knowledge base: A knowledge base accommodates the instances of the types specified in the domain schema.",
+          "best_citation": "chunk_2",
+          "citations": [
+            "chunk_2"
+          ],
+          "support_method": "deterministic_exact_match",
+          "evidence_provenance": {
+            "citation_id": "chunk_2",
+            "document_id": null,
+            "chunk_id": null,
+            "point_id": "web-1",
+            "canonical_evidence_id": null
+          },
+          "parent_claim": "A knowledge base accommodates the instances of the types specified in the domain schema."
+        }
+      ],
+      "cited_chunk_id": "chunk_2",
+      "cited_chunk_ids": [
+        "chunk_2"
+      ],
+      "cited_chunk_key": "chunk_2"
+    }
+  ],
+  "grounding_scores": [
+    {
+      "claim": "Core metadata elements defined by the Dublin Core standard: Title, Subject, Description, Type, Source, Relations, Coverage, Creator, Publisher, Contributor, Rights, Date, Format, Identifier, Language",
+      "score": 0.9637,
+      "supported": true,
+      "citations": [
+        "chunk_1"
+      ],
+      "atomic_claims": [
+        {
+          "claim": "Core metadata elements defined by the Dublin Core standard: Title, Subject, Description, Type, Source, Relations, Coverage, Creator, Publisher, Contributor, Rights, Date, Format, Identifier, Language",
+          "score": 0.9637,
+          "supported": true,
+          "best_evidence_unit": "They provide predefined metadata elements that are intended to be sufficiently generic for various use cases. Perhaps the most widely used standard metadata schema in is Dublin Core, which is a set of 15 basic (core) elements intended for published documents. These elements are Title, Subject, Description, Type, Source, Relations, Coverage, Creator, Publisher, Contributor, Rights, Date, Format, Identifier, and Language.",
+          "best_citation": "chunk_1",
+          "citations": [
+            "chunk_1"
+          ],
+          "support_method": "entailment",
+          "evidence_provenance": {
+            "citation_id": "chunk_1",
+            "document_id": null,
+            "chunk_id": null,
+            "point_id": "web-2",
+            "canonical_evidence_id": null
+          },
+          "parent_claim": "Core metadata elements defined by the Dublin Core standard: Title, Subject, Description, Type, Source, Relations, Coverage, Creator, Publisher, Contributor, Rights, Date, Format, Identifier, Language"
+        }
+      ]
+    },
+    {
+      "claim": "Additional metadata fields often used as taxonomies or controlled vocabularies include Topic, Activity, Location, Organization Name, People/Role Type, Document Type, Content Language, etc.",
+      "score": 0.939,
+      "supported": true,
+      "citations": [
+        "chunk_1"
+      ],
+      "atomic_claims": [
+        {
+          "claim": "Additional metadata fields often used as taxonomies or controlled vocabularies include Topic, Activity, Location, Organization Name, People/Role Type, Document Type, Content Language, etc.",
+          "score": 0.939,
+          "supported": true,
+          "best_evidence_unit": "In the context of metadata schemas, there exist not only these custom metadata schemas, but also standard metadata sets of elements and their schemas. They provide predefined metadata elements that are intended to be sufficiently generic for various use cases. Perhaps the most widely used standard metadata schema in is Dublin Core, which is a set of 15 basic (core) elements intended for published documents. These elements are Title, Subject, Description, Type, Source, Relations, Coverage, Creator, Publisher, Contributor, Rights, Date, Format, Identifier, and Language. There are other standard metadata schema that are somewhat more specific for a subject domain, such as IPTC (International Press Telecommunications Council) metadata which is intended for images. When standard data notation, The value type for the metadata element (For example, controlled vocabulary terms, uncontrolled keywords, free text, date, integers, Boolean yes/no, etc.) Whether assignment of a value from the metadata element is required or optional for each content item (or depends on the specific type of content item). Whether the assignment of the values from the metadata element is limited to just one or can be multiple, which is referred to as \"cardinality.\" (For example, the assignment of only one Document Type but up to four Topics per content item.) Example of a custom metadata schema Standard Metadata Element Sets and Schemas # Types of Metadata Schemas Heather Hedden Taxonomies or sets of controlled vocabularies are typically implemented as values for various metadata elements (also called metadata properties or fields). Metadata elements that contain controlled vocabularies could be Topic, Activity, Location, Organization Name, People/Role Type, Document Type, Content Language, etc. These are often implemented as facets in faceted search, although they do not have to be. There may be additional metadata elements for non-taxonomy values, such as Document Title, Image Caption, Creator/Author, Creation Date, Rights Status, etc. In addition to designing taxonomies, in my consulting projects I often also design such broader metadata schemas. ## Custom Metadata Schemas",
+          "best_citation": "chunk_1",
+          "citations": [
+            "chunk_1"
+          ],
+          "support_method": "entailment",
+          "evidence_provenance": {
+            "citation_id": "chunk_1",
+            "document_id": null,
+            "chunk_id": null,
+            "point_id": "web-2",
+            "canonical_evidence_id": null
+          },
+          "parent_claim": "Additional metadata fields often used as taxonomies or controlled vocabularies include Topic, Activity, Location, Organization Name, People/Role Type, Document Type, Content Language, etc."
+        }
+      ]
+    },
+    {
+      "claim": "A knowledge base stores internal documents such as policies, updates, onboarding materials, strategies, summaries, company values, and Standard Operating Procedures.",
+      "score": 0.9157,
+      "supported": true,
+      "citations": [
+        "chunk_3"
+      ],
+      "atomic_claims": [
+        {
+          "claim": "A knowledge base stores internal documents such as policies, updates, onboarding materials, strategies, summaries, company values, and Standard Operating Procedures.",
+          "score": 0.9157,
+          "supported": true,
+          "best_evidence_unit": "When it comes to internal use, a knowledge base can store different types of information: internal policies, updates, onboarding materials, strategies, summaries, company values, Standard Operating Procedures, and more.",
+          "best_citation": "chunk_3",
+          "citations": [
+            "chunk_3"
+          ],
+          "support_method": "entailment",
+          "evidence_provenance": {
+            "citation_id": "chunk_3",
+            "document_id": null,
+            "chunk_id": null,
+            "point_id": "web-5",
+            "canonical_evidence_id": null
+          },
+          "parent_claim": "A knowledge base stores internal documents such as policies, updates, onboarding materials, strategies, summaries, company values, and Standard Operating Procedures."
+        }
+      ]
+    },
+    {
+      "claim": "It can also contain external/customer‑facing content such as answers to common questions and product or service information.",
+      "score": 0.5952,
+      "supported": true,
+      "citations": [
+        "chunk_3"
+      ],
+      "atomic_claims": [
+        {
+          "claim": "It can also contain external/customer‑facing content such as answers to common questions and product or service information.",
+          "score": 0.5952,
+          "supported": true,
+          "best_evidence_unit": "A self service customer knowledge base is available 24/7 and can contain answers to common questions or information about a product, service, or a particular topic. To create a knowledge base, follow these steps: 1. Identify the key topics and information that employees need for their roles. 2. Include essential company policies, procedures, and guidelines. 3. Organize the content into categories, such as HR, IT, product information, etc. 4.",
+          "best_citation": "chunk_3",
+          "citations": [
+            "chunk_3"
+          ],
+          "support_method": "entailment",
+          "evidence_provenance": {
+            "citation_id": "chunk_3",
+            "document_id": null,
+            "chunk_id": null,
+            "point_id": "web-5",
+            "canonical_evidence_id": null
+          },
+          "parent_claim": "It can also contain external/customer‑facing content such as answers to common questions and product or service information."
+        }
+      ]
+    },
+    {
+      "claim": "Product‑documentation knowledge bases hold technical information about how software, applications, or digital products function and provide product‑specific technical details.",
+      "score": 0.888,
+      "supported": true,
+      "citations": [
+        "chunk_5"
+      ],
+      "atomic_claims": [
+        {
+          "claim": "Product‑documentation knowledge bases hold technical information about how software, applications, or digital products function and provide product‑specific technical details.",
+          "score": 0.888,
+          "supported": true,
+          "best_evidence_unit": "###### Modernize Your Knowledge Base Replace static folders with a dynamic, searchable home for all your company data. Book a FREE Demo Enterprise Intelligence ## 3. Product Documentation Knowledge Base Product documentation knowledge bases house technical information about how your software, application, or digital product functions. This knowledge base type is fundamentally different from general support content. It focuses on product-specific technical details rather than company policies or broad customer service topics. You create reference material that explains what each feature does, how users interact with specific functionality, and technical specifications that developers need for integration. Learn More Enterprise Intelligence A list of the different types of knowledge bases ## 1. Customer-Facing Knowledge Base Platforms Customer-facing knowledge base platforms function as public self-service portals where customers access information about your products and services without restrictions. These external types of knowledge bases remain available to anyone seeking answers, unlike internal systems reserved for employees. You'll find them embedded on company websites, within products, or hosted at dedicated domains like support.company.com. ## 7. Community-Driven or Collaborative Knowledge Base High levels of community engagement and collaboration see a 10% increase in customer loyalty. Many organizations are shifting toward a collaborative model in which users contribute to the documentation. This type functions as a peer-to-peer repository where long-time customers or power users share workarounds, creative use cases, and localized solutions that a corporate team might miss. Crowdsourcing information ensures that the library remains dynamic and reflects real-world applications. Moderation tools allow your staff to verify community answers, turning a simple forum into a trusted, authoritative source. This reduces the burden on your content team while fostering a sense of ownership among your most loyal brand advocates.",
+          "best_citation": "chunk_5",
+          "citations": [
+            "chunk_5"
+          ],
+          "support_method": "entailment",
+          "evidence_provenance": {
+            "citation_id": "chunk_5",
+            "document_id": null,
+            "chunk_id": null,
+            "point_id": "web-4",
+            "canonical_evidence_id": null
+          },
+          "parent_claim": "Product‑documentation knowledge bases hold technical information about how software, applications, or digital products function and provide product‑specific technical details."
+        }
+      ]
+    },
+    {
+      "claim": "Customer‑facing knowledge base platforms are public self‑service portals that provide information about products and services to anyone.",
+      "score": 0.7943,
+      "supported": true,
+      "citations": [
+        "chunk_5"
+      ],
+      "atomic_claims": [
+        {
+          "claim": "Customer‑facing knowledge base platforms are public self‑service portals that provide information about products and services to anyone.",
+          "score": 0.7943,
+          "supported": true,
+          "best_evidence_unit": "It focuses on product-specific technical details rather than company policies or broad customer service topics. You create reference material that explains what each feature does, how users interact with specific functionality, and technical specifications that developers need for integration. Learn More Enterprise Intelligence A list of the different types of knowledge bases ## 1. Customer-Facing Knowledge Base Platforms Customer-facing knowledge base platforms function as public self-service portals where customers access information about your products and services without restrictions. These external types of knowledge bases remain available to anyone seeking answers, unlike internal systems reserved for employees.",
+          "best_citation": "chunk_5",
+          "citations": [
+            "chunk_5"
+          ],
+          "support_method": "entailment",
+          "evidence_provenance": {
+            "citation_id": "chunk_5",
+            "document_id": null,
+            "chunk_id": null,
+            "point_id": "web-4",
+            "canonical_evidence_id": null
+          },
+          "parent_claim": "Customer‑facing knowledge base platforms are public self‑service portals that provide information about products and services to anyone."
+        }
+      ]
+    },
+    {
+      "claim": "A domain schema is a schematic description of domain‑specific knowledge that defines the types and structure used in the knowledge base.",
+      "score": 0.7946,
+      "supported": true,
+      "citations": [
+        "chunk_2"
+      ],
+      "atomic_claims": [
+        {
+          "claim": "A domain schema is a schematic description of domain‑specific knowledge that defines the types",
+          "score": 0.7946,
+          "supported": true,
+          "best_evidence_unit": "Domain schema: The domain schema is a schematic description of the domain-specific knowledge and information needed for a particular area or topic. It uses different types to define the structure of this knowledge.",
+          "best_citation": "chunk_2",
+          "citations": [
+            "chunk_2"
+          ],
+          "support_method": "entailment",
+          "evidence_provenance": {
+            "citation_id": "chunk_2",
+            "document_id": null,
+            "chunk_id": null,
+            "point_id": "web-1",
+            "canonical_evidence_id": null
+          },
+          "parent_claim": "A domain schema is a schematic description of domain‑specific knowledge that defines the types and structure used in the knowledge base."
+        },
+        {
+          "claim": "structure used in the knowledge base.",
+          "score": 0.9391,
+          "supported": true,
+          "best_evidence_unit": "In the context of the knowledge base, the domain schema resembles a framework or structure that helps to organize and represent information in our AI system.",
+          "best_citation": "chunk_2",
+          "citations": [
+            "chunk_2"
+          ],
+          "support_method": "entailment",
+          "evidence_provenance": {
+            "citation_id": "chunk_2",
+            "document_id": null,
+            "chunk_id": null,
+            "point_id": "web-1",
+            "canonical_evidence_id": null
+          },
+          "parent_claim": "A domain schema is a schematic description of domain‑specific knowledge that defines the types and structure used in the knowledge base."
+        }
+      ]
+    },
+    {
+      "claim": "A knowledge base accommodates the instances of the types specified in the domain schema.",
+      "score": 1.0,
+      "supported": true,
+      "citations": [
+        "chunk_2"
+      ],
+      "atomic_claims": [
+        {
+          "claim": "A knowledge base accommodates the instances of the types specified in the domain schema.",
+          "score": 1.0,
+          "supported": true,
+          "best_evidence_unit": "Knowledge base: A knowledge base accommodates the instances of the types specified in the domain schema.",
+          "best_citation": "chunk_2",
+          "citations": [
+            "chunk_2"
+          ],
+          "support_method": "deterministic_exact_match",
+          "evidence_provenance": {
+            "citation_id": "chunk_2",
+            "document_id": null,
+            "chunk_id": null,
+            "point_id": "web-1",
+            "canonical_evidence_id": null
+          },
+          "parent_claim": "A knowledge base accommodates the instances of the types specified in the domain schema."
+        }
+      ]
+    }
+  ],
+  "grounding_details": {
+    "atomic_claims": [
+      {
+        "claim": "Core metadata elements defined by the Dublin Core standard: Title, Subject, Description, Type, Source, Relations, Coverage, Creator, Publisher, Contributor, Rights, Date, Format, Identifier, Language",
+        "score": 0.9637,
+        "supported": true,
+        "best_evidence_unit": "They provide predefined metadata elements that are intended to be sufficiently generic for various use cases. Perhaps the most widely used standard metadata schema in is Dublin Core, which is a set of 15 basic (core) elements intended for published documents. These elements are Title, Subject, Description, Type, Source, Relations, Coverage, Creator, Publisher, Contributor, Rights, Date, Format, Identifier, and Language.",
+        "best_citation": "chunk_1",
+        "citations": [
+          "chunk_1"
+        ],
+        "support_method": "entailment",
+        "evidence_provenance": {
+          "citation_id": "chunk_1",
+          "document_id": null,
+          "chunk_id": null,
+          "point_id": "web-2",
+          "canonical_evidence_id": null
+        },
+        "parent_claim": "Core metadata elements defined by the Dublin Core standard: Title, Subject, Description, Type, Source, Relations, Coverage, Creator, Publisher, Contributor, Rights, Date, Format, Identifier, Language"
+      },
+      {
+        "claim": "Additional metadata fields often used as taxonomies or controlled vocabularies include Topic, Activity, Location, Organization Name, People/Role Type, Document Type, Content Language, etc.",
+        "score": 0.939,
+        "supported": true,
+        "best_evidence_unit": "In the context of metadata schemas, there exist not only these custom metadata schemas, but also standard metadata sets of elements and their schemas. They provide predefined metadata elements that are intended to be sufficiently generic for various use cases. Perhaps the most widely used standard metadata schema in is Dublin Core, which is a set of 15 basic (core) elements intended for published documents. These elements are Title, Subject, Description, Type, Source, Relations, Coverage, Creator, Publisher, Contributor, Rights, Date, Format, Identifier, and Language. There are other standard metadata schema that are somewhat more specific for a subject domain, such as IPTC (International Press Telecommunications Council) metadata which is intended for images. When standard data notation, The value type for the metadata element (For example, controlled vocabulary terms, uncontrolled keywords, free text, date, integers, Boolean yes/no, etc.) Whether assignment of a value from the metadata element is required or optional for each content item (or depends on the specific type of content item). Whether the assignment of the values from the metadata element is limited to just one or can be multiple, which is referred to as \"cardinality.\" (For example, the assignment of only one Document Type but up to four Topics per content item.) Example of a custom metadata schema Standard Metadata Element Sets and Schemas # Types of Metadata Schemas Heather Hedden Taxonomies or sets of controlled vocabularies are typically implemented as values for various metadata elements (also called metadata properties or fields). Metadata elements that contain controlled vocabularies could be Topic, Activity, Location, Organization Name, People/Role Type, Document Type, Content Language, etc. These are often implemented as facets in faceted search, although they do not have to be. There may be additional metadata elements for non-taxonomy values, such as Document Title, Image Caption, Creator/Author, Creation Date, Rights Status, etc. In addition to designing taxonomies, in my consulting projects I often also design such broader metadata schemas. ## Custom Metadata Schemas",
+        "best_citation": "chunk_1",
+        "citations": [
+          "chunk_1"
+        ],
+        "support_method": "entailment",
+        "evidence_provenance": {
+          "citation_id": "chunk_1",
+          "document_id": null,
+          "chunk_id": null,
+          "point_id": "web-2",
+          "canonical_evidence_id": null
+        },
+        "parent_claim": "Additional metadata fields often used as taxonomies or controlled vocabularies include Topic, Activity, Location, Organization Name, People/Role Type, Document Type, Content Language, etc."
+      },
+      {
+        "claim": "A knowledge base stores internal documents such as policies, updates, onboarding materials, strategies, summaries, company values, and Standard Operating Procedures.",
+        "score": 0.9157,
+        "supported": true,
+        "best_evidence_unit": "When it comes to internal use, a knowledge base can store different types of information: internal policies, updates, onboarding materials, strategies, summaries, company values, Standard Operating Procedures, and more.",
+        "best_citation": "chunk_3",
+        "citations": [
+          "chunk_3"
+        ],
+        "support_method": "entailment",
+        "evidence_provenance": {
+          "citation_id": "chunk_3",
+          "document_id": null,
+          "chunk_id": null,
+          "point_id": "web-5",
+          "canonical_evidence_id": null
+        },
+        "parent_claim": "A knowledge base stores internal documents such as policies, updates, onboarding materials, strategies, summaries, company values, and Standard Operating Procedures."
+      },
+      {
+        "claim": "It can also contain external/customer‑facing content such as answers to common questions and product or service information.",
+        "score": 0.5952,
+        "supported": true,
+        "best_evidence_unit": "A self service customer knowledge base is available 24/7 and can contain answers to common questions or information about a product, service, or a particular topic. To create a knowledge base, follow these steps: 1. Identify the key topics and information that employees need for their roles. 2. Include essential company policies, procedures, and guidelines. 3. Organize the content into categories, such as HR, IT, product information, etc. 4.",
+        "best_citation": "chunk_3",
+        "citations": [
+          "chunk_3"
+        ],
+        "support_method": "entailment",
+        "evidence_provenance": {
+          "citation_id": "chunk_3",
+          "document_id": null,
+          "chunk_id": null,
+          "point_id": "web-5",
+          "canonical_evidence_id": null
+        },
+        "parent_claim": "It can also contain external/customer‑facing content such as answers to common questions and product or service information."
+      },
+      {
+        "claim": "Product‑documentation knowledge bases hold technical information about how software, applications, or digital products function and provide product‑specific technical details.",
+        "score": 0.888,
+        "supported": true,
+        "best_evidence_unit": "###### Modernize Your Knowledge Base Replace static folders with a dynamic, searchable home for all your company data. Book a FREE Demo Enterprise Intelligence ## 3. Product Documentation Knowledge Base Product documentation knowledge bases house technical information about how your software, application, or digital product functions. This knowledge base type is fundamentally different from general support content. It focuses on product-specific technical details rather than company policies or broad customer service topics. You create reference material that explains what each feature does, how users interact with specific functionality, and technical specifications that developers need for integration. Learn More Enterprise Intelligence A list of the different types of knowledge bases ## 1. Customer-Facing Knowledge Base Platforms Customer-facing knowledge base platforms function as public self-service portals where customers access information about your products and services without restrictions. These external types of knowledge bases remain available to anyone seeking answers, unlike internal systems reserved for employees. You'll find them embedded on company websites, within products, or hosted at dedicated domains like support.company.com. ## 7. Community-Driven or Collaborative Knowledge Base High levels of community engagement and collaboration see a 10% increase in customer loyalty. Many organizations are shifting toward a collaborative model in which users contribute to the documentation. This type functions as a peer-to-peer repository where long-time customers or power users share workarounds, creative use cases, and localized solutions that a corporate team might miss. Crowdsourcing information ensures that the library remains dynamic and reflects real-world applications. Moderation tools allow your staff to verify community answers, turning a simple forum into a trusted, authoritative source. This reduces the burden on your content team while fostering a sense of ownership among your most loyal brand advocates.",
+        "best_citation": "chunk_5",
+        "citations": [
+          "chunk_5"
+        ],
+        "support_method": "entailment",
+        "evidence_provenance": {
+          "citation_id": "chunk_5",
+          "document_id": null,
+          "chunk_id": null,
+          "point_id": "web-4",
+          "canonical_evidence_id": null
+        },
+        "parent_claim": "Product‑documentation knowledge bases hold technical information about how software, applications, or digital products function and provide product‑specific technical details."
+      },
+      {
+        "claim": "Customer‑facing knowledge base platforms are public self‑service portals that provide information about products and services to anyone.",
+        "score": 0.7943,
+        "supported": true,
+        "best_evidence_unit": "It focuses on product-specific technical details rather than company policies or broad customer service topics. You create reference material that explains what each feature does, how users interact with specific functionality, and technical specifications that developers need for integration. Learn More Enterprise Intelligence A list of the different types of knowledge bases ## 1. Customer-Facing Knowledge Base Platforms Customer-facing knowledge base platforms function as public self-service portals where customers access information about your products and services without restrictions. These external types of knowledge bases remain available to anyone seeking answers, unlike internal systems reserved for employees.",
+        "best_citation": "chunk_5",
+        "citations": [
+          "chunk_5"
+        ],
+        "support_method": "entailment",
+        "evidence_provenance": {
+          "citation_id": "chunk_5",
+          "document_id": null,
+          "chunk_id": null,
+          "point_id": "web-4",
+          "canonical_evidence_id": null
+        },
+        "parent_claim": "Customer‑facing knowledge base platforms are public self‑service portals that provide information about products and services to anyone."
+      },
+      {
+        "claim": "A domain schema is a schematic description of domain‑specific knowledge that defines the types",
+        "score": 0.7946,
+        "supported": true,
+        "best_evidence_unit": "Domain schema: The domain schema is a schematic description of the domain-specific knowledge and information needed for a particular area or topic. It uses different types to define the structure of this knowledge.",
+        "best_citation": "chunk_2",
+        "citations": [
+          "chunk_2"
+        ],
+        "support_method": "entailment",
+        "evidence_provenance": {
+          "citation_id": "chunk_2",
+          "document_id": null,
+          "chunk_id": null,
+          "point_id": "web-1",
+          "canonical_evidence_id": null
+        },
+        "parent_claim": "A domain schema is a schematic description of domain‑specific knowledge that defines the types and structure used in the knowledge base."
+      },
+      {
+        "claim": "structure used in the knowledge base.",
+        "score": 0.9391,
+        "supported": true,
+        "best_evidence_unit": "In the context of the knowledge base, the domain schema resembles a framework or structure that helps to organize and represent information in our AI system.",
+        "best_citation": "chunk_2",
+        "citations": [
+          "chunk_2"
+        ],
+        "support_method": "entailment",
+        "evidence_provenance": {
+          "citation_id": "chunk_2",
+          "document_id": null,
+          "chunk_id": null,
+          "point_id": "web-1",
+          "canonical_evidence_id": null
+        },
+        "parent_claim": "A domain schema is a schematic description of domain‑specific knowledge that defines the types and structure used in the knowledge base."
+      },
+      {
+        "claim": "A knowledge base accommodates the instances of the types specified in the domain schema.",
+        "score": 1.0,
+        "supported": true,
+        "best_evidence_unit": "Knowledge base: A knowledge base accommodates the instances of the types specified in the domain schema.",
+        "best_citation": "chunk_2",
+        "citations": [
+          "chunk_2"
+        ],
+        "support_method": "deterministic_exact_match",
+        "evidence_provenance": {
+          "citation_id": "chunk_2",
+          "document_id": null,
+          "chunk_id": null,
+          "point_id": "web-1",
+          "canonical_evidence_id": null
+        },
+        "parent_claim": "A knowledge base accommodates the instances of the types specified in the domain schema."
+      }
+    ],
+    "claims": [
+      {
+        "claim": "Core metadata elements defined by the Dublin Core standard: Title, Subject, Description, Type, Source, Relations, Coverage, Creator, Publisher, Contributor, Rights, Date, Format, Identifier, Language",
+        "score": 0.9637,
+        "supported": true,
+        "citations": [
+          "chunk_1"
+        ],
+        "atomic_claims": [
+          {
+            "claim": "Core metadata elements defined by the Dublin Core standard: Title, Subject, Description, Type, Source, Relations, Coverage, Creator, Publisher, Contributor, Rights, Date, Format, Identifier, Language",
+            "score": 0.9637,
+            "supported": true,
+            "best_evidence_unit": "They provide predefined metadata elements that are intended to be sufficiently generic for various use cases. Perhaps the most widely used standard metadata schema in is Dublin Core, which is a set of 15 basic (core) elements intended for published documents. These elements are Title, Subject, Description, Type, Source, Relations, Coverage, Creator, Publisher, Contributor, Rights, Date, Format, Identifier, and Language.",
+            "best_citation": "chunk_1",
+            "citations": [
+              "chunk_1"
+            ],
+            "support_method": "entailment",
+            "evidence_provenance": {
+              "citation_id": "chunk_1",
+              "document_id": null,
+              "chunk_id": null,
+              "point_id": "web-2",
+              "canonical_evidence_id": null
+            },
+            "parent_claim": "Core metadata elements defined by the Dublin Core standard: Title, Subject, Description, Type, Source, Relations, Coverage, Creator, Publisher, Contributor, Rights, Date, Format, Identifier, Language"
+          }
+        ]
+      },
+      {
+        "claim": "Additional metadata fields often used as taxonomies or controlled vocabularies include Topic, Activity, Location, Organization Name, People/Role Type, Document Type, Content Language, etc.",
+        "score": 0.939,
+        "supported": true,
+        "citations": [
+          "chunk_1"
+        ],
+        "atomic_claims": [
+          {
+            "claim": "Additional metadata fields often used as taxonomies or controlled vocabularies include Topic, Activity, Location, Organization Name, People/Role Type, Document Type, Content Language, etc.",
+            "score": 0.939,
+            "supported": true,
+            "best_evidence_unit": "In the context of metadata schemas, there exist not only these custom metadata schemas, but also standard metadata sets of elements and their schemas. They provide predefined metadata elements that are intended to be sufficiently generic for various use cases. Perhaps the most widely used standard metadata schema in is Dublin Core, which is a set of 15 basic (core) elements intended for published documents. These elements are Title, Subject, Description, Type, Source, Relations, Coverage, Creator, Publisher, Contributor, Rights, Date, Format, Identifier, and Language. There are other standard metadata schema that are somewhat more specific for a subject domain, such as IPTC (International Press Telecommunications Council) metadata which is intended for images. When standard data notation, The value type for the metadata element (For example, controlled vocabulary terms, uncontrolled keywords, free text, date, integers, Boolean yes/no, etc.) Whether assignment of a value from the metadata element is required or optional for each content item (or depends on the specific type of content item). Whether the assignment of the values from the metadata element is limited to just one or can be multiple, which is referred to as \"cardinality.\" (For example, the assignment of only one Document Type but up to four Topics per content item.) Example of a custom metadata schema Standard Metadata Element Sets and Schemas # Types of Metadata Schemas Heather Hedden Taxonomies or sets of controlled vocabularies are typically implemented as values for various metadata elements (also called metadata properties or fields). Metadata elements that contain controlled vocabularies could be Topic, Activity, Location, Organization Name, People/Role Type, Document Type, Content Language, etc. These are often implemented as facets in faceted search, although they do not have to be. There may be additional metadata elements for non-taxonomy values, such as Document Title, Image Caption, Creator/Author, Creation Date, Rights Status, etc. In addition to designing taxonomies, in my consulting projects I often also design such broader metadata schemas. ## Custom Metadata Schemas",
+            "best_citation": "chunk_1",
+            "citations": [
+              "chunk_1"
+            ],
+            "support_method": "entailment",
+            "evidence_provenance": {
+              "citation_id": "chunk_1",
+              "document_id": null,
+              "chunk_id": null,
+              "point_id": "web-2",
+              "canonical_evidence_id": null
+            },
+            "parent_claim": "Additional metadata fields often used as taxonomies or controlled vocabularies include Topic, Activity, Location, Organization Name, People/Role Type, Document Type, Content Language, etc."
+          }
+        ]
+      },
+      {
+        "claim": "A knowledge base stores internal documents such as policies, updates, onboarding materials, strategies, summaries, company values, and Standard Operating Procedures.",
+        "score": 0.9157,
+        "supported": true,
+        "citations": [
+          "chunk_3"
+        ],
+        "atomic_claims": [
+          {
+            "claim": "A knowledge base stores internal documents such as policies, updates, onboarding materials, strategies, summaries, company values, and Standard Operating Procedures.",
+            "score": 0.9157,
+            "supported": true,
+            "best_evidence_unit": "When it comes to internal use, a knowledge base can store different types of information: internal policies, updates, onboarding materials, strategies, summaries, company values, Standard Operating Procedures, and more.",
+            "best_citation": "chunk_3",
+            "citations": [
+              "chunk_3"
+            ],
+            "support_method": "entailment",
+            "evidence_provenance": {
+              "citation_id": "chunk_3",
+              "document_id": null,
+              "chunk_id": null,
+              "point_id": "web-5",
+              "canonical_evidence_id": null
+            },
+            "parent_claim": "A knowledge base stores internal documents such as policies, updates, onboarding materials, strategies, summaries, company values, and Standard Operating Procedures."
+          }
+        ]
+      },
+      {
+        "claim": "It can also contain external/customer‑facing content such as answers to common questions and product or service information.",
+        "score": 0.5952,
+        "supported": true,
+        "citations": [
+          "chunk_3"
+        ],
+        "atomic_claims": [
+          {
+            "claim": "It can also contain external/customer‑facing content such as answers to common questions and product or service information.",
+            "score": 0.5952,
+            "supported": true,
+            "best_evidence_unit": "A self service customer knowledge base is available 24/7 and can contain answers to common questions or information about a product, service, or a particular topic. To create a knowledge base, follow these steps: 1. Identify the key topics and information that employees need for their roles. 2. Include essential company policies, procedures, and guidelines. 3. Organize the content into categories, such as HR, IT, product information, etc. 4.",
+            "best_citation": "chunk_3",
+            "citations": [
+              "chunk_3"
+            ],
+            "support_method": "entailment",
+            "evidence_provenance": {
+              "citation_id": "chunk_3",
+              "document_id": null,
+              "chunk_id": null,
+              "point_id": "web-5",
+              "canonical_evidence_id": null
+            },
+            "parent_claim": "It can also contain external/customer‑facing content such as answers to common questions and product or service information."
+          }
+        ]
+      },
+      {
+        "claim": "Product‑documentation knowledge bases hold technical information about how software, applications, or digital products function and provide product‑specific technical details.",
+        "score": 0.888,
+        "supported": true,
+        "citations": [
+          "chunk_5"
+        ],
+        "atomic_claims": [
+          {
+            "claim": "Product‑documentation knowledge bases hold technical information about how software, applications, or digital products function and provide product‑specific technical details.",
+            "score": 0.888,
+            "supported": true,
+            "best_evidence_unit": "###### Modernize Your Knowledge Base Replace static folders with a dynamic, searchable home for all your company data. Book a FREE Demo Enterprise Intelligence ## 3. Product Documentation Knowledge Base Product documentation knowledge bases house technical information about how your software, application, or digital product functions. This knowledge base type is fundamentally different from general support content. It focuses on product-specific technical details rather than company policies or broad customer service topics. You create reference material that explains what each feature does, how users interact with specific functionality, and technical specifications that developers need for integration. Learn More Enterprise Intelligence A list of the different types of knowledge bases ## 1. Customer-Facing Knowledge Base Platforms Customer-facing knowledge base platforms function as public self-service portals where customers access information about your products and services without restrictions. These external types of knowledge bases remain available to anyone seeking answers, unlike internal systems reserved for employees. You'll find them embedded on company websites, within products, or hosted at dedicated domains like support.company.com. ## 7. Community-Driven or Collaborative Knowledge Base High levels of community engagement and collaboration see a 10% increase in customer loyalty. Many organizations are shifting toward a collaborative model in which users contribute to the documentation. This type functions as a peer-to-peer repository where long-time customers or power users share workarounds, creative use cases, and localized solutions that a corporate team might miss. Crowdsourcing information ensures that the library remains dynamic and reflects real-world applications. Moderation tools allow your staff to verify community answers, turning a simple forum into a trusted, authoritative source. This reduces the burden on your content team while fostering a sense of ownership among your most loyal brand advocates.",
+            "best_citation": "chunk_5",
+            "citations": [
+              "chunk_5"
+            ],
+            "support_method": "entailment",
+            "evidence_provenance": {
+              "citation_id": "chunk_5",
+              "document_id": null,
+              "chunk_id": null,
+              "point_id": "web-4",
+              "canonical_evidence_id": null
+            },
+            "parent_claim": "Product‑documentation knowledge bases hold technical information about how software, applications, or digital products function and provide product‑specific technical details."
+          }
+        ]
+      },
+      {
+        "claim": "Customer‑facing knowledge base platforms are public self‑service portals that provide information about products and services to anyone.",
+        "score": 0.7943,
+        "supported": true,
+        "citations": [
+          "chunk_5"
+        ],
+        "atomic_claims": [
+          {
+            "claim": "Customer‑facing knowledge base platforms are public self‑service portals that provide information about products and services to anyone.",
+            "score": 0.7943,
+            "supported": true,
+            "best_evidence_unit": "It focuses on product-specific technical details rather than company policies or broad customer service topics. You create reference material that explains what each feature does, how users interact with specific functionality, and technical specifications that developers need for integration. Learn More Enterprise Intelligence A list of the different types of knowledge bases ## 1. Customer-Facing Knowledge Base Platforms Customer-facing knowledge base platforms function as public self-service portals where customers access information about your products and services without restrictions. These external types of knowledge bases remain available to anyone seeking answers, unlike internal systems reserved for employees.",
+            "best_citation": "chunk_5",
+            "citations": [
+              "chunk_5"
+            ],
+            "support_method": "entailment",
+            "evidence_provenance": {
+              "citation_id": "chunk_5",
+              "document_id": null,
+              "chunk_id": null,
+              "point_id": "web-4",
+              "canonical_evidence_id": null
+            },
+            "parent_claim": "Customer‑facing knowledge base platforms are public self‑service portals that provide information about products and services to anyone."
+          }
+        ]
+      },
+      {
+        "claim": "A domain schema is a schematic description of domain‑specific knowledge that defines the types and structure used in the knowledge base.",
+        "score": 0.7946,
+        "supported": true,
+        "citations": [
+          "chunk_2"
+        ],
+        "atomic_claims": [
+          {
+            "claim": "A domain schema is a schematic description of domain‑specific knowledge that defines the types",
+            "score": 0.7946,
+            "supported": true,
+            "best_evidence_unit": "Domain schema: The domain schema is a schematic description of the domain-specific knowledge and information needed for a particular area or topic. It uses different types to define the structure of this knowledge.",
+            "best_citation": "chunk_2",
+            "citations": [
+              "chunk_2"
+            ],
+            "support_method": "entailment",
+            "evidence_provenance": {
+              "citation_id": "chunk_2",
+              "document_id": null,
+              "chunk_id": null,
+              "point_id": "web-1",
+              "canonical_evidence_id": null
+            },
+            "parent_claim": "A domain schema is a schematic description of domain‑specific knowledge that defines the types and structure used in the knowledge base."
+          },
+          {
+            "claim": "structure used in the knowledge base.",
+            "score": 0.9391,
+            "supported": true,
+            "best_evidence_unit": "In the context of the knowledge base, the domain schema resembles a framework or structure that helps to organize and represent information in our AI system.",
+            "best_citation": "chunk_2",
+            "citations": [
+              "chunk_2"
+            ],
+            "support_method": "entailment",
+            "evidence_provenance": {
+              "citation_id": "chunk_2",
+              "document_id": null,
+              "chunk_id": null,
+              "point_id": "web-1",
+              "canonical_evidence_id": null
+            },
+            "parent_claim": "A domain schema is a schematic description of domain‑specific knowledge that defines the types and structure used in the knowledge base."
+          }
+        ]
+      },
+      {
+        "claim": "A knowledge base accommodates the instances of the types specified in the domain schema.",
+        "score": 1.0,
+        "supported": true,
+        "citations": [
+          "chunk_2"
+        ],
+        "atomic_claims": [
+          {
+            "claim": "A knowledge base accommodates the instances of the types specified in the domain schema.",
+            "score": 1.0,
+            "supported": true,
+            "best_evidence_unit": "Knowledge base: A knowledge base accommodates the instances of the types specified in the domain schema.",
+            "best_citation": "chunk_2",
+            "citations": [
+              "chunk_2"
+            ],
+            "support_method": "deterministic_exact_match",
+            "evidence_provenance": {
+              "citation_id": "chunk_2",
+              "document_id": null,
+              "chunk_id": null,
+              "point_id": "web-1",
+              "canonical_evidence_id": null
+            },
+            "parent_claim": "A knowledge base accommodates the instances of the types specified in the domain schema."
+          }
+        ]
+      }
+    ],
+    "unsupported_claims": [],
+    "uncited_claims": [],
+    "invalid_citations": [],
+    "entailment_threshold": 0.5,
+    "claim_count": 8,
+    "atomic_claim_count": 9,
+    "unsupported_atomic_count": 0,
+    "available_citation_count": 10,
+    "citation_consistency": {
+      "passed": true,
+      "claims_checked": 9,
+      "citations_checked": 9,
+      "violation_count": 0,
+      "violations": [],
+      "results": [
+        {
+          "claim": "Core metadata elements defined by the Dublin Core standard: Title, Subject, Description, Type, Source, Relations, Coverage, Creator, Publisher, Contributor, Rights, Date, Format, Identifier, Language",
+          "citation": "chunk_1",
+          "score": 0.9637,
+          "supported": true,
+          "support_method": "entailment",
+          "best_evidence_unit": "They provide predefined metadata elements that are intended to be sufficiently generic for various use cases. Perhaps the most widely used standard metadata schema in is Dublin Core, which is a set of 15 basic (core) elements intended for published documents. These elements are Title, Subject, Description, Type, Source, Relations, Coverage, Creator, Publisher, Contributor, Rights, Date, Format, Identifier, and Language."
+        },
+        {
+          "claim": "Additional metadata fields often used as taxonomies or controlled vocabularies include Topic, Activity, Location, Organization Name, People/Role Type, Document Type, Content Language, etc.",
+          "citation": "chunk_1",
+          "score": 0.939,
+          "supported": true,
+          "support_method": "entailment",
+          "best_evidence_unit": "In the context of metadata schemas, there exist not only these custom metadata schemas, but also standard metadata sets of elements and their schemas. They provide predefined metadata elements that are intended to be sufficiently generic for various use cases. Perhaps the most widely used standard metadata schema in is Dublin Core, which is a set of 15 basic (core) elements intended for published documents. These elements are Title, Subject, Description, Type, Source, Relations, Coverage, Creator, Publisher, Contributor, Rights, Date, Format, Identifier, and Language. There are other standard metadata schema that are somewhat more specific for a subject domain, such as IPTC (International Press Telecommunications Council) metadata which is intended for images. When standard data notation, The value type for the metadata element (For example, controlled vocabulary terms, uncontrolled keywords, free text, date, integers, Boolean yes/no, etc.) Whether assignment of a value from the metadata element is required or optional for each content item (or depends on the specific type of content item). Whether the assignment of the values from the metadata element is limited to just one or can be multiple, which is referred to as \"cardinality.\" (For example, the assignment of only one Document Type but up to four Topics per content item.) Example of a custom metadata schema Standard Metadata Element Sets and Schemas # Types of Metadata Schemas Heather Hedden Taxonomies or sets of controlled vocabularies are typically implemented as values for various metadata elements (also called metadata properties or fields). Metadata elements that contain controlled vocabularies could be Topic, Activity, Location, Organization Name, People/Role Type, Document Type, Content Language, etc. These are often implemented as facets in faceted search, although they do not have to be. There may be additional metadata elements for non-taxonomy values, such as Document Title, Image Caption, Creator/Author, Creation Date, Rights Status, etc. In addition to designing taxonomies, in my consulting projects I often also design such broader metadata schemas. ## Custom Metadata Schemas"
+        },
+        {
+          "claim": "A knowledge base stores internal documents such as policies, updates, onboarding materials, strategies, summaries, company values, and Standard Operating Procedures.",
+          "citation": "chunk_3",
+          "score": 0.9157,
+          "supported": true,
+          "support_method": "entailment",
+          "best_evidence_unit": "When it comes to internal use, a knowledge base can store different types of information: internal policies, updates, onboarding materials, strategies, summaries, company values, Standard Operating Procedures, and more."
+        },
+        {
+          "claim": "It can also contain external/customer‑facing content such as answers to common questions and product or service information.",
+          "citation": "chunk_3",
+          "score": 0.5952,
+          "supported": true,
+          "support_method": "entailment",
+          "best_evidence_unit": "A self service customer knowledge base is available 24/7 and can contain answers to common questions or information about a product, service, or a particular topic. To create a knowledge base, follow these steps: 1. Identify the key topics and information that employees need for their roles. 2. Include essential company policies, procedures, and guidelines. 3. Organize the content into categories, such as HR, IT, product information, etc. 4."
+        },
+        {
+          "claim": "Product‑documentation knowledge bases hold technical information about how software, applications, or digital products function and provide product‑specific technical details.",
+          "citation": "chunk_5",
+          "score": 0.888,
+          "supported": true,
+          "support_method": "entailment",
+          "best_evidence_unit": "###### Modernize Your Knowledge Base Replace static folders with a dynamic, searchable home for all your company data. Book a FREE Demo Enterprise Intelligence ## 3. Product Documentation Knowledge Base Product documentation knowledge bases house technical information about how your software, application, or digital product functions. This knowledge base type is fundamentally different from general support content. It focuses on product-specific technical details rather than company policies or broad customer service topics. You create reference material that explains what each feature does, how users interact with specific functionality, and technical specifications that developers need for integration. Learn More Enterprise Intelligence A list of the different types of knowledge bases ## 1. Customer-Facing Knowledge Base Platforms Customer-facing knowledge base platforms function as public self-service portals where customers access information about your products and services without restrictions. These external types of knowledge bases remain available to anyone seeking answers, unlike internal systems reserved for employees. You'll find them embedded on company websites, within products, or hosted at dedicated domains like support.company.com. ## 7. Community-Driven or Collaborative Knowledge Base High levels of community engagement and collaboration see a 10% increase in customer loyalty. Many organizations are shifting toward a collaborative model in which users contribute to the documentation. This type functions as a peer-to-peer repository where long-time customers or power users share workarounds, creative use cases, and localized solutions that a corporate team might miss. Crowdsourcing information ensures that the library remains dynamic and reflects real-world applications. Moderation tools allow your staff to verify community answers, turning a simple forum into a trusted, authoritative source. This reduces the burden on your content team while fostering a sense of ownership among your most loyal brand advocates."
+        },
+        {
+          "claim": "Customer‑facing knowledge base platforms are public self‑service portals that provide information about products and services to anyone.",
+          "citation": "chunk_5",
+          "score": 0.7943,
+          "supported": true,
+          "support_method": "entailment",
+          "best_evidence_unit": "It focuses on product-specific technical details rather than company policies or broad customer service topics. You create reference material that explains what each feature does, how users interact with specific functionality, and technical specifications that developers need for integration. Learn More Enterprise Intelligence A list of the different types of knowledge bases ## 1. Customer-Facing Knowledge Base Platforms Customer-facing knowledge base platforms function as public self-service portals where customers access information about your products and services without restrictions. These external types of knowledge bases remain available to anyone seeking answers, unlike internal systems reserved for employees."
+        },
+        {
+          "claim": "A domain schema is a schematic description of domain‑specific knowledge that defines the types",
+          "citation": "chunk_2",
+          "score": 0.7946,
+          "supported": true,
+          "support_method": "entailment",
+          "best_evidence_unit": "Domain schema: The domain schema is a schematic description of the domain-specific knowledge and information needed for a particular area or topic. It uses different types to define the structure of this knowledge."
+        },
+        {
+          "claim": "structure used in the knowledge base.",
+          "citation": "chunk_2",
+          "score": 0.9391,
+          "supported": true,
+          "support_method": "entailment",
+          "best_evidence_unit": "In the context of the knowledge base, the domain schema resembles a framework or structure that helps to organize and represent information in our AI system."
+        },
+        {
+          "claim": "A knowledge base accommodates the instances of the types specified in the domain schema.",
+          "citation": "chunk_2",
+          "score": 1.0,
+          "supported": true,
+          "support_method": "deterministic_exact_match",
+          "best_evidence_unit": "Knowledge base: A knowledge base accommodates the instances of the types specified in the domain schema."
+        }
+      ]
+    },
+    "evidence_window": {
+      "radius": 1,
+      "large_radius": 2,
+      "max_candidates": 8,
+      "fallback_candidates": 3,
+      "minimum_lexical_overlap": 1
+    }
+  },
+  "grounding_feedback": [
+    "All substantive claims passed strict grounding validation."
+  ],
+  "answer_supported": true,
+  "answer_useful": true,
+  "support_score": 0.5952,
+  "usefulness_score": 0.95,
+  "validation_passed": true,
+  "revision_count": 1,
+  "answer_revision_count": 1,
+  "retrieval_rewrite_count": 0,
+  "web_rewrite_count": 0,
+  "support_retry_count": 0,
+  "max_revisions": 2,
+  "retrieval_latency_ms": 1678.4522,
+  "rerank_latency_ms": null,
+  "grader_latency_ms": null,
+  "generation_latency_ms": 4557.61,
+  "grounding_ms": 2981.69,
+  "hhem_call_count": 8,
+  "hhem_total_ms": 2809.73,
+  "request_hhem_call_count": 21,
+  "request_hhem_total_ms": 13335.65,
+  "grounding_pass_count": 2,
+  "entailment_cache_hits": 0,
+  "entailment_cache_misses": 8,
+  "cache_entries_received": 13,
+  "cache_entries_returned": 21,
+  "latency_ms": 37912.19
+}

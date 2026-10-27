@@ -1,0 +1,903 @@
+{
+  "artifact_type": "provisional_live_retrieval_label_proposals",
+  "created_at_utc": "2026-10-20T10:17:20.160185+00:00",
+  "version": 2,
+  "original_manifest": "inventory70_consolidated_label_proposals_20261020.json",
+  "original_dataset": "evals\\datasets\\inventory_retrieval_probes_70.json",
+  "original_dataset_probe_count": 70,
+  "original_dataset_sha256_at_manifest_creation": "21ee63518d16f2b08d8e5c1e452a4cfa8f5675b5f0322727f623c1aa2ac3e101",
+  "canonical_inventory": "evals\\datasets\\true_chunk_inventory.csv",
+  "canonical_inventory_sha256_at_manifest_creation": "80cdf4f1cc5982276544d408e31788a1993be23610f6014321c0b554d391731d",
+  "proposal_count": 26,
+  "proposals": [
+    {
+      "probe_id": "inv_harness_003",
+      "source_file": "inventory70_harness003_minimal_candidate_20261020.json",
+      "question": "What kinds of information does the paper suggest searching for when researching coding-agent techniques and implementations?",
+      "source_filename": "harness.pdf",
+      "original_relevant_chunks": [
+        {
+          "document_id": "66f55cf4060534797ac59189",
+          "chunk_id": 62
+        }
+      ],
+      "candidate_live_document_id": "7b7add4488da35c33e99474d",
+      "proposed_minimal_live_chunk_ids": [
+        69
+      ],
+      "verified_live_references": [
+        {
+          "document_id": "7b7add4488da35c33e99474d",
+          "chunk_id": 69,
+          "point_id": "e67df65b-c940-531e-a461-ea881e6c5bd1",
+          "source": "harness.pdf"
+        }
+      ],
+      "rationale": "Chunk 69 directly lists concrete research targets including implementation code/configuration, ablation data, exact implementation details, and failure-mode analysis.",
+      "review_status": "PROPOSED_MINIMAL_SET_REQUIRES_FINAL_REVIEW"
+    },
+    {
+      "probe_id": "inv_harness_004",
+      "source_file": "inventory70_harness004_minimal_candidate_20261020.json",
+      "question": "How does the paper describe the effect of encoding recurring coordination patterns into tools, middleware, and memory?",
+      "source_filename": "harness.pdf",
+      "original_relevant_chunks": [
+        {
+          "document_id": "66f55cf4060534797ac59189",
+          "chunk_id": 93
+        }
+      ],
+      "candidate_live_document_id": "7b7add4488da35c33e99474d",
+      "proposed_minimal_live_chunk_ids": [
+        108
+      ],
+      "verified_live_references": [
+        {
+          "document_id": "7b7add4488da35c33e99474d",
+          "chunk_id": 108,
+          "point_id": "b9559456-0ffa-5300-8bf3-df30cb186512",
+          "source": "harness.pdf"
+        }
+      ],
+      "rationale": "Chunk 108 directly explains the coordination-pattern mechanism and its effects on per-call compute, energy footprint, and harness iteration speed.",
+      "review_status": "PROPOSED_MINIMAL_SET_REQUIRES_FINAL_REVIEW"
+    },
+    {
+      "probe_id": "inv_harness_011",
+      "source_file": "inventory70_harness011_minimal_candidate_20261020.json",
+      "question": "What evidence shows that the AHE loop can recover previously observed failure modes across later iterations?",
+      "source_filename": "harness.pdf",
+      "original_relevant_chunks": [
+        {
+          "document_id": "66f55cf4060534797ac59189",
+          "chunk_id": "73"
+        }
+      ],
+      "candidate_live_document_id": "7b7add4488da35c33e99474d",
+      "proposed_minimal_live_chunk_ids": [
+        5,
+        15
+      ],
+      "verified_live_references": [
+        {
+          "document_id": "7b7add4488da35c33e99474d",
+          "chunk_id": 5,
+          "point_id": "0419dae4-fc17-5c32-ac58-864b12480196",
+          "source": "harness.pdf",
+          "evidence_role": "Observability and structured prior-failure evidence"
+        },
+        {
+          "document_id": "7b7add4488da35c33e99474d",
+          "chunk_id": 15,
+          "point_id": "6195e4db-8601-5f68-9562-528f5bdaa5c8",
+          "source": "harness.pdf",
+          "evidence_role": "Prior-manifest attribution, rollback, and iteration"
+        }
+      ],
+      "rationale": "Chunk 5 explains how failure patterns are mapped to components and distilled into structured evidence. Chunk 15 describes attributing prior changes to later outcomes and rolling back rejected edits.",
+      "review_status": "PROPOSED_MINIMAL_SET_REQUIRES_FINAL_REVIEW"
+    },
+    {
+      "probe_id": "inv_loop_001",
+      "source_file": "inventory70_loop001_minimal_candidate_20261020.json",
+      "question": "What five elements does the paper define as part of a loop specification for coding agents?",
+      "source_filename": "loop.pdf",
+      "original_relevant_chunks": [
+        {
+          "document_id": "a26a0a845b9004cd2b884c79",
+          "chunk_id": 0
+        }
+      ],
+      "candidate_live_document_id": "23b038dd8383e3d47638322b",
+      "proposed_minimal_live_chunk_ids": [
+        10
+      ],
+      "verified_live_references": [
+        {
+          "document_id": "23b038dd8383e3d47638322b",
+          "chunk_id": 10,
+          "point_id": "901c8fdf-d3ff-55ec-9934-4a74f07a8f87",
+          "source": "loop.pdf",
+          "evidence_role": "Explicit definition of all five loop-specification parts"
+        }
+      ],
+      "rationale": "Chunk 10 explicitly lists trigger, goal, execution, verification, and stopping rule.",
+      "review_status": "PROPOSED_MINIMAL_SET_REQUIRES_FINAL_REVIEW"
+    },
+    {
+      "probe_id": "inv_rag_008",
+      "source_file": "inventory70_rag008_minimal_candidate_20261020.json",
+      "question": "How is the Wikipedia knowledge source organized for RAG retrieval, and what retrieval method and passage sizes are used?",
+      "source_filename": "RAG.pdf",
+      "original_relevant_chunks": [
+        {
+          "document_id": "89e40c0de3ce2081b9d726b9",
+          "chunk_id": "9"
+        }
+      ],
+      "candidate_live_document_id": "8f25ec73a5dcfeca772c16ff",
+      "proposed_minimal_live_chunk_ids": [
+        4,
+        11
+      ],
+      "verified_live_references": [
+        {
+          "document_id": "8f25ec73a5dcfeca772c16ff",
+          "chunk_id": 4,
+          "point_id": "520eb83d-1f91-5c7e-87a5-b14fe812de98",
+          "source": "RAG.pdf",
+          "evidence_role": "Wikipedia dense index and DPR retrieval architecture"
+        },
+        {
+          "document_id": "8f25ec73a5dcfeca772c16ff",
+          "chunk_id": 11,
+          "point_id": "3d24404a-0c11-5a22-a987-9250decf5d45",
+          "source": "RAG.pdf",
+          "evidence_role": "100-word passages, index size, and retrieval settings"
+        }
+      ],
+      "rationale": "Chunk 4 identifies the Wikipedia dense vector index and DPR retriever. Chunk 11 specifies disjoint 100-word passages, 21 million documents, FAISS/MIPS indexing, and training-time retrieval settings. Test-time k is selected using development data.",
+      "review_status": "PROPOSED_MINIMAL_SET_REQUIRES_FINAL_REVIEW"
+    },
+    {
+      "probe_id": "inv_harness_005",
+      "question": "What three observability pillars are used to drive the Agentic Harness Engineering closed loop?",
+      "source_filename": "harness.pdf",
+      "original_relevant_chunks": [
+        {
+          "document_id": "66f55cf4060534797ac59189",
+          "chunk_id": "4"
+        }
+      ],
+      "candidate_live_document_id": "7b7add4488da35c33e99474d",
+      "proposed_minimal_live_chunk_ids": [
+        5
+      ],
+      "verified_live_references": [
+        {
+          "document_id": "7b7add4488da35c33e99474d",
+          "chunk_id": 5,
+          "point_id": "0419dae4-fc17-5c32-ac58-864b12480196",
+          "source": "harness.pdf"
+        }
+      ],
+      "rationale": "Chunk 5 identifies component, experience, and decision observability.",
+      "review_status": "PROPOSED_MINIMAL_SET_REQUIRES_FINAL_REVIEW",
+      "original_dataset_modified": false
+    },
+    {
+      "probe_id": "inv_harness_006",
+      "question": "What framework is used to instantiate the editable harness substrate, and what does the substrate expose as explicit files?",
+      "source_filename": "harness.pdf",
+      "original_relevant_chunks": [
+        {
+          "document_id": "66f55cf4060534797ac59189",
+          "chunk_id": "9"
+        }
+      ],
+      "candidate_live_document_id": "7b7add4488da35c33e99474d",
+      "proposed_minimal_live_chunk_ids": [
+        10
+      ],
+      "verified_live_references": [
+        {
+          "document_id": "7b7add4488da35c33e99474d",
+          "chunk_id": 10,
+          "point_id": "a9163479-a2be-560f-8237-dccc94dcc299",
+          "source": "harness.pdf"
+        }
+      ],
+      "rationale": "Chunk 10 names NexAU and lists the explicit-file component types.",
+      "review_status": "PROPOSED_MINIMAL_SET_REQUIRES_FINAL_REVIEW",
+      "original_dataset_modified": false
+    },
+    {
+      "probe_id": "inv_harness_007",
+      "question": "How are failures counted for pass@1 in the Terminal-Bench evaluation, and what runtime components are described as infrastructure?",
+      "source_filename": "harness.pdf",
+      "original_relevant_chunks": [
+        {
+          "document_id": "66f55cf4060534797ac59189",
+          "chunk_id": "14"
+        }
+      ],
+      "candidate_live_document_id": "7b7add4488da35c33e99474d",
+      "proposed_minimal_live_chunk_ids": [
+        45,
+        17
+      ],
+      "verified_live_references": [
+        {
+          "document_id": "7b7add4488da35c33e99474d",
+          "chunk_id": 45,
+          "point_id": "44be359d-a720-5ef5-b093-1e7d092d6fb1",
+          "source": "harness.pdf",
+          "evidence_role": "Pass@1 failure-counting rule"
+        },
+        {
+          "document_id": "7b7add4488da35c33e99474d",
+          "chunk_id": 17,
+          "point_id": "53c448a7-eb7f-5ebb-9675-c4331a321e79",
+          "source": "harness.pdf",
+          "evidence_role": "Runtime infrastructure components"
+        }
+      ],
+      "rationale": "Chunks 45 and 17 cover pass@1 failure counting and runtime infrastructure.",
+      "review_status": "PROPOSED_MINIMAL_SET_REQUIRES_FINAL_REVIEW",
+      "original_dataset_modified": false
+    },
+    {
+      "probe_id": "inv_harness_008",
+      "question": "What does the AHE evaluation report about the generality of its gains across different providers or reasoning depths?",
+      "source_filename": "harness.pdf",
+      "original_relevant_chunks": [
+        {
+          "document_id": "66f55cf4060534797ac59189",
+          "chunk_id": "19"
+        }
+      ],
+      "candidate_live_document_id": "7b7add4488da35c33e99474d",
+      "proposed_minimal_live_chunk_ids": [
+        22
+      ],
+      "verified_live_references": [
+        {
+          "document_id": "7b7add4488da35c33e99474d",
+          "chunk_id": 22,
+          "point_id": "986a3756-2b7c-5ed9-8dce-8daa5e93db25",
+          "source": "harness.pdf"
+        }
+      ],
+      "rationale": "Chunk 22 reports gains across model families and reasoning configurations.",
+      "review_status": "PROPOSED_MINIMAL_SET_REQUIRES_FINAL_REVIEW",
+      "original_dataset_modified": false
+    },
+    {
+      "probe_id": "inv_harness_009",
+      "question": "What governance mechanisms does AHE use to bound self-modification and roll back ineffective edits?",
+      "source_filename": "harness.pdf",
+      "original_relevant_chunks": [
+        {
+          "document_id": "66f55cf4060534797ac59189",
+          "chunk_id": "24"
+        }
+      ],
+      "candidate_live_document_id": "7b7add4488da35c33e99474d",
+      "proposed_minimal_live_chunk_ids": [
+        14,
+        27
+      ],
+      "verified_live_references": [
+        {
+          "document_id": "7b7add4488da35c33e99474d",
+          "chunk_id": 14,
+          "point_id": "480c9491-e5d7-534c-a87a-fba4188d5e64",
+          "source": "harness.pdf",
+          "evidence_role": "Modification boundaries and evidence-linked decisions"
+        },
+        {
+          "document_id": "7b7add4488da35c33e99474d",
+          "chunk_id": 27,
+          "point_id": "40e42236-358a-5e75-9a4f-6e29385790ff",
+          "source": "harness.pdf",
+          "evidence_role": "Rollback behavior and limitations"
+        }
+      ],
+      "rationale": "Chunks 14 and 27 cover modification boundaries, evidence-linked decisions, and rollback.",
+      "review_status": "PROPOSED_MINIMAL_SET_REQUIRES_FINAL_REVIEW",
+      "original_dataset_modified": false
+    },
+    {
+      "probe_id": "inv_harness_010",
+      "question": "What repeated guarding behaviors are codified into the AHE system prompt?",
+      "source_filename": "harness.pdf",
+      "original_relevant_chunks": [
+        {
+          "document_id": "66f55cf4060534797ac59189",
+          "chunk_id": "68"
+        }
+      ],
+      "candidate_live_document_id": "7b7add4488da35c33e99474d",
+      "proposed_minimal_live_chunk_ids": [
+        78
+      ],
+      "verified_live_references": [
+        {
+          "document_id": "7b7add4488da35c33e99474d",
+          "chunk_id": 78,
+          "point_id": "fde22c32-2eaa-5a4f-a42f-12953a3afd90",
+          "source": "harness.pdf"
+        }
+      ],
+      "rationale": "Chunk 78 lists the system-prompt guarding rules.",
+      "review_status": "PROPOSED_MINIMAL_SET_REQUIRES_FINAL_REVIEW",
+      "original_dataset_modified": false
+    },
+    {
+      "probe_id": "inv_harness_012",
+      "question": "What task does configure-git-webserver require the agent to complete, and what loophole or middleware issue was patched?",
+      "source_filename": "harness.pdf",
+      "original_relevant_chunks": [
+        {
+          "document_id": "66f55cf4060534797ac59189",
+          "chunk_id": "78"
+        }
+      ],
+      "candidate_live_document_id": "7b7add4488da35c33e99474d",
+      "proposed_minimal_live_chunk_ids": [
+        91,
+        93,
+        97
+      ],
+      "verified_live_references": [
+        {
+          "document_id": "7b7add4488da35c33e99474d",
+          "chunk_id": 91,
+          "point_id": "80b8c76e-c1b0-59db-84f9-dc9dd92b9cbe",
+          "source": "harness.pdf",
+          "evidence_role": "Task requirements and observed loophole"
+        },
+        {
+          "document_id": "7b7add4488da35c33e99474d",
+          "chunk_id": 93,
+          "point_id": "5ca49440-e29a-5232-bbf6-b7b5648595ed",
+          "source": "harness.pdf",
+          "evidence_role": "Failure-to-success transition after the patch"
+        },
+        {
+          "document_id": "7b7add4488da35c33e99474d",
+          "chunk_id": 97,
+          "point_id": "3358ec5c-250b-542c-bd27-a34f39e81205",
+          "source": "harness.pdf",
+          "evidence_role": "Publish-state guard implementation"
+        }
+      ],
+      "rationale": "Chunks 91, 93, and 97 cover task requirements, the loophole, and the publish-state guard.",
+      "review_status": "PROPOSED_MINIMAL_SET_REQUIRES_FINAL_REVIEW",
+      "original_dataset_modified": false
+    },
+    {
+      "probe_id": "inv_attention_001",
+      "source_file": "inventory70_attention_live_label_candidates_20261020.json",
+      "question": "What is the main architectural idea introduced by the Transformer in Attention Is All You Need?",
+      "category": "architecture",
+      "source_filename": "Attention.pdf",
+      "original_relevant_chunks": [
+        {
+          "document_id": "c5403b511fa73a2221411a42",
+          "chunk_id": 0
+        }
+      ],
+      "candidate_live_document_id": "9ff74efe2d339c2bb9a53c06",
+      "proposed_minimal_live_chunk_ids": [
+        0,
+        5
+      ],
+      "verified_live_references": [],
+      "reference_verification_status": "DOCUMENT_AND_CHUNK_CANDIDATES_ONLY_POINT_IDS_NOT_VERIFIED",
+      "rationale": "Chunk 0 states the Transformer replaces recurrence and convolutions with attention; chunk 5 describes its reliance on self-attention.",
+      "candidate_evidence": [
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 0,
+          "evidence_excerpt": "Provided proper attribution is provided, Google hereby grants permission to reproduce the tables and figures in this paper solely for use in journalistic or scholarly works. Attention Is All You Need Ashish Vaswani∗ Google Brain avaswani@google.com Noam Shazeer∗ Google Brain noam@google.com Niki Parmar∗ Google Research nikip@google.com Jakob Uszkoreit∗ Google Research usz@google.com Llion Jones∗ Google Research llion@google.com Aidan N. Gomez∗† University of Toronto aidan@cs.toronto.edu Łukasz Kaiser∗ Google Brain lukaszkaiser@google.com Illia Polosukhin∗‡ illia.polosukhin@gmail.com Abstract The dominant sequence transduction models are based"
+        },
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 5,
+          "evidence_excerpt": "ced e Self-attention, sometimes called intra-attention is an attention mechanism relating different positions of a single sequence in order to compute a representation of the sequence. Self-attention has been used successfully in a variety of tasks including reading comprehension, abstractive summarization, textual entailment and learning task-independent sentence representations [4, 27, 28, 22]. End-to-end memory networks are based on a recurrent attention mechanism instead of sequence- aligned recurrence and have been shown to perform well on simple-language question answering and language modeling tasks [34]. To the best of our knowledge, "
+        }
+      ],
+      "review_status": "PROPOSED_CONTENT_MATCH_REQUIRES_FINAL_REVIEW",
+      "semantic_approval": false
+    },
+    {
+      "probe_id": "inv_attention_002",
+      "source_file": "inventory70_attention_live_label_candidates_20261020.json",
+      "question": "How does self-attention differ between the encoder and decoder with respect to which positions can be attended to?",
+      "category": "self_attention",
+      "source_filename": "Attention.pdf",
+      "original_relevant_chunks": [
+        {
+          "document_id": "c5403b511fa73a2221411a42",
+          "chunk_id": 9
+        }
+      ],
+      "candidate_live_document_id": "9ff74efe2d339c2bb9a53c06",
+      "proposed_minimal_live_chunk_ids": [
+        7,
+        11
+      ],
+      "verified_live_references": [],
+      "reference_verification_status": "DOCUMENT_AND_CHUNK_CANDIDATES_ONLY_POINT_IDS_NOT_VERIFIED",
+      "rationale": "Chunk 7 describes masking future decoder positions; chunk 11 describes encoder and decoder attention behavior.",
+      "candidate_evidence": [
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 7,
+          "evidence_excerpt": "d by layer normalization. We also modify the self-attention sub-layer in the decoder stack to prevent positions from attending to subsequent positions This masking, combined with fact that the output embeddings are offset by one position, ensures that the predictions for position i can depend only on the known outputs at positions less than i. 3.2 Attention An attention function can be described as mapping a query and a set of key-value pairs to an output, where the query, keys, values, and output are all vectors. The output is computed as a weighted sum 3"
+        },
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 11,
+          "evidence_excerpt": "In a self-attention layer all of the keys, values and queries come from the same place, in this case, the output of the prev Each position in the encoder can attend to all positions in the previous layer of the encoder. • Similarly, self-attention layers in the decoder allow each position in the decoder to attend to all positions in the decoder up to and including that position. We need to prevent leftward information flow in the decoder to preserve the auto-regressive property. We implement this inside of scaled dot-product attention by masking out (setting to −∞) all values in the input of the softmax which correspond to illegal connections"
+        }
+      ],
+      "review_status": "PROPOSED_CONTENT_MATCH_REQUIRES_FINAL_REVIEW",
+      "semantic_approval": false
+    },
+    {
+      "probe_id": "inv_attention_003",
+      "source_file": "inventory70_attention_live_label_candidates_20261020.json",
+      "question": "What do the experiments indicate about the effect of changing the number of attention heads and the attention key size?",
+      "category": "experiments",
+      "source_filename": "Attention.pdf",
+      "original_relevant_chunks": [
+        {
+          "document_id": "c5403b511fa73a2221411a42",
+          "chunk_id": 18
+        }
+      ],
+      "candidate_live_document_id": "9ff74efe2d339c2bb9a53c06",
+      "proposed_minimal_live_chunk_ids": [
+        22,
+        23
+      ],
+      "verified_live_references": [],
+      "reference_verification_status": "DOCUMENT_AND_CHUNK_CANDIDATES_ONLY_POINT_IDS_NOT_VERIFIED",
+      "rationale": "Chunk 22 contains the architecture-variation results; chunk 23 states that too many heads and smaller attention key sizes can reduce model quality.",
+      "candidate_evidence": [
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 22,
+          "evidence_excerpt": "nge in performance on English-to-German translation on the 5We used values of 2.8, 3.7, 6.0 and 9.5 T Table 3: Variations on the Transformer architecture. Unlisted values are identical to those of the base model. All metrics are on the English-to-German translation development set, newstest2013. Listed perplexities are per-wordpiece, according to our byte-pair encoding, and should not be compared to per-word perplexities. N dmodel dff h dk dv Pdrop ϵls train PPL BLEU params steps (dev) (dev) ×106 base 6 512 2048 8 64 64 0.1 0.1 100K 4.92 25.8 65 (A) 1 512 512 5.29 24.9 4 128 128 5.00 25.5 16 32 32 4.91 25.8 32 16 16 5.01 25.4 (B) 16 5.16 25.1"
+        },
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 23,
+          "evidence_excerpt": "best setting, quality also drops off with too many heads. In Table 3 rows (B), we observe that reducing the attention key size dk hurts model quality This suggests that determining compatibility is not easy and that a more sophisticated compatibility function than dot product may be beneficial. We further observe in rows (C) and (D) that, as expected, bigger models are better, and dropout is very helpful in avoiding over-fitting. In row (E) we replace our sinusoidal positional encoding with learned positional embeddings [9], and observe nearly identical results to the base model. 6.3 English Constituency Parsing To evaluate if the Transformer"
+        }
+      ],
+      "review_status": "PROPOSED_CONTENT_MATCH_REQUIRES_FINAL_REVIEW",
+      "semantic_approval": false
+    },
+    {
+      "probe_id": "inv_attention_004",
+      "source_file": "inventory70_attention_live_label_candidates_20261020.json",
+      "question": "What do the visualized attention heads reveal about anaphora resolution in the Transformer?",
+      "category": "analysis",
+      "source_filename": "Attention.pdf",
+      "original_relevant_chunks": [
+        {
+          "document_id": "c5403b511fa73a2221411a42",
+          "chunk_id": 27
+        }
+      ],
+      "candidate_live_document_id": "9ff74efe2d339c2bb9a53c06",
+      "proposed_minimal_live_chunk_ids": [
+        35,
+        36
+      ],
+      "verified_live_references": [],
+      "reference_verification_status": "DOCUMENT_AND_CHUNK_CANDIDATES_ONLY_POINT_IDS_NOT_VERIFIED",
+      "rationale": "These chunks contain the attention visualizations and describe heads associated with anaphora resolution for 'its'.",
+      "candidate_evidence": [
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 35,
+          "evidence_excerpt": "rase ‘making...more difficult’. Attentions here shown only for the word ‘making’. Different colors represent different heads. Best viewed in color. 13 The Law will never be perfect , but its application should be just - this is what we are missing , in my opinion . <EOS> <pad> The Law will never be perfect , but its application should be just - this is what we are missing , in my opinion . <EOS> <pad> The Law will never be perfect , but its application should be just - this is what we are missing , in my opinion . <EOS> <pad> The Law will never be perfect , but its application should be just - this is what we are missing , in my opinion . <EO"
+        },
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 36,
+          "evidence_excerpt": "or head 5. Bottom: Isolated attentions from just the word ‘its’ for attention heads 5 and 6. Note that the attentions are very sharp for this word. 14 The Law will never be perfect , but its application should be just - this is what we are missing , in my opinion . <EOS> <pad> The Law will never be perfect , but its application should be just - this is what we are missing , in my opinion . <EOS> <pad> The Law will never be perfect , but its application should be just - this is what we are missing , in my opinion . <EOS> <pad> The Law will never be perfect , but its application should be just - this is what we are missing , in my opinion . <EO"
+        }
+      ],
+      "review_status": "PROPOSED_CONTENT_MATCH_REQUIRES_FINAL_REVIEW",
+      "semantic_approval": false
+    },
+    {
+      "probe_id": "inv_attention_005",
+      "source_file": "inventory70_attention_live_label_candidates_20261020.json",
+      "question": "What BLEU score did the Transformer achieve on the WMT 2014 English-to-French translation task, and how long did training take on how many GPUs?",
+      "category": "results",
+      "source_filename": "Attention.pdf",
+      "original_relevant_chunks": [
+        {
+          "document_id": "c5403b511fa73a2221411a42",
+          "chunk_id": "1"
+        }
+      ],
+      "candidate_live_document_id": "9ff74efe2d339c2bb9a53c06",
+      "proposed_minimal_live_chunk_ids": [
+        1
+      ],
+      "verified_live_references": [],
+      "reference_verification_status": "DOCUMENT_AND_CHUNK_CANDIDATES_ONLY_POINT_IDS_NOT_VERIFIED",
+      "rationale": "Chunk 1 explicitly reports 41.8 BLEU on WMT 2014 English-to-French, 3.5 days of training, and eight GPUs.",
+      "candidate_evidence": [
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 1,
+          "evidence_excerpt": "achieves On the WMT 2014 English-to-French translation task, our model establishes a new single-model state-of-the-art BLEU score of 41.8 after training for 3.5 days on eight GPUs, a small fraction of the training costs of the best models from the literature. We show that the Transformer generalizes well to other tasks by applying it successfully to English constituency parsing both with large and limited training data. ∗Equal contribution. Listing order is random. Jakob proposed replacing RNNs with self-attention and started the effort to evaluate this idea. Ashish, with Illia, designed and implemented the first Transformer models and has be"
+        }
+      ],
+      "review_status": "PROPOSED_CONTENT_MATCH_REQUIRES_FINAL_REVIEW",
+      "semantic_approval": false
+    },
+    {
+      "probe_id": "inv_attention_006",
+      "source_file": "inventory70_attention_live_label_candidates_20261020.json",
+      "question": "What is self-attention, and what does it compute for positions within a single sequence?",
+      "category": "self_attention",
+      "source_filename": "Attention.pdf",
+      "original_relevant_chunks": [
+        {
+          "document_id": "c5403b511fa73a2221411a42",
+          "chunk_id": "4"
+        }
+      ],
+      "candidate_live_document_id": "9ff74efe2d339c2bb9a53c06",
+      "proposed_minimal_live_chunk_ids": [
+        5
+      ],
+      "verified_live_references": [],
+      "reference_verification_status": "DOCUMENT_AND_CHUNK_CANDIDATES_ONLY_POINT_IDS_NOT_VERIFIED",
+      "rationale": "Chunk 5 defines self-attention as relating positions in one sequence to compute a representation of that sequence.",
+      "candidate_evidence": [
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 5,
+          "evidence_excerpt": "ced e Self-attention, sometimes called intra-attention is an attention mechanism relating different positions of a single sequence in order to compute a representation of the sequence. Self-attention has been used successfully in a variety of tasks including reading comprehension, abstractive summarization, textual entailment and learning task-independent sentence representations [4, 27, 28, 22]. End-to-end memory networks are based on a recurrent attention mechanism instead of sequence- aligned recurrence and have been shown to perform well on simple-language question answering and language modeling tasks [34]. To the best of our knowledge, "
+        }
+      ],
+      "review_status": "PROPOSED_CONTENT_MATCH_REQUIRES_FINAL_REVIEW",
+      "semantic_approval": false
+    },
+    {
+      "probe_id": "inv_attention_007",
+      "source_file": "inventory70_attention_live_label_candidates_20261020.json",
+      "question": "How does scaled dot-product attention differ from ordinary dot-product attention, and why is the scaling factor used?",
+      "category": "attention",
+      "source_filename": "Attention.pdf",
+      "original_relevant_chunks": [
+        {
+          "document_id": "c5403b511fa73a2221411a42",
+          "chunk_id": "7"
+        }
+      ],
+      "candidate_live_document_id": "9ff74efe2d339c2bb9a53c06",
+      "proposed_minimal_live_chunk_ids": [
+        9
+      ],
+      "verified_live_references": [],
+      "reference_verification_status": "DOCUMENT_AND_CHUNK_CANDIDATES_ONLY_POINT_IDS_NOT_VERIFIED",
+      "rationale": "Chunk 9 explains large dot products, small softmax gradients, and scaling by the inverse square root of the key dimension.",
+      "candidate_evidence": [
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 9,
+          "evidence_excerpt": "t-product attention is much faster and more space-efficient in practice, since it can be implemented using highly optimized matrix multiplication code While for small values of dk the two mechanisms perform similarly, additive attention outperforms dot product attention without scaling for larger values of dk [3]. We suspect that for large values of dk, the dot products grow large in magnitude, pushing the softmax function into regions where it has extremely small gradients 4. To counteract this effect, we scale the dot products by 1 √dk . 3.2.2 Multi-Head Attention Instead of performing a single attention function with dmodel-dimensional key"
+        }
+      ],
+      "review_status": "PROPOSED_CONTENT_MATCH_REQUIRES_FINAL_REVIEW",
+      "semantic_approval": false
+    },
+    {
+      "probe_id": "inv_attention_008",
+      "source_file": "inventory70_attention_live_label_candidates_20261020.json",
+      "question": "What advantage does multi-head attention provide over using a single attention head?",
+      "category": "multi_head_attention",
+      "source_filename": "Attention.pdf",
+      "original_relevant_chunks": [
+        {
+          "document_id": "c5403b511fa73a2221411a42",
+          "chunk_id": "8"
+        }
+      ],
+      "candidate_live_document_id": "9ff74efe2d339c2bb9a53c06",
+      "proposed_minimal_live_chunk_ids": [
+        10
+      ],
+      "verified_live_references": [],
+      "reference_verification_status": "DOCUMENT_AND_CHUNK_CANDIDATES_ONLY_POINT_IDS_NOT_VERIFIED",
+      "rationale": "Chunk 10 explains that multi-head attention jointly attends to different representation subspaces and positions.",
+      "candidate_evidence": [
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 10,
+          "evidence_excerpt": "ts of q and k are independent ran output values. These are concatenated and once again projected, resulting in the final values, as depicted in Figure 2. Multi-head attention allows the model to jointly attend to information from different representation subspaces at different positions. With a single attention head, averaging inhibits this. MultiHead(Q, K, V ) = Concat(head1, ..., headh)W O where headi = Attention(QW Q i , KW K i , V W V i ) Where the projections are parameter matrices W Q i ∈Rdmodel×dk, W K i ∈Rdmodel×dk, W V i ∈Rdmodel×dv and W O ∈Rhdv×dmodel. In this work we employ h = 8 parallel attention layers, or heads. For each of th"
+        }
+      ],
+      "review_status": "PROPOSED_CONTENT_MATCH_REQUIRES_FINAL_REVIEW",
+      "semantic_approval": false
+    },
+    {
+      "probe_id": "inv_attention_009",
+      "source_file": "inventory70_attention_live_label_candidates_20261020.json",
+      "question": "Why does the Transformer architecture make learning long-range dependencies easier?",
+      "category": "architecture",
+      "source_filename": "Attention.pdf",
+      "original_relevant_chunks": [
+        {
+          "document_id": "c5403b511fa73a2221411a42",
+          "chunk_id": "12"
+        }
+      ],
+      "candidate_live_document_id": "9ff74efe2d339c2bb9a53c06",
+      "proposed_minimal_live_chunk_ids": [
+        15,
+        16
+      ],
+      "verified_live_references": [],
+      "reference_verification_status": "DOCUMENT_AND_CHUNK_CANDIDATES_ONLY_POINT_IDS_NOT_VERIFIED",
+      "rationale": "These chunks discuss shorter paths between positions and the constant sequential-operation path of self-attention.",
+      "candidate_evidence": [
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 15,
+          "evidence_excerpt": "ne key factor affecting the ability to learn such dependencies is the length of the paths forward and backward signals have to traverse in the network The shorter these paths between any combination of positions in the input and output sequences, the easier it is to learn long-range dependencies [12]. Hence we also compare the maximum path length between any two input and output positions in networks composed of the different layer types. As noted in Table 1, a self-attention layer connects all positions with a constant number of sequentially executed operations, whereas a recurrent layer requires O(n) sequential operations. In terms of compu"
+        },
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 16,
+          "evidence_excerpt": "requires O(n) seq length n is smaller than the representation dimensionality d, which is most often the case with sentence representations used by state-of-the-art models in machine translations, such as word-piece [38] and byte-pair [31] representations. To improve computational performance for tasks involving very long sequences, self-attention could be restricted to considering only a neighborhood of size r in the input sequence centered around the respective output position. This would increase the maximum path length to O(n/r). We plan to investigate this approach further in future work. A single convolutional layer with kernel width k <"
+        }
+      ],
+      "review_status": "PROPOSED_CONTENT_MATCH_REQUIRES_FINAL_REVIEW",
+      "semantic_approval": false
+    },
+    {
+      "probe_id": "inv_attention_010",
+      "source_file": "inventory70_attention_live_label_candidates_20261020.json",
+      "question": "How did the Transformer big model perform on the WMT 2014 English-to-German translation task compared with previously reported models?",
+      "category": "results",
+      "source_filename": "Attention.pdf",
+      "original_relevant_chunks": [
+        {
+          "document_id": "c5403b511fa73a2221411a42",
+          "chunk_id": "16"
+        }
+      ],
+      "candidate_live_document_id": "9ff74efe2d339c2bb9a53c06",
+      "proposed_minimal_live_chunk_ids": [
+        0,
+        19,
+        20
+      ],
+      "verified_live_references": [],
+      "reference_verification_status": "DOCUMENT_AND_CHUNK_CANDIDATES_ONLY_POINT_IDS_NOT_VERIFIED",
+      "rationale": "Chunk 0 gives the 28.4 BLEU English-to-German result; chunk 19 contains the comparison table; chunk 20 discusses performance relative to previously reported models.",
+      "candidate_evidence": [
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 0,
+          "evidence_excerpt": "Provided proper attribution is provided, Google hereby grants permission to reproduce the tables and figures in this paper solely for use in journalistic or scholarly works. Attention Is All You Need Ashish Vaswani∗ Google Brain avaswani@google.com Noam Shazeer∗ Google Brain noam@google.com Niki Parmar∗ Google Research nikip@google.com Jakob Uszkoreit∗ Google Research usz@google.com Llion Jones∗ Google Research llion@google.com Aidan N. Gomez∗† University of Toronto aidan@cs.toronto.edu Łukasz Kaiser∗ Google Brain lukaszkaiser@google.com Illia Polosukhin∗‡ illia.polosukhin@gmail.com Abstract The dominant sequence transduction models are based"
+        },
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 19,
+          "evidence_excerpt": "the inverse square root Table 2: The Transformer achieves better BLEU scores than previous state-of-the-art models on the English-to-German and English-to-French newstest2014 tests at a fraction of the training cost. Model BLEU Training Cost (FLOPs) EN-DE EN-FR EN-DE EN-FR ByteNet [18] 23.75 Deep-Att + PosUnk [39] 39.2 1.0 · 1020 GNMT + RL [38] 24.6 39.92 2.3 · 1019 1.4 · 1020 ConvS2S [9] 25.16 40.46 9.6 · 1018 1.5 · 1020 MoE [32] 26.03 40.56 2.0 · 1019 1.2 · 1020 Deep-Att + PosUnk Ensemble [39] 40.4 8.0 · 1020 GNMT + RL Ensemble [38] 26.30 41.16 1.8 · 1020 1.1 · 1021 ConvS2S Ensemble [9] 26.36 41.29 7.7 · 1019 1.2 · 1021 Transformer (base mo"
+        },
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 20,
+          "evidence_excerpt": "2) outperforms the best previously reported models (including ensembles) by more than 2.0 The configuration of this model is listed in the bottom line of Table 3. Training took 3.5 days on 8 P100 GPUs. Even our base model surpasses all previously published models and ensembles, at a fraction of the training cost of any of the competitive models. On the WMT 2014 English-to-French translation task, our big model achieves a BLEU score of 41.0, outperforming all of the previously published single models, at less than 1/4 the training cost of the previous state-of-the-art model. The Transformer (big) model trained for English-to-French used dropou"
+        }
+      ],
+      "review_status": "PROPOSED_CONTENT_MATCH_REQUIRES_FINAL_REVIEW",
+      "semantic_approval": false
+    },
+    {
+      "probe_id": "inv_llm_agents_001",
+      "source_file": "inventory70_four_probe_minimal_label_candidates_20261020.json",
+      "question": "How does the survey define an LLM-based agent, and what basic capabilities distinguish such an agent?",
+      "category": "definition",
+      "source_filename": "LLM Based-learning.pdf",
+      "original_relevant_chunks": [
+        {
+          "document_id": "7ed18d7a17efb3ce8ec56478",
+          "chunk_id": 0
+        }
+      ],
+      "candidate_live_document_id": "e65504ab611fa43ac5013829",
+      "proposed_minimal_live_chunk_ids": [
+        0,
+        8
+      ],
+      "verified_live_references": [],
+      "reference_verification_status": "DOCUMENT_AND_CHUNK_CANDIDATES_ONLY_POINT_IDS_NOT_VERIFIED",
+      "rationale": "Chunk 0 directly defines agents as entities that sense, decide, and act. Chunk 8 lists LLM capabilities including knowledge acquisition, instruction comprehension, generalization, planning, reasoning, and natural-language interaction. Chunks 1 and 11 appear supplementary rather than necessary for this question.",
+      "candidate_evidence": [
+        {
+          "document_id": "e65504ab611fa43ac5013829",
+          "chunk_id": 0,
+          "evidence_excerpt": "The Rise and Potential of Large Language Model Based Agents: A Survey Zhiheng Xi∗†, Wenxiang Chen∗, Xin Guo∗, Wei He∗, Yiwen Ding∗, Boyang Hong∗, Ming Zhang∗, Junzhe Wang∗, Senjie Jin∗, Enyu Zhou∗, Rui Zheng, Xiaoran Fan, Xiao Wang, Limao Xiong, Yuhao Zhou, Weiran Wang, Changhao Jiang, Yicheng Zou, Xiangyang Liu, Zhangyue Yin, Shihan Dou, Rongxiang Weng, Wensen Cheng, Qi Zhang†, Wenjuan Qin, Yongyan Zheng, Xipeng Qiu, Xuanjing Huang and Tao Gui† Fudan NLP Group Abstract For a long time, humanity has pursued artificial intelligence (AI) equivalent to or surpassing the human level, with AI agents considered a promising vehicle for this pursuit. AI agents are artificial entities that sense their environment, make decisions, and take actions. Many efforts have been made to develop intelligent agents, but they mainly focus on advancement in algorithms or training strategies to enhance specific capabilities or performance on particular tasks. Actually, what the community lacks is a general and powerful model to serve as a starting point for designing AI agents that can adapt to diverse scenarios. Due to the versatile capabilities they demonstrate, large language models (LLMs) are regarded as potential sparks for Artificial General Intelligence (AGI), offering hope for building general AI agents. Many researchers have leveraged LLMs as the foundation to build AI agents and have achieved significant progress. In this paper, we perform a comprehensive survey on LLM-based agents."
+        },
+        {
+          "document_id": "e65504ab611fa43ac5013829",
+          "chunk_id": 8,
+          "evidence_excerpt": "f the model’s inherent general abilities like knowledge memorization, long-term planning, effective gene Actually, enhancing the inherent capabilities of the model is the pivotal factor for advancing the agent further, and the domain is in need of a powerful foundational model endowed with a variety of key attributes mentioned above to serve as a starting point for agent systems. The development of large language models (LLMs) has brought a glimmer of hope for the further development of agents [24; 25; 26], and significant progress has been made by the community [22; 27; 28; 29]. According to the notion of World Scope (WS) [30] which encompasses five levels that depict the research progress from NLP to general AI (i.e., Corpus, Internet, Perception, Embodiment, and Social), the pure LLMs are built on the second level with internet-scale textual inputs and outputs. Despite this, LLMs have demonstrated powerful capabilities in knowledge acquisition, instruction comprehension, generalization, planning, and reasoning, while displaying effective natural language interactions with humans. These advantages have earned LLMs the designation of sparks for AGI [31], making them highly desirable for building intelligent agents to foster a world where humans and agents coexist harmoniously [22]. Starting from this, if we elevate LLMs to the status of agents and equip them with an expanded perception space and action space, they have the potential to reach the third and fourth levels of WS"
+        }
+      ],
+      "review_status": "PROPOSED_MINIMAL_SET_REQUIRES_FINAL_REVIEW",
+      "semantic_approval": false
+    },
+    {
+      "probe_id": "inv_llm_agents_003",
+      "source_file": "inventory70_four_probe_minimal_label_candidates_20261020.json",
+      "question": "What role does AutoGPT play in the survey's discussion of autonomous or lifelong-learning agents?",
+      "category": "autonomous_agents",
+      "source_filename": "LLM Based-learning.pdf",
+      "original_relevant_chunks": [
+        {
+          "document_id": "7ed18d7a17efb3ce8ec56478",
+          "chunk_id": 74
+        }
+      ],
+      "candidate_live_document_id": "e65504ab611fa43ac5013829",
+      "proposed_minimal_live_chunk_ids": [
+        85
+      ],
+      "verified_live_references": [],
+      "reference_verification_status": "DOCUMENT_AND_CHUNK_CANDIDATES_ONLY_POINT_IDS_NOT_VERIFIED",
+      "rationale": "Chunk 85 directly describes AutoGPT's autonomous objective-driven task execution, external tools, and long-/short-term memory.",
+      "candidate_evidence": [
+        {
+          "document_id": "e65504ab611fa43ac5013829",
+          "chunk_id": 85,
+          "evidence_excerpt": "we elucidate the diverse application scenarios of Single Agent, including task-oriented, innovation-oriented, and lifecycle-oriented scenarios (§ 4.1) Then, we present the significant coordinating potential of Multiple Agents. Whether through cooperative interaction for complementarity or adversarial interaction for advancement, both approaches can lead to higher task efficiency and response quality (§ 4.2). Finally, we categorize the interactive collaboration between humans and agents into two paradigms and introduce the main forms and specific applications respectively (§ 4.3). The topological diagram for LLM-based agent applications is depicted in Figure 6. 4.1 General Ability of Single Agent Currently, there is a vibrant development of application instances of LLM-based agents [429; 430; 431]. AutoGPT [114] is one of the ongoing popular open-source projects aiming to achieve a fully autonomous system. Apart from the basic functions of large language models like GPT-4, the AutoGPT framework also incorporates various practical external tools and long/short-term memory management. After users input their customized objectives, they can free their hands and wait for AutoGPT to automatically generate thoughts and perform specific tasks, all without requiring additional user prompts. As shown in Figure 8, we introduce the astonishingly diverse capabilities that the agent exhibits in scenarios where only one single agent is present."
+        }
+      ],
+      "review_status": "PROPOSED_MINIMAL_SET_REQUIRES_FINAL_REVIEW",
+      "semantic_approval": false
+    },
+    {
+      "probe_id": "inv_llm_001",
+      "source_file": "inventory70_four_probe_minimal_label_candidates_20261020.json",
+      "question": "What motivation does the GPT-3 paper give for pretraining large language models before applying them to downstream tasks?",
+      "category": "pretraining",
+      "source_filename": "LLM.pdf",
+      "original_relevant_chunks": [
+        {
+          "document_id": "3caf265f6ce786e3c2bd0ad6",
+          "chunk_id": 0
+        }
+      ],
+      "candidate_live_document_id": "68424e3d1aa5e84e426da70c",
+      "proposed_minimal_live_chunk_ids": [
+        5,
+        6,
+        8
+      ],
+      "verified_live_references": [],
+      "reference_verification_status": "DOCUMENT_AND_CHUNK_CANDIDATES_ONLY_POINT_IDS_NOT_VERIFIED",
+      "rationale": "Chunk 5 covers the cost and limited applicability of collecting labeled examples for every task and discusses fine-tuning generalization concerns. Chunks 6 and 8 describe pretraining skills and in-context adaptation from instructions or examples. Review whether chunk 6 is needed in addition to chunks 5 and 8.",
+      "candidate_evidence": [
+        {
+          "document_id": "68424e3d1aa5e84e426da70c",
+          "chunk_id": 5,
+          "evidence_excerpt": "on a dataset of thousands to hundreds of thousands of examples speciﬁc to that task. Removing this limitation would First, from a practical perspective, the need for a large dataset of labeled examples for every new task limits the applicability of language models. There exists a very wide range of possible useful language tasks, encompassing anything from correcting grammar, to generating examples of an abstract concept, to critiquing a short story. For many of these tasks it is difﬁcult to collect a large supervised training dataset, especially when the process must be repeated for every new task. Second, the potential to exploit spurious correlations in training data fundamentally grows with the expressiveness of the model and the narrowness of the training distribution. This can create problems for the pre-training plus ﬁne-tuning paradigm, where models are designed to be large to absorb information during pre-training, but are then ﬁne-tuned on very narrow task distributions. For instance [HLW+20] observe that larger models do not necessarily generalize better out-of-distribution. There is evidence that suggests that the generalization achieved under this paradigm can be poor because the model is overly speciﬁc to the training distribution and does not generalize well outside it [YdC+19, MPL19]. Thus, the performance of ﬁne-tuned models on speciﬁc benchmarks, even when it is nominally at human-level, may exaggerate actual performance on the underlying task [GSL+18, NK19]"
+        },
+        {
+          "document_id": "68424e3d1aa5e84e426da70c",
+          "chunk_id": 6,
+          "evidence_excerpt": "-tuned models on speciﬁc benchmarks, even when it is nominally at human-level, may exaggerate actual performance on the underlying task [GSL+18, NK19] Third, humans do not require large supervised datasets to learn most language tasks – a brief directive in natural language (e.g. “please tell me if this sentence describes something happy or something sad”) or at most a tiny number of demonstrations (e.g. “here are two examples of people acting brave; please give a third example of bravery”) is often Figure 1.1: Language model meta-learning. During unsupervised pre-training, a language model develops a broad set of skills and pattern recognition abilities. It then uses these abilities at inference time to rapidly adapt to or recognize the desired task. We use the term “in-context learning” to describe the inner loop of this process, which occurs within the forward-pass upon each sequence. The sequences in this diagram are not intended to be representative of the data a model would see during pre-training, but are intended to show that there are sometimes repeated sub-tasks embedded within a single sequence. 3"
+        },
+        {
+          "document_id": "68424e3d1aa5e84e426da70c",
+          "chunk_id": 8,
+          "evidence_excerpt": "ities at training time, and then uses those abilities at inference time to rapidly adapt to or recognize the desired task (illustrated in F Recent work [RWC+19] attempts to do this via what we call “in-context learning”, using the text input of a pretrained language model as a form of task speciﬁcation: the model is conditioned on a natural language instruction and/or a few demonstrations of the task and is then expected to complete further instances of the task simply by predicting what comes next. While it has shown some initial promise, this approach still achieves results far inferior to ﬁne-tuning – for example [RWC+19] achieves only 4% on Natural Questions, and even its 55 F1 CoQa result is now more than 35 points behind the state of the art. Meta-learning clearly requires substantial improvement in order to be viable as a practical method of solving language tasks. Another recent trend in language modeling may offer a way forward. In recent years the capacity of transformer language models has increased substantially, from 100 million parameters [RNSS18], to 300 million parameters [DCLT18], to 1.5 billion parameters [RWC+19], to 8 billion parameters [SPP+19], 11 billion parameters [RSR+19], and ﬁnally 17 billion parameters [Tur20]. Each increase has brought improvements in text synthesis and/or downstream NLP tasks, and there is evidence suggesting that log loss, which correlates well with many downstream tasks, follows a smooth trend of improvement with scale [KMH+20]"
+        }
+      ],
+      "review_status": "PROPOSED_MINIMAL_SET_REQUIRES_FINAL_REVIEW",
+      "semantic_approval": false
+    },
+    {
+      "probe_id": "inv_rag_001",
+      "source_file": "inventory70_four_probe_minimal_label_candidates_20261020.json",
+      "question": "What limitations of pretrained language models motivate Retrieval-Augmented Generation?",
+      "category": "motivation",
+      "source_filename": "RAG.pdf",
+      "original_relevant_chunks": [
+        {
+          "document_id": "89e40c0de3ce2081b9d726b9",
+          "chunk_id": 0
+        }
+      ],
+      "candidate_live_document_id": "8f25ec73a5dcfeca772c16ff",
+      "proposed_minimal_live_chunk_ids": [
+        0
+      ],
+      "verified_live_references": [],
+      "reference_verification_status": "DOCUMENT_AND_CHUNK_CANDIDATES_ONLY_POINT_IDS_NOT_VERIFIED",
+      "rationale": "Chunk 0's abstract directly covers limited access to and precise manipulation of parametric knowledge, weaker knowledge-intensive task performance, provenance, and updating world knowledge.",
+      "candidate_evidence": [
+        {
+          "document_id": "8f25ec73a5dcfeca772c16ff",
+          "chunk_id": 0,
+          "evidence_excerpt": "Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks Patrick Lewis†‡, Ethan Perez⋆, Aleksandra Piktus†, Fabio Petroni†, Vladimir Karpukhin†, Naman Goyal†, Heinrich Küttler†, Mike Lewis†, Wen-tau Yih†, Tim Rocktäschel†‡, Sebastian Riedel†‡, Douwe Kiela† †Facebook AI Research; ‡University College London; ⋆New York University; plewis@fb.com Abstract Large pre-trained language models have been shown to store factual knowledge in their parameters, and achieve state-of-the-art results when ﬁne-tuned on down- stream NLP tasks. However, their ability to access and precisely manipulate knowl- edge is still limited, and hence on knowledge-intensive tasks, their performance lags behind task-speciﬁc architectures. Additionally, providing provenance for their decisions and updating their world knowledge remain open research problems. Pre- trained models with a differentiable access mechanism to explicit non-parametric memory have so far been only investigated for extractive downstream tasks. We explore a general-purpose ﬁne-tuning recipe for retrieval-augmented generation (RAG) — models which combine pre-trained parametric and non-parametric mem- ory for language generation. We introduce RAG models where the parametric memory is a pre-trained seq2seq model and the non-parametric memory is a dense vector index of Wikipedia, accessed with a pre-trained neural retriever."
+        }
+      ],
+      "review_status": "PROPOSED_MINIMAL_SET_REQUIRES_FINAL_REVIEW",
+      "semantic_approval": false
+    }
+  ],
+  "covered_unique_probe_count": 26,
+  "not_yet_covered_probe_count": 44,
+  "not_yet_covered_probe_ids": [
+    "inv_llm_002",
+    "inv_llm_005",
+    "inv_llm_006",
+    "inv_llm_007",
+    "inv_llm_008",
+    "inv_llm_009",
+    "inv_llm_010",
+    "inv_llm_011",
+    "inv_llm_012",
+    "inv_llm_agents_005",
+    "inv_llm_agents_006",
+    "inv_llm_agents_007",
+    "inv_llm_agents_008",
+    "inv_llm_agents_009",
+    "inv_llm_agents_010",
+    "inv_llm_agents_011",
+    "inv_llm_agents_012",
+    "inv_loop_002",
+    "inv_loop_003",
+    "inv_loop_005",
+    "inv_loop_006",
+    "inv_loop_007",
+    "inv_loop_008",
+    "inv_loop_009",
+    "inv_loop_010",
+    "inv_loop_011",
+    "inv_rag_002",
+    "inv_rag_003",
+    "inv_rag_004",
+    "inv_rag_005",
+    "inv_rag_006",
+    "inv_rag_007",
+    "inv_rag_009",
+    "inv_rag_010",
+    "inv_training_001",
+    "inv_training_002",
+    "inv_training_003",
+    "inv_training_004",
+    "inv_training_005",
+    "inv_training_006",
+    "inv_training_007",
+    "inv_training_008",
+    "inv_training_009",
+    "inv_training_010"
+  ],
+  "not_yet_approved_probe_count": 26,
+  "benchmark_ready": false,
+  "limitations": [
+    "All candidate labels remain provisional and require semantic review.",
+    "The normalized Attention and four-probe candidates do not contain verified Qdrant point IDs in their source artifacts.",
+    "Empty verified_live_references means point-ID verification must still be performed.",
+    "Structural reference integrity does not establish semantic gold-label correctness.",
+    "The canonical dataset and canonical inventory are read-only inputs."
+  ]
+}

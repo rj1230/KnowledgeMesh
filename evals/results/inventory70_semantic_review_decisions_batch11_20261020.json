@@ -1,0 +1,59 @@
+{
+  "artifact_type": "semantic_review_batch",
+  "benchmark_ready": false,
+  "candidate_count": 2,
+  "collection_name": "enterprise_rag_bge_base",
+  "created_date": "2026-10-20",
+  "decisions": [
+    {
+      "probe_id": "inv_attention_010",
+      "question": "How did the Transformer big model perform on the WMT 2014 English-to-German translation task compared with previously reported models?",
+      "source_filename": "Attention.pdf",
+      "proposed_document_id": "9ff74efe2d339c2bb9a53c06",
+      "proposed_chunk_ids": [
+        19
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "9ff74efe2d339c2bb9a53c06",
+          "chunk_id": 19,
+          "point_id": "acda89fe-15d4-58d5-be06-926835e0a392",
+          "source": "Attention.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "Live chunk 19 reports Transformer (big) achieving 28.4 BLEU on WMT 2014 English-to-German and outperforming previously reported models, including ensembles, by more than 2.0 BLEU."
+    },
+    {
+      "probe_id": "inv_llm_002",
+      "question": "What does the GPT-3 evaluation report about the largest model's accuracy in few-shot learning?",
+      "source_filename": "LLM.pdf",
+      "proposed_document_id": "68424e3d1aa5e84e426da70c",
+      "proposed_chunk_ids": [
+        32
+      ],
+      "resolved_live_references": [
+        {
+          "document_id": "68424e3d1aa5e84e426da70c",
+          "chunk_id": 32,
+          "point_id": "541a1138-0bbd-5803-8642-35c07a53f3a6",
+          "source": "LLM.pdf"
+        }
+      ],
+      "reference_verification_status": "PASS",
+      "reference_issues": [],
+      "semantic_review_status": "SEMANTICALLY_APPROVED",
+      "semantic_approval": true,
+      "semantic_rationale": "Live chunk 32 explicitly states that GPT-3 achieves 86.4% accuracy in the few-shot setting, an increase of over 18% from the previous state of the art. The selected chunk directly supports the question; LAMBADA is not required to appear in the same chunk for this accuracy claim."
+    }
+  ],
+  "reference_issue_count": 0,
+  "reference_issue_probe_ids": [],
+  "semantic_approvals": 2,
+  "source_dataset": "evals/datasets/inventory_retrieval_probes_70.json",
+  "source_dataset_sha256": "21ee63518d16f2b08d8e5c1e452a4cfa8f5675b5f0322727f623c1aa2ac3e101",
+  "unique_probe_count": 2
+}

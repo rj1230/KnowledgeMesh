@@ -1,0 +1,300 @@
+C:\Users\HP\OneDrive\Desktop\KnowledgeMesh\app\services\retrieval\qdrant_service.py:185: LogfireNotConfiguredWarning: No logs or spans will be created until `logfire.configure()` has been called. Set the environment variable LOGFIRE_IGNORE_NO_CONFIG=1 or add ignore_no_config=true in pyproject.toml to suppress this warning.
+  with logfire.span(
+C:\Users\HP\OneDrive\Desktop\KnowledgeMesh\app\services\retrieval\embedding.py:149: FutureWarning: The `get_sentence_embedding_dimension` method has been renamed to `get_embedding_dimension`.
+  detected_dimension = model.get_sentence_embedding_dimension()
+INFO:httpx:HTTP Request: POST https://d8cef025-71c1-440b-b007-ac5ec1ce6c99.eu-west-2-0.aws.cloud.qdrant.io:6333/collections/enterprise_rag/points/query "HTTP/1.1 200 OK"
+INFO:knowledgemesh:Qdrant retrieval completed | query='How does self-attention differ between the encoder and decoder with respect to which positions can be attended to?' | collection=enterprise_rag | points=50 | limit=50 | score_threshold=None
+INFO:httpx:HTTP Request: POST https://d8cef025-71c1-440b-b007-ac5ec1ce6c99.eu-west-2-0.aws.cloud.qdrant.io:6333/collections/enterprise_rag/points/query "HTTP/1.1 200 OK"
+INFO:knowledgemesh:Qdrant retrieval completed | query='What do the experiments indicate about the effect of changing the number of attention heads and the attention key size?' | collection=enterprise_rag | points=50 | limit=50 | score_threshold=None
+INFO:httpx:HTTP Request: POST https://d8cef025-71c1-440b-b007-ac5ec1ce6c99.eu-west-2-0.aws.cloud.qdrant.io:6333/collections/enterprise_rag/points/query "HTTP/1.1 200 OK"
+INFO:knowledgemesh:Qdrant retrieval completed | query='What do the visualized attention heads reveal about anaphora resolution in the Transformer?' | collection=enterprise_rag | points=50 | limit=50 | score_threshold=None
+INFO:httpx:HTTP Request: POST https://d8cef025-71c1-440b-b007-ac5ec1ce6c99.eu-west-2-0.aws.cloud.qdrant.io:6333/collections/enterprise_rag/points/query "HTTP/1.1 200 OK"
+INFO:knowledgemesh:Qdrant retrieval completed | query='What kinds of information does the paper suggest searching for when researching coding-agent techniques and implementations?' | collection=enterprise_rag | points=50 | limit=50 | score_threshold=None
+INFO:httpx:HTTP Request: POST https://d8cef025-71c1-440b-b007-ac5ec1ce6c99.eu-west-2-0.aws.cloud.qdrant.io:6333/collections/enterprise_rag/points/query "HTTP/1.1 200 OK"
+INFO:knowledgemesh:Qdrant retrieval completed | query='How does the paper describe the effect of encoding recurring coordination patterns into tools, middleware, and memory?' | collection=enterprise_rag | points=50 | limit=50 | score_threshold=None
+INFO:httpx:HTTP Request: POST https://d8cef025-71c1-440b-b007-ac5ec1ce6c99.eu-west-2-0.aws.cloud.qdrant.io:6333/collections/enterprise_rag/points/query "HTTP/1.1 200 OK"
+INFO:knowledgemesh:Qdrant retrieval completed | query='How does the survey define an LLM-based agent, and what basic capabilities distinguish such an agent?' | collection=enterprise_rag | points=50 | limit=50 | score_threshold=None
+INFO:httpx:HTTP Request: POST https://d8cef025-71c1-440b-b007-ac5ec1ce6c99.eu-west-2-0.aws.cloud.qdrant.io:6333/collections/enterprise_rag/points/query "HTTP/1.1 200 OK"
+INFO:knowledgemesh:Qdrant retrieval completed | query="What role does AutoGPT play in the survey's discussion of autonomous or lifelong-learning agents?" | collection=enterprise_rag | points=50 | limit=50 | score_threshold=None
+INFO:httpx:HTTP Request: POST https://d8cef025-71c1-440b-b007-ac5ec1ce6c99.eu-west-2-0.aws.cloud.qdrant.io:6333/collections/enterprise_rag/points/query "HTTP/1.1 200 OK"
+INFO:knowledgemesh:Qdrant retrieval completed | query='What motivation does the GPT-3 paper give for pretraining large language models before applying them to downstream tasks?' | collection=enterprise_rag | points=50 | limit=50 | score_threshold=None
+INFO:httpx:HTTP Request: POST https://d8cef025-71c1-440b-b007-ac5ec1ce6c99.eu-west-2-0.aws.cloud.qdrant.io:6333/collections/enterprise_rag/points/query "HTTP/1.1 200 OK"
+INFO:knowledgemesh:Qdrant retrieval completed | query="What does the GPT-3 evaluation report about the largest model's accuracy in few-shot learning?" | collection=enterprise_rag | points=50 | limit=50 | score_threshold=None
+INFO:httpx:HTTP Request: POST https://d8cef025-71c1-440b-b007-ac5ec1ce6c99.eu-west-2-0.aws.cloud.qdrant.io:6333/collections/enterprise_rag/points/query "HTTP/1.1 200 OK"
+INFO:knowledgemesh:Qdrant retrieval completed | query='What limitations of pretrained language models motivate Retrieval-Augmented Generation?' | collection=enterprise_rag | points=50 | limit=50 | score_threshold=None
+INFO:httpx:HTTP Request: POST https://d8cef025-71c1-440b-b007-ac5ec1ce6c99.eu-west-2-0.aws.cloud.qdrant.io:6333/collections/enterprise_rag/points/query "HTTP/1.1 200 OK"
+INFO:knowledgemesh:Qdrant retrieval completed | query='Why can the generator sometimes complete a title using its parametric knowledge even when the retrieval posterior becomes less informative?' | collection=enterprise_rag | points=50 | limit=50 | score_threshold=None
+INFO:httpx:HTTP Request: POST https://d8cef025-71c1-440b-b007-ac5ec1ce6c99.eu-west-2-0.aws.cloud.qdrant.io:6333/collections/enterprise_rag/points/query "HTTP/1.1 200 OK"
+INFO:knowledgemesh:Qdrant retrieval completed | query='What evidence does the RAG paper provide about the relationship between retrieval and generation when generating book titles?' | collection=enterprise_rag | points=50 | limit=50 | score_threshold=None
+INFO:httpx:HTTP Request: POST https://d8cef025-71c1-440b-b007-ac5ec1ce6c99.eu-west-2-0.aws.cloud.qdrant.io:6333/collections/enterprise_rag/points/query "HTTP/1.1 200 OK"
+INFO:knowledgemesh:Qdrant retrieval completed | query='What happens when the retrieval component of a RAG system collapses and repeatedly retrieves the same documents?' | collection=enterprise_rag | points=50 | limit=50 | score_threshold=None
+INFO:httpx:HTTP Request: POST https://d8cef025-71c1-440b-b007-ac5ec1ce6c99.eu-west-2-0.aws.cloud.qdrant.io:6333/collections/enterprise_rag/points/query "HTTP/1.1 200 OK"
+INFO:knowledgemesh:Qdrant retrieval completed | query='Why does the InstructGPT paper argue that increasing language-model size alone does not guarantee better instruction following?' | collection=enterprise_rag | points=50 | limit=50 | score_threshold=None
+INFO:httpx:HTTP Request: POST https://d8cef025-71c1-440b-b007-ac5ec1ce6c99.eu-west-2-0.aws.cloud.qdrant.io:6333/collections/enterprise_rag/points/query "HTTP/1.1 200 OK"
+INFO:knowledgemesh:Qdrant retrieval completed | query='What evidence does the paper provide that instruction-following alignment can generalize to tasks that were not directly supervised?' | collection=enterprise_rag | points=50 | limit=50 | score_threshold=None
+INFO:httpx:HTTP Request: POST https://d8cef025-71c1-440b-b007-ac5ec1ce6c99.eu-west-2-0.aws.cloud.qdrant.io:6333/collections/enterprise_rag/points/query "HTTP/1.1 200 OK"
+INFO:knowledgemesh:Qdrant retrieval completed | query='How does the paper evaluate whether model outputs are toxic, and what dimensions are considered in that evaluation?' | collection=enterprise_rag | points=50 | limit=50 | score_threshold=None
+INFO:httpx:HTTP Request: POST https://d8cef025-71c1-440b-b007-ac5ec1ce6c99.eu-west-2-0.aws.cloud.qdrant.io:6333/collections/enterprise_rag/points/query "HTTP/1.1 200 OK"
+INFO:knowledgemesh:Qdrant retrieval completed | query='What does the human evaluation example involving GPT-3 175B and InstructGPT 175B illustrate?' | collection=enterprise_rag | points=50 | limit=50 | score_threshold=None
+INFO:httpx:HTTP Request: POST https://d8cef025-71c1-440b-b007-ac5ec1ce6c99.eu-west-2-0.aws.cloud.qdrant.io:6333/collections/enterprise_rag/points/query "HTTP/1.1 200 OK"
+INFO:knowledgemesh:Qdrant retrieval completed | query='What five elements does the paper define as part of a loop specification for coding agents?' | collection=enterprise_rag | points=50 | limit=50 | score_threshold=None
+INFO:httpx:HTTP Request: POST https://d8cef025-71c1-440b-b007-ac5ec1ce6c99.eu-west-2-0.aws.cloud.qdrant.io:6333/collections/enterprise_rag/points/query "HTTP/1.1 200 OK"
+INFO:knowledgemesh:Qdrant retrieval completed | query='How does the Ralph loop use fresh context and external files to maintain state across iterations?' | collection=enterprise_rag | points=50 | limit=50 | score_threshold=None
+INFO:httpx:HTTP Request: POST https://d8cef025-71c1-440b-b007-ac5ec1ce6c99.eu-west-2-0.aws.cloud.qdrant.io:6333/collections/enterprise_rag/points/query "HTTP/1.1 200 OK"
+INFO:knowledgemesh:Qdrant retrieval completed | query='What does the paper mean by the claim that a loop automates typing rather than judgment?' | collection=enterprise_rag | points=50 | limit=50 | score_threshold=None
+INFO:httpx:HTTP Request: POST https://d8cef025-71c1-440b-b007-ac5ec1ce6c99.eu-west-2-0.aws.cloud.qdrant.io:6333/collections/enterprise_rag/points/query "HTTP/1.1 200 OK"
+INFO:knowledgemesh:Qdrant retrieval completed | query='What BLEU score did the Transformer achieve on the WMT 2014 English-to-French translation task, and how long did training take on how many GPUs?' | collection=enterprise_rag | points=50 | limit=50 | score_threshold=None
+INFO:httpx:HTTP Request: POST https://d8cef025-71c1-440b-b007-ac5ec1ce6c99.eu-west-2-0.aws.cloud.qdrant.io:6333/collections/enterprise_rag/points/query "HTTP/1.1 200 OK"
+INFO:knowledgemesh:Qdrant retrieval completed | query='What is self-attention, and what does it compute for positions within a single sequence?' | collection=enterprise_rag | points=50 | limit=50 | score_threshold=None
+INFO:httpx:HTTP Request: POST https://d8cef025-71c1-440b-b007-ac5ec1ce6c99.eu-west-2-0.aws.cloud.qdrant.io:6333/collections/enterprise_rag/points/query "HTTP/1.1 200 OK"
+INFO:knowledgemesh:Qdrant retrieval completed | query='How does scaled dot-product attention differ from ordinary dot-product attention, and why is the scaling factor used?' | collection=enterprise_rag | points=50 | limit=50 | score_threshold=None
+INFO:httpx:HTTP Request: POST https://d8cef025-71c1-440b-b007-ac5ec1ce6c99.eu-west-2-0.aws.cloud.qdrant.io:6333/collections/enterprise_rag/points/query "HTTP/1.1 200 OK"
+INFO:knowledgemesh:Qdrant retrieval completed | query='What advantage does multi-head attention provide over using a single attention head?' | collection=enterprise_rag | points=50 | limit=50 | score_threshold=None
+INFO:httpx:HTTP Request: POST https://d8cef025-71c1-440b-b007-ac5ec1ce6c99.eu-west-2-0.aws.cloud.qdrant.io:6333/collections/enterprise_rag/points/query "HTTP/1.1 200 OK"
+INFO:knowledgemesh:Qdrant retrieval completed | query='Why does the Transformer architecture make learning long-range dependencies easier?' | collection=enterprise_rag | points=50 | limit=50 | score_threshold=None
+INFO:httpx:HTTP Request: POST https://d8cef025-71c1-440b-b007-ac5ec1ce6c99.eu-west-2-0.aws.cloud.qdrant.io:6333/collections/enterprise_rag/points/query "HTTP/1.1 200 OK"
+INFO:knowledgemesh:Qdrant retrieval completed | query='How did the Transformer big model perform on the WMT 2014 English-to-German translation task compared with previously reported models?' | collection=enterprise_rag | points=50 | limit=50 | score_threshold=None
+INFO:httpx:HTTP Request: POST https://d8cef025-71c1-440b-b007-ac5ec1ce6c99.eu-west-2-0.aws.cloud.qdrant.io:6333/collections/enterprise_rag/points/query "HTTP/1.1 200 OK"
+INFO:knowledgemesh:Qdrant retrieval completed | query='What three observability pillars are used to drive the Agentic Harness Engineering closed loop?' | collection=enterprise_rag | points=50 | limit=50 | score_threshold=None
+INFO:httpx:HTTP Request: POST https://d8cef025-71c1-440b-b007-ac5ec1ce6c99.eu-west-2-0.aws.cloud.qdrant.io:6333/collections/enterprise_rag/points/query "HTTP/1.1 200 OK"
+INFO:knowledgemesh:Qdrant retrieval completed | query='What framework is used to instantiate the editable harness substrate, and what does the substrate expose as explicit files?' | collection=enterprise_rag | points=50 | limit=50 | score_threshold=None
+INFO:httpx:HTTP Request: POST https://d8cef025-71c1-440b-b007-ac5ec1ce6c99.eu-west-2-0.aws.cloud.qdrant.io:6333/collections/enterprise_rag/points/query "HTTP/1.1 200 OK"
+INFO:knowledgemesh:Qdrant retrieval completed | query='How are failures counted for pass@1 in the Terminal-Bench evaluation, and what runtime components are described as infrastructure?' | collection=enterprise_rag | points=50 | limit=50 | score_threshold=None
+INFO:httpx:HTTP Request: POST https://d8cef025-71c1-440b-b007-ac5ec1ce6c99.eu-west-2-0.aws.cloud.qdrant.io:6333/collections/enterprise_rag/points/query "HTTP/1.1 200 OK"
+INFO:knowledgemesh:Qdrant retrieval completed | query='What does the AHE evaluation report about the generality of its gains across different providers or reasoning depths?' | collection=enterprise_rag | points=50 | limit=50 | score_threshold=None
+INFO:httpx:HTTP Request: POST https://d8cef025-71c1-440b-b007-ac5ec1ce6c99.eu-west-2-0.aws.cloud.qdrant.io:6333/collections/enterprise_rag/points/query "HTTP/1.1 200 OK"
+INFO:knowledgemesh:Qdrant retrieval completed | query='What governance mechanisms does AHE use to bound self-modification and roll back ineffective edits?' | collection=enterprise_rag | points=50 | limit=50 | score_threshold=None
+INFO:httpx:HTTP Request: POST https://d8cef025-71c1-440b-b007-ac5ec1ce6c99.eu-west-2-0.aws.cloud.qdrant.io:6333/collections/enterprise_rag/points/query "HTTP/1.1 200 OK"
+INFO:knowledgemesh:Qdrant retrieval completed | query='What repeated guarding behaviors are codified into the AHE system prompt?' | collection=enterprise_rag | points=50 | limit=50 | score_threshold=None
+INFO:httpx:HTTP Request: POST https://d8cef025-71c1-440b-b007-ac5ec1ce6c99.eu-west-2-0.aws.cloud.qdrant.io:6333/collections/enterprise_rag/points/query "HTTP/1.1 200 OK"
+INFO:knowledgemesh:Qdrant retrieval completed | query='What evidence shows that the AHE loop can recover previously observed failure modes across later iterations?' | collection=enterprise_rag | points=50 | limit=50 | score_threshold=None
+INFO:httpx:HTTP Request: POST https://d8cef025-71c1-440b-b007-ac5ec1ce6c99.eu-west-2-0.aws.cloud.qdrant.io:6333/collections/enterprise_rag/points/query "HTTP/1.1 200 OK"
+INFO:knowledgemesh:Qdrant retrieval completed | query='What task does configure-git-webserver require the agent to complete, and what loophole or middleware issue was patched?' | collection=enterprise_rag | points=50 | limit=50 | score_threshold=None
+INFO:httpx:HTTP Request: POST https://d8cef025-71c1-440b-b007-ac5ec1ce6c99.eu-west-2-0.aws.cloud.qdrant.io:6333/collections/enterprise_rag/points/query "HTTP/1.1 200 OK"
+INFO:knowledgemesh:Qdrant retrieval completed | query='How do ChatDB and DB-GPT connect LLM-based agents with SQL databases, and what factors are used for memory retrieval?' | collection=enterprise_rag | points=50 | limit=50 | score_threshold=None
+INFO:httpx:HTTP Request: POST https://d8cef025-71c1-440b-b007-ac5ec1ce6c99.eu-west-2-0.aws.cloud.qdrant.io:6333/collections/enterprise_rag/points/query "HTTP/1.1 200 OK"
+INFO:knowledgemesh:Qdrant retrieval completed | query='How can LLM-based agents acquire knowledge about the tools available to them through zero-shot or few-shot prompting?' | collection=enterprise_rag | points=50 | limit=50 | score_threshold=None
+INFO:httpx:HTTP Request: POST https://d8cef025-71c1-440b-b007-ac5ec1ce6c99.eu-west-2-0.aws.cloud.qdrant.io:6333/collections/enterprise_rag/points/query "HTTP/1.1 200 OK"
+INFO:knowledgemesh:Qdrant retrieval completed | query='What limitation of static planning is identified for embodied agents, and what information can help correct errors earlier?' | collection=enterprise_rag | points=50 | limit=50 | score_threshold=None
+INFO:httpx:HTTP Request: POST https://d8cef025-71c1-440b-b007-ac5ec1ce6c99.eu-west-2-0.aws.cloud.qdrant.io:6333/collections/enterprise_rag/points/query "HTTP/1.1 200 OK"
+INFO:knowledgemesh:Qdrant retrieval completed | query='What two major challenges are identified as limiting the realization of LLM-based agents in cutting-edge scientific work?' | collection=enterprise_rag | points=50 | limit=50 | score_threshold=None
+INFO:httpx:HTTP Request: POST https://d8cef025-71c1-440b-b007-ac5ec1ce6c99.eu-west-2-0.aws.cloud.qdrant.io:6333/collections/enterprise_rag/points/query "HTTP/1.1 200 OK"
+INFO:knowledgemesh:Qdrant retrieval completed | query='What role can a high-level policy play in embodied action planning according to the discussion of hierarchical reinforcement learning?' | collection=enterprise_rag | points=50 | limit=50 | score_threshold=None
+INFO:httpx:HTTP Request: POST https://d8cef025-71c1-440b-b007-ac5ec1ce6c99.eu-west-2-0.aws.cloud.qdrant.io:6333/collections/enterprise_rag/points/query "HTTP/1.1 200 OK"
+INFO:knowledgemesh:Qdrant retrieval completed | query='How are humans and agents characterized in the instructor-executor and equal-partnership paradigms?' | collection=enterprise_rag | points=50 | limit=50 | score_threshold=None
+INFO:httpx:HTTP Request: POST https://d8cef025-71c1-440b-b007-ac5ec1ce6c99.eu-west-2-0.aws.cloud.qdrant.io:6333/collections/enterprise_rag/points/query "HTTP/1.1 200 OK"
+INFO:knowledgemesh:Qdrant retrieval completed | query='What is the calibration problem for LLMs, and why can it create difficulties for interactive agents?' | collection=enterprise_rag | points=50 | limit=50 | score_threshold=None
+INFO:httpx:HTTP Request: POST https://d8cef025-71c1-440b-b007-ac5ec1ce6c99.eu-west-2-0.aws.cloud.qdrant.io:6333/collections/enterprise_rag/points/query "HTTP/1.1 200 OK"
+INFO:knowledgemesh:Qdrant retrieval completed | query='How can sufficiently large LLMs use prompting to decompose high-level tasks into subtasks without additional training?' | collection=enterprise_rag | points=50 | limit=50 | score_threshold=None
+INFO:httpx:HTTP Request: POST https://d8cef025-71c1-440b-b007-ac5ec1ce6c99.eu-west-2-0.aws.cloud.qdrant.io:6333/collections/enterprise_rag/points/query "HTTP/1.1 200 OK"
+INFO:knowledgemesh:Qdrant retrieval completed | query='How does GPT-3 define the few-shot setting, and how does it differ from fine-tuning?' | collection=enterprise_rag | points=50 | limit=50 | score_threshold=None
+INFO:httpx:HTTP Request: POST https://d8cef025-71c1-440b-b007-ac5ec1ce6c99.eu-west-2-0.aws.cloud.qdrant.io:6333/collections/enterprise_rag/points/query "HTTP/1.1 200 OK"
+INFO:knowledgemesh:Qdrant retrieval completed | query='What zero-shot and few-shot results did GPT-3 achieve on LAMBADA?' | collection=enterprise_rag | points=50 | limit=50 | score_threshold=None
+INFO:httpx:HTTP Request: POST https://d8cef025-71c1-440b-b007-ac5ec1ce6c99.eu-west-2-0.aws.cloud.qdrant.io:6333/collections/enterprise_rag/points/query "HTTP/1.1 200 OK"
+INFO:knowledgemesh:Qdrant retrieval completed | query='How did GPT-3 perform on the CoQA, QuAC, DROP, and SQuAD 2.0 question-answering benchmarks?' | collection=enterprise_rag | points=50 | limit=50 | score_threshold=None
+INFO:httpx:HTTP Request: POST https://d8cef025-71c1-440b-b007-ac5ec1ce6c99.eu-west-2-0.aws.cloud.qdrant.io:6333/collections/enterprise_rag/points/query "HTTP/1.1 200 OK"
+INFO:knowledgemesh:Qdrant retrieval completed | query="What were GPT-3's few-shot, one-shot, and zero-shot accuracies on the SAT analogy problems?" | collection=enterprise_rag | points=50 | limit=50 | score_threshold=None
+INFO:httpx:HTTP Request: POST https://d8cef025-71c1-440b-b007-ac5ec1ce6c99.eu-west-2-0.aws.cloud.qdrant.io:6333/collections/enterprise_rag/points/query "HTTP/1.1 200 OK"
+INFO:knowledgemesh:Qdrant retrieval completed | query='What does the GPT-3 grammar-correction experiment illustrate about using human demonstrations as conditioning examples?' | collection=enterprise_rag | points=50 | limit=50 | score_threshold=None
+INFO:httpx:HTTP Request: POST https://d8cef025-71c1-440b-b007-ac5ec1ce6c99.eu-west-2-0.aws.cloud.qdrant.io:6333/collections/enterprise_rag/points/query "HTTP/1.1 200 OK"
+INFO:knowledgemesh:Qdrant retrieval completed | query='What kinds of socially harmful applications are identified as potential misuse cases for high-quality language models?' | collection=enterprise_rag | points=50 | limit=50 | score_threshold=None
+INFO:httpx:HTTP Request: POST https://d8cef025-71c1-440b-b007-ac5ec1ce6c99.eu-west-2-0.aws.cloud.qdrant.io:6333/collections/enterprise_rag/points/query "HTTP/1.1 200 OK"
+INFO:knowledgemesh:Qdrant retrieval completed | query='What historical model-size progression is described in the discussion of scaling language models?' | collection=enterprise_rag | points=50 | limit=50 | score_threshold=None
+INFO:httpx:HTTP Request: POST https://d8cef025-71c1-440b-b007-ac5ec1ce6c99.eu-west-2-0.aws.cloud.qdrant.io:6333/collections/enterprise_rag/points/query "HTTP/1.1 200 OK"
+INFO:knowledgemesh:Qdrant retrieval completed | query='Which algorithmic innovations in language modeling are identified as important developments preceding the large-scale model approach?' | collection=enterprise_rag | points=50 | limit=50 | score_threshold=None
+INFO:httpx:HTTP Request: POST https://d8cef025-71c1-440b-b007-ac5ec1ce6c99.eu-west-2-0.aws.cloud.qdrant.io:6333/collections/enterprise_rag/points/query "HTTP/1.1 200 OK"
+INFO:knowledgemesh:Qdrant retrieval completed | query='What are the two RAG formulations described in the paper, and how do they differ in the passages used during generation?' | collection=enterprise_rag | points=50 | limit=50 | score_threshold=None
+INFO:httpx:HTTP Request: POST https://d8cef025-71c1-440b-b007-ac5ec1ce6c99.eu-west-2-0.aws.cloud.qdrant.io:6333/collections/enterprise_rag/points/query "HTTP/1.1 200 OK"
+INFO:knowledgemesh:Qdrant retrieval completed | query='What benefits does combining parametric and non-parametric memory provide in the RAG approach?' | collection=enterprise_rag | points=50 | limit=50 | score_threshold=None
+INFO:httpx:HTTP Request: POST https://d8cef025-71c1-440b-b007-ac5ec1ce6c99.eu-west-2-0.aws.cloud.qdrant.io:6333/collections/enterprise_rag/points/query "HTTP/1.1 200 OK"
+INFO:knowledgemesh:Qdrant retrieval completed | query='How does RAG-Sequence marginalize retrieved documents, and how does this differ from RAG-Token?' | collection=enterprise_rag | points=50 | limit=50 | score_threshold=None
+INFO:httpx:HTTP Request: POST https://d8cef025-71c1-440b-b007-ac5ec1ce6c99.eu-west-2-0.aws.cloud.qdrant.io:6333/collections/enterprise_rag/points/query "HTTP/1.1 200 OK"
+INFO:knowledgemesh:Qdrant retrieval completed | query='How is the Wikipedia knowledge source organized for RAG retrieval, and what retrieval method and passage sizes are used?' | collection=enterprise_rag | points=50 | limit=50 | score_threshold=None
+INFO:httpx:HTTP Request: POST https://d8cef025-71c1-440b-b007-ac5ec1ce6c99.eu-west-2-0.aws.cloud.qdrant.io:6333/collections/enterprise_rag/points/query "HTTP/1.1 200 OK"
+INFO:knowledgemesh:Qdrant retrieval completed | query='What two dimensions of generation quality were evaluated by humans in the RAG experiments?' | collection=enterprise_rag | points=50 | limit=50 | score_threshold=None
+INFO:httpx:HTTP Request: POST https://d8cef025-71c1-440b-b007-ac5ec1ce6c99.eu-west-2-0.aws.cloud.qdrant.io:6333/collections/enterprise_rag/points/query "HTTP/1.1 200 OK"
+INFO:knowledgemesh:Qdrant retrieval completed | query='What does the RAG evaluation report about documents that contain clues but do not state the answer verbatim?' | collection=enterprise_rag | points=50 | limit=50 | score_threshold=None
+INFO:httpx:HTTP Request: POST https://d8cef025-71c1-440b-b007-ac5ec1ce6c99.eu-west-2-0.aws.cloud.qdrant.io:6333/collections/enterprise_rag/points/query "HTTP/1.1 200 OK"
+INFO:knowledgemesh:Qdrant retrieval completed | query='What criteria and rating scale were used when human labelers evaluated model responses?' | collection=enterprise_rag | points=50 | limit=50 | score_threshold=None
+INFO:httpx:HTTP Request: POST https://d8cef025-71c1-440b-b007-ac5ec1ce6c99.eu-west-2-0.aws.cloud.qdrant.io:6333/collections/enterprise_rag/points/query "HTTP/1.1 200 OK"
+INFO:knowledgemesh:Qdrant retrieval completed | query='How were InstructGPT models evaluated on public datasets, particularly with respect to language-model safety?' | collection=enterprise_rag | points=50 | limit=50 | score_threshold=None
+INFO:httpx:HTTP Request: POST https://d8cef025-71c1-440b-b007-ac5ec1ce6c99.eu-west-2-0.aws.cloud.qdrant.io:6333/collections/enterprise_rag/points/query "HTTP/1.1 200 OK"
+INFO:knowledgemesh:Qdrant retrieval completed | query='What evidence does the PPO evaluation provide about truthfulness and hallucination compared with the GPT-3 baseline?' | collection=enterprise_rag | points=50 | limit=50 | score_threshold=None
+INFO:httpx:HTTP Request: POST https://d8cef025-71c1-440b-b007-ac5ec1ce6c99.eu-west-2-0.aws.cloud.qdrant.io:6333/collections/enterprise_rag/points/query "HTTP/1.1 200 OK"
+INFO:knowledgemesh:Qdrant retrieval completed | query='How much computational effort is reported for the 175B supervised fine-tuning and PPO-ptx stages, compared with GPT-3 training?' | collection=enterprise_rag | points=50 | limit=50 | score_threshold=None
+INFO:httpx:HTTP Request: POST https://d8cef025-71c1-440b-b007-ac5ec1ce6c99.eu-west-2-0.aws.cloud.qdrant.io:6333/collections/enterprise_rag/points/query "HTTP/1.1 200 OK"
+INFO:knowledgemesh:Qdrant retrieval completed | query='What concern about inter-labeler agreement is reported in the human evaluation?' | collection=enterprise_rag | points=50 | limit=50 | score_threshold=None
+INFO:httpx:HTTP Request: POST https://d8cef025-71c1-440b-b007-ac5ec1ce6c99.eu-west-2-0.aws.cloud.qdrant.io:6333/collections/enterprise_rag/points/query "HTTP/1.1 200 OK"
+INFO:knowledgemesh:Qdrant retrieval completed | query='What trade-offs are discussed between open-sourcing large language models and providing controlled API access?' | collection=enterprise_rag | points=50 | limit=50 | score_threshold=None
+INFO:httpx:HTTP Request: POST https://d8cef025-71c1-440b-b007-ac5ec1ce6c99.eu-west-2-0.aws.cloud.qdrant.io:6333/collections/enterprise_rag/points/query "HTTP/1.1 200 OK"
+INFO:knowledgemesh:Qdrant retrieval completed | query='How does the paper define loop engineering, and what does its corpus analysis report about autonomous verification and terminal states?' | collection=enterprise_rag | points=50 | limit=50 | score_threshold=None
+INFO:httpx:HTTP Request: POST https://d8cef025-71c1-440b-b007-ac5ec1ce6c99.eu-west-2-0.aws.cloud.qdrant.io:6333/collections/enterprise_rag/points/query "HTTP/1.1 200 OK"
+INFO:knowledgemesh:Qdrant retrieval completed | query='What five components make up a loop specification?' | collection=enterprise_rag | points=50 | limit=50 | score_threshold=None
+INFO:httpx:HTTP Request: POST https://d8cef025-71c1-440b-b007-ac5ec1ce6c99.eu-west-2-0.aws.cloud.qdrant.io:6333/collections/enterprise_rag/points/query "HTTP/1.1 200 OK"
+INFO:knowledgemesh:Qdrant retrieval completed | query='What dimensions are used to classify loop specifications in the proposed taxonomy?' | collection=enterprise_rag | points=50 | limit=50 | score_threshold=None
+INFO:httpx:HTTP Request: POST https://d8cef025-71c1-440b-b007-ac5ec1ce6c99.eu-west-2-0.aws.cloud.qdrant.io:6333/collections/enterprise_rag/points/query "HTTP/1.1 200 OK"
+INFO:knowledgemesh:Qdrant retrieval completed | query='What proportion of the analyzed loops rely on autonomous verification at levels 1 and 2, and what proportion rely on a level-4 model judge?' | collection=enterprise_rag | points=50 | limit=50 | score_threshold=None
+INFO:httpx:HTTP Request: POST https://d8cef025-71c1-440b-b007-ac5ec1ce6c99.eu-west-2-0.aws.cloud.qdrant.io:6333/collections/enterprise_rag/points/query "HTTP/1.1 200 OK"
+INFO:knowledgemesh:Qdrant retrieval completed | query='What maturity mismatch does the corpus reveal between terminal states, autonomous verification, verifiable goals, automated triggers, reusable skills, and persistent memory?' | collection=enterprise_rag | points=50 | limit=50 | score_threshold=None
+INFO:httpx:HTTP Request: POST https://d8cef025-71c1-440b-b007-ac5ec1ce6c99.eu-west-2-0.aws.cloud.qdrant.io:6333/collections/enterprise_rag/points/query "HTTP/1.1 200 OK"
+INFO:knowledgemesh:Qdrant retrieval completed | query='How is the proposed metric cost per accepted change defined, and why is raw token spending considered insufficient?' | collection=enterprise_rag | points=50 | limit=50 | score_threshold=None
+INFO:httpx:HTTP Request: POST https://d8cef025-71c1-440b-b007-ac5ec1ce6c99.eu-west-2-0.aws.cloud.qdrant.io:6333/collections/enterprise_rag/points/query "HTTP/1.1 200 OK"
+INFO:knowledgemesh:Qdrant retrieval completed | query='What open empirical question does the paper identify about whether loop specifications improve outcomes in real-world use?' | collection=enterprise_rag | points=50 | limit=50 | score_threshold=None
+====================================================================================================
+RECOVERY WEIGHT SWEEP ù LIVE 70-PROBE COUNTERFACTUAL
+====================================================================================================
+Dataset: C:\Users\HP\OneDrive\Desktop\KnowledgeMesh\evals\datasets\inventory_retrieval_probes_70.json
+Probes: 70
+
+Thresholds held constant:
+  MIN_SEMANTIC_SCORE           = 0.45
+  DENSE_RECOVERY_MIN_SCORE    = 0.68
+  DENSE_RECOVERY_MIN_COVERAGE = 0.2
+  DENSE_RECOVERY_K             = 20
+
+====================================================================================================
+RETRIEVAL / RERANK CACHE
+====================================================================================================
+[01/70] inv_attention_001            reranked=50 29341.8 ms
+[02/70] inv_attention_002            reranked=50  1385.4 ms
+[03/70] inv_attention_003            reranked=50   980.4 ms
+[04/70] inv_attention_004            reranked=50  1128.6 ms
+[05/70] inv_harness_003              reranked=50  1006.1 ms
+[06/70] inv_harness_004              reranked=50  1038.4 ms
+[07/70] inv_llm_agents_001           reranked=50   945.2 ms
+[08/70] inv_llm_agents_003           reranked=50  1064.5 ms
+[09/70] inv_llm_001                  reranked=50  1032.8 ms
+[10/70] inv_llm_002                  reranked=50   822.9 ms
+[11/70] inv_rag_001                  reranked=50   902.5 ms
+[12/70] inv_rag_002                  reranked=50  1224.8 ms
+[13/70] inv_rag_003                  reranked=50  1034.6 ms
+[14/70] inv_rag_004                  reranked=50   711.7 ms
+[15/70] inv_training_001             reranked=50   840.9 ms
+[16/70] inv_training_002             reranked=50   987.9 ms
+[17/70] inv_training_003             reranked=50   773.8 ms
+[18/70] inv_training_004             reranked=50   693.7 ms
+[19/70] inv_loop_001                 reranked=50  1102.3 ms
+[20/70] inv_loop_002                 reranked=50  1130.5 ms
+[21/70] inv_loop_003                 reranked=50   698.3 ms
+[22/70] inv_attention_005            reranked=50   741.3 ms
+[23/70] inv_attention_006            reranked=50  1128.1 ms
+[24/70] inv_attention_007            reranked=50  1014.9 ms
+[25/70] inv_attention_008            reranked=50  1011.2 ms
+[26/70] inv_attention_009            reranked=50   932.1 ms
+[27/70] inv_attention_010            reranked=50  1017.5 ms
+[28/70] inv_harness_005              reranked=50   933.4 ms
+[29/70] inv_harness_006              reranked=50  1031.4 ms
+[30/70] inv_harness_007              reranked=50  1013.6 ms
+[31/70] inv_harness_008              reranked=50  1121.7 ms
+[32/70] inv_harness_009              reranked=50   743.7 ms
+[33/70] inv_harness_010              reranked=50  1004.4 ms
+[34/70] inv_harness_011              reranked=50   814.8 ms
+[35/70] inv_harness_012              reranked=50   801.8 ms
+[36/70] inv_llm_agents_005           reranked=50   939.6 ms
+[37/70] inv_llm_agents_006           reranked=50   832.8 ms
+[38/70] inv_llm_agents_007           reranked=50   995.8 ms
+[39/70] inv_llm_agents_008           reranked=50   725.5 ms
+[40/70] inv_llm_agents_009           reranked=50   989.5 ms
+[41/70] inv_llm_agents_010           reranked=50   759.8 ms
+[42/70] inv_llm_agents_011           reranked=50  1233.0 ms
+[43/70] inv_llm_agents_012           reranked=50   709.7 ms
+[44/70] inv_llm_005                  reranked=50   688.8 ms
+[45/70] inv_llm_006                  reranked=50   768.1 ms
+[46/70] inv_llm_007                  reranked=50   995.2 ms
+[47/70] inv_llm_008                  reranked=50   699.6 ms
+[48/70] inv_llm_009                  reranked=50   714.3 ms
+[49/70] inv_llm_010                  reranked=50  1054.9 ms
+[50/70] inv_llm_011                  reranked=50   912.7 ms
+[51/70] inv_llm_012                  reranked=50   935.4 ms
+[52/70] inv_rag_005                  reranked=50  1000.8 ms
+[53/70] inv_rag_006                  reranked=50   743.1 ms
+[54/70] inv_rag_007                  reranked=50   759.7 ms
+[55/70] inv_rag_008                  reranked=50   760.5 ms
+[56/70] inv_rag_009                  reranked=50  1037.9 ms
+[57/70] inv_rag_010                  reranked=50   736.0 ms
+[58/70] inv_training_005             reranked=50   962.8 ms
+[59/70] inv_training_006             reranked=50  1050.5 ms
+[60/70] inv_training_007             reranked=50  1644.5 ms
+[61/70] inv_training_008             reranked=50  1014.2 ms
+[62/70] inv_training_009             reranked=50   996.1 ms
+[63/70] inv_training_010             reranked=50   899.1 ms
+[64/70] inv_loop_005                 reranked=50   785.3 ms
+[65/70] inv_loop_006                 reranked=50   730.7 ms
+[66/70] inv_loop_007                 reranked=50   691.3 ms
+[67/70] inv_loop_008                 reranked=50   923.0 ms
+[68/70] inv_loop_009                 reranked=50   940.7 ms
+[69/70] inv_loop_010                 reranked=50  1007.0 ms
+[70/70] inv_loop_011                 reranked=50  1096.3 ms
+
+Retrieval/rerank cache complete.
+
+
+====================================================================================================
+AGGREGATE
+====================================================================================================
+Variant                      Hit@5  Neighbor       MRR    nDCG@5
+----------------------------------------------------------------------------------------------------
+production                   0.857     0.886     0.756     0.781
+dense_heavy                  0.843     0.871     0.750     0.773
+dense_more                   0.871     0.886     0.757     0.785
+dense_dominant               0.871     0.886     0.758     0.786
+dense_plus_coverage          0.857     0.871     0.754     0.779
+
+====================================================================================================
+RESCUES / REGRESSIONS VS PRODUCTION
+====================================================================================================
+
+dense_heavy
+  RESCUED   (0): []
+  REGRESSED (1): ['inv_llm_agents_003']
+
+dense_more
+  RESCUED   (2): ['inv_loop_001', 'inv_rag_008']
+  REGRESSED (1): ['inv_llm_agents_003']
+
+dense_dominant
+  RESCUED   (2): ['inv_loop_001', 'inv_rag_008']
+  REGRESSED (1): ['inv_llm_agents_003']
+
+dense_plus_coverage
+  RESCUED   (1): ['inv_loop_001']
+  REGRESSED (1): ['inv_llm_agents_003']
+
+====================================================================================================
+KNOWN A_EXACT FAILURE CHECK
+====================================================================================================
+
+inv_loop_001
+  production               hit=0 top5=[('a26a0a845b9004cd2b884c79', '11'), ('a26a0a845b9004cd2b884c79', '9'), ('a26a0a845b9004cd2b884c79', '4'), ('a26a0a845b9004cd2b884c79', '1'), ('a26a0a845b9004cd2b884c79', '8')]
+  dense_heavy              hit=0 top5=[('a26a0a845b9004cd2b884c79', '11'), ('a26a0a845b9004cd2b884c79', '9'), ('a26a0a845b9004cd2b884c79', '4'), ('a26a0a845b9004cd2b884c79', '1'), ('a26a0a845b9004cd2b884c79', '2')]
+  dense_more               hit=1 top5=[('a26a0a845b9004cd2b884c79', '11'), ('a26a0a845b9004cd2b884c79', '9'), ('a26a0a845b9004cd2b884c79', '4'), ('a26a0a845b9004cd2b884c79', '0'), ('a26a0a845b9004cd2b884c79', '2')]
+  dense_dominant           hit=1 top5=[('a26a0a845b9004cd2b884c79', '11'), ('a26a0a845b9004cd2b884c79', '9'), ('a26a0a845b9004cd2b884c79', '4'), ('a26a0a845b9004cd2b884c79', '0'), ('a26a0a845b9004cd2b884c79', '2')]
+  dense_plus_coverage      hit=1 top5=[('a26a0a845b9004cd2b884c79', '11'), ('a26a0a845b9004cd2b884c79', '9'), ('a26a0a845b9004cd2b884c79', '4'), ('a26a0a845b9004cd2b884c79', '0'), ('a26a0a845b9004cd2b884c79', '2')]
+
+inv_harness_011
+  production               hit=0 top5=[('66f55cf4060534797ac59189', '23'), ('66f55cf4060534797ac59189', '66'), ('66f55cf4060534797ac59189', '4'), ('66f55cf4060534797ac59189', '13'), ('66f55cf4060534797ac59189', '10')]
+  dense_heavy              hit=0 top5=[('66f55cf4060534797ac59189', '23'), ('66f55cf4060534797ac59189', '66'), ('66f55cf4060534797ac59189', '4'), ('66f55cf4060534797ac59189', '13'), ('66f55cf4060534797ac59189', '10')]
+  dense_more               hit=0 top5=[('66f55cf4060534797ac59189', '23'), ('66f55cf4060534797ac59189', '66'), ('66f55cf4060534797ac59189', '4'), ('66f55cf4060534797ac59189', '13'), ('66f55cf4060534797ac59189', '10')]
+  dense_dominant           hit=0 top5=[('66f55cf4060534797ac59189', '23'), ('66f55cf4060534797ac59189', '4'), ('66f55cf4060534797ac59189', '13'), ('66f55cf4060534797ac59189', '10'), ('66f55cf4060534797ac59189', '92')]
+  dense_plus_coverage      hit=0 top5=[('66f55cf4060534797ac59189', '23'), ('66f55cf4060534797ac59189', '66'), ('66f55cf4060534797ac59189', '4'), ('66f55cf4060534797ac59189', '13'), ('66f55cf4060534797ac59189', '10')]
+
+inv_rag_008
+  production               hit=0 top5=[('89e40c0de3ce2081b9d726b9', '1'), ('89e40c0de3ce2081b9d726b9', '3'), ('89e40c0de3ce2081b9d726b9', '24'), ('89e40c0de3ce2081b9d726b9', '48'), ('89e40c0de3ce2081b9d726b9', '19')]
+  dense_heavy              hit=0 top5=[('89e40c0de3ce2081b9d726b9', '1'), ('89e40c0de3ce2081b9d726b9', '3'), ('89e40c0de3ce2081b9d726b9', '24'), ('89e40c0de3ce2081b9d726b9', '48'), ('89e40c0de3ce2081b9d726b9', '19')]
+  dense_more               hit=1 top5=[('89e40c0de3ce2081b9d726b9', '1'), ('89e40c0de3ce2081b9d726b9', '3'), ('89e40c0de3ce2081b9d726b9', '24'), ('89e40c0de3ce2081b9d726b9', '19'), ('89e40c0de3ce2081b9d726b9', '9')]
+  dense_dominant           hit=1 top5=[('89e40c0de3ce2081b9d726b9', '1'), ('89e40c0de3ce2081b9d726b9', '3'), ('89e40c0de3ce2081b9d726b9', '24'), ('89e40c0de3ce2081b9d726b9', '19'), ('89e40c0de3ce2081b9d726b9', '9')]
+  dense_plus_coverage      hit=0 top5=[('89e40c0de3ce2081b9d726b9', '1'), ('89e40c0de3ce2081b9d726b9', '3'), ('89e40c0de3ce2081b9d726b9', '24'), ('89e40c0de3ce2081b9d726b9', '48'), ('89e40c0de3ce2081b9d726b9', '19')]
+
+inv_rag_009
+  production               hit=0 top5=[('89e40c0de3ce2081b9d726b9', '15'), ('89e40c0de3ce2081b9d726b9', '10')]
+  dense_heavy              hit=0 top5=[('89e40c0de3ce2081b9d726b9', '15'), ('89e40c0de3ce2081b9d726b9', '10')]
+  dense_more               hit=0 top5=[('89e40c0de3ce2081b9d726b9', '15'), ('89e40c0de3ce2081b9d726b9', '10')]
+  dense_dominant           hit=0 top5=[('89e40c0de3ce2081b9d726b9', '15'), ('89e40c0de3ce2081b9d726b9', '10')]
+  dense_plus_coverage      hit=0 top5=[('89e40c0de3ce2081b9d726b9', '15'), ('89e40c0de3ce2081b9d726b9', '10')]
+
+inv_training_005
+  production               hit=0 top5=[('c7cc94a4d3e661a199e0bb13', '80'), ('c7cc94a4d3e661a199e0bb13', '20'), ('c7cc94a4d3e661a199e0bb13', '81'), ('c7cc94a4d3e661a199e0bb13', '26'), ('c7cc94a4d3e661a199e0bb13', '25')]
+  dense_heavy              hit=0 top5=[('c7cc94a4d3e661a199e0bb13', '80'), ('c7cc94a4d3e661a199e0bb13', '20'), ('c7cc94a4d3e661a199e0bb13', '81'), ('c7cc94a4d3e661a199e0bb13', '26'), ('c7cc94a4d3e661a199e0bb13', '25')]
+  dense_more               hit=0 top5=[('c7cc94a4d3e661a199e0bb13', '80'), ('c7cc94a4d3e661a199e0bb13', '20'), ('c7cc94a4d3e661a199e0bb13', '104'), ('c7cc94a4d3e661a199e0bb13', '25'), ('c7cc94a4d3e661a199e0bb13', '18')]
+  dense_dominant           hit=0 top5=[('c7cc94a4d3e661a199e0bb13', '80'), ('c7cc94a4d3e661a199e0bb13', '20'), ('c7cc94a4d3e661a199e0bb13', '104'), ('c7cc94a4d3e661a199e0bb13', '25'), ('c7cc94a4d3e661a199e0bb13', '18')]
+  dense_plus_coverage      hit=0 top5=[('c7cc94a4d3e661a199e0bb13', '80'), ('c7cc94a4d3e661a199e0bb13', '20'), ('c7cc94a4d3e661a199e0bb13', '81'), ('c7cc94a4d3e661a199e0bb13', '26'), ('c7cc94a4d3e661a199e0bb13', '25')]

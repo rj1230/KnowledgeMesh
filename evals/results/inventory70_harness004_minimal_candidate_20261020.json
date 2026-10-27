@@ -1,0 +1,44 @@
+{
+  "probe_id": "inv_harness_004",
+  "question": "How does the paper describe the effect of encoding recurring coordination patterns into tools, middleware, and memory?",
+  "source_filename": "harness.pdf",
+  "original_relevant_chunks": [
+    {
+      "document_id": "66f55cf4060534797ac59189",
+      "chunk_id": 93
+    }
+  ],
+  "candidate_live_document_id": "7b7add4488da35c33e99474d",
+  "proposed_minimal_live_chunk_ids": [
+    108
+  ],
+  "verified_live_references": [
+    {
+      "document_id": "7b7add4488da35c33e99474d",
+      "chunk_id": 108,
+      "point_id": "b9559456-0ffa-5300-8bf3-df30cb186512",
+      "source": "harness.pdf"
+    }
+  ],
+  "supplemental_candidates": [
+    {
+      "document_id": "7b7add4488da35c33e99474d",
+      "chunk_id": 21,
+      "point_id": "48d5b7ec-8199-5c3b-9bbf-6d6e5a956699",
+      "source": "harness.pdf",
+      "reason": "Provides quantitative token reductions against ACE, TF-GRPO, and the seed baseline."
+    }
+  ],
+  "excluded_from_minimal_set": [
+    {
+      "document_id": "7b7add4488da35c33e99474d",
+      "chunk_id": 6,
+      "point_id": "bf9c4fe1-c88e-51a6-a0a6-c32b8818820b",
+      "source": "harness.pdf",
+      "reason": "Adds component-ablation evidence but is not necessary to answer the core question."
+    }
+  ],
+  "rationale": "Chunk 108 directly explains the coordination-pattern mechanism and its effects on per-call compute, energy footprint, and harness iteration speed.",
+  "review_status": "PROPOSED_MINIMAL_SET_REQUIRES_FINAL_REVIEW",
+  "original_dataset_modified": false
+}

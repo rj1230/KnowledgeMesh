@@ -1,0 +1,1283 @@
+{
+  "retrieval": {
+    "total_cases": 11,
+    "successful_cases": 11,
+    "failed_cases": 0,
+    "metrics": {
+      "retrieval_recall_at_5": 0.0,
+      "retrieval_precision_at_5": 0.0,
+      "retrieval_hit_at_5": 0.0,
+      "retrieval_document_hit_at_5": 0.0,
+      "retrieval_neighbor_hit_at_5": 0.0,
+      "ndcg_at_5": 0.0,
+      "reciprocal_rank": 0.0,
+      "web_hit_at_5": null,
+      "web_reciprocal_rank": null,
+      "web_domain_precision_at_5": null,
+      "answer_relevancy": 0.5968066024884208,
+      "answer_point_coverage": 1.0,
+      "citation_precision": 0.8787878787878788,
+      "citation_recall": 1.0,
+      "grounding_score": 0.8779220779220779,
+      "unsupported_claim_rate": 0.12207792207792209,
+      "retrieved_unknown_id_rate": 1.0,
+      "routing_accuracy": 0.8181818181818182,
+      "web_decision_accuracy": 0.8181818181818182,
+      "web_use_recall": null,
+      "unnecessary_web_rate": 0.18181818181818182,
+      "correct_abstention_rate": null,
+      "false_abstention_rate": 0.0,
+      "final_gate_pass_rate": 0.7272727272727273
+    },
+    "metrics_n": {
+      "retrieval_recall_at_5": 11,
+      "retrieval_precision_at_5": 11,
+      "retrieval_hit_at_5": 11,
+      "retrieval_document_hit_at_5": 11,
+      "retrieval_neighbor_hit_at_5": 11,
+      "ndcg_at_5": 11,
+      "reciprocal_rank": 11,
+      "web_hit_at_5": 0,
+      "web_reciprocal_rank": 0,
+      "web_domain_precision_at_5": 0,
+      "answer_relevancy": 11,
+      "answer_point_coverage": 11,
+      "citation_precision": 11,
+      "citation_recall": 11,
+      "grounding_score": 11,
+      "unsupported_claim_rate": 11,
+      "retrieved_unknown_id_rate": 11,
+      "routing_accuracy": 11,
+      "web_decision_accuracy": 11,
+      "web_use_recall": 0,
+      "unnecessary_web_rate": 11,
+      "correct_abstention_rate": 0,
+      "false_abstention_rate": 11,
+      "final_gate_pass_rate": 11
+    },
+    "quality_gate": {
+      "passed": false,
+      "checks": {
+        "retrieval_recall_at_5": {
+          "value": 0.0,
+          "threshold": 0.7,
+          "passed": false
+        },
+        "answer_relevancy": {
+          "value": 0.5968066024884208,
+          "threshold": 0.7,
+          "passed": false
+        },
+        "grounding_score": {
+          "value": 0.8779220779220779,
+          "threshold": 0.9,
+          "passed": false
+        },
+        "citation_precision": {
+          "value": 0.8787878787878788,
+          "threshold": 0.9,
+          "passed": false
+        },
+        "final_gate_pass_rate": {
+          "value": 0.7272727272727273,
+          "threshold": 0.9,
+          "passed": false
+        },
+        "unsupported_claim_rate": {
+          "value": 0.12207792207792209,
+          "threshold": 0.1,
+          "passed": false
+        },
+        "web_decision_accuracy": {
+          "value": 0.8181818181818182,
+          "threshold": 0.8,
+          "passed": true
+        },
+        "correct_abstention_rate": {
+          "value": null,
+          "threshold": 0.8,
+          "passed": true,
+          "skipped": true
+        },
+        "false_abstention_rate": {
+          "value": 0.0,
+          "threshold": 0.1,
+          "passed": true
+        },
+        "attack_success_rate": {
+          "value": null,
+          "threshold": 0.0,
+          "passed": true,
+          "skipped": true
+        },
+        "leaked_sensitive_content": {
+          "value": null,
+          "threshold": 0.0,
+          "passed": true,
+          "skipped": true
+        },
+        "false_refusal": {
+          "value": null,
+          "threshold": 0.2,
+          "passed": true,
+          "skipped": true
+        },
+        "safety_correct": {
+          "value": null,
+          "threshold": 0.9,
+          "passed": true,
+          "skipped": true
+        }
+      }
+    },
+    "cases": [
+      {
+        "case_id": "gp001",
+        "category": "golden",
+        "question": "What is retrieval-augmented generation and what two types of memory does it combine?",
+        "answer": "Retrieval‑augmented generation (RAG) are models that combine a pre‑trained seq2seq transformer (parametric memory) with a dense vector index of Wikipedia accessed by a neural retriever (non‑parametric memory) [chunk_2][chunk_1]",
+        "metrics": {
+          "retrieval_recall_at_5": 0.0,
+          "retrieval_precision_at_5": 0.0,
+          "retrieval_hit_at_5": 0.0,
+          "retrieval_document_hit_at_5": 0.0,
+          "retrieval_neighbor_hit_at_5": 0.0,
+          "ndcg_at_5": 0.0,
+          "reciprocal_rank": 0.0,
+          "web_hit_at_5": null,
+          "web_reciprocal_rank": null,
+          "web_domain_precision_at_5": null,
+          "routing_accuracy": 1.0,
+          "web_decision_accuracy": 1.0,
+          "web_use_recall": null,
+          "unnecessary_web_rate": 0.0,
+          "correct_abstention_rate": null,
+          "false_abstention_rate": 0.0,
+          "answer_relevancy": 0.46153846153846156,
+          "answer_point_coverage": 1.0,
+          "citation_precision": 1.0,
+          "citation_recall": 1.0,
+          "grounding_score": 1.0,
+          "unsupported_claim_rate": 0.0,
+          "retrieved_unknown_id_rate": 1.0
+        },
+        "retrieval": {
+          "retrieved_ids": [
+            "8f25ec73a5dcfeca772c16ff::4",
+            "8f25ec73a5dcfeca772c16ff::0",
+            "8f25ec73a5dcfeca772c16ff::1",
+            "8f25ec73a5dcfeca772c16ff::28",
+            "8f25ec73a5dcfeca772c16ff::3"
+          ],
+          "reranked_ids": [
+            "8f25ec73a5dcfeca772c16ff::4",
+            "8f25ec73a5dcfeca772c16ff::0",
+            "8f25ec73a5dcfeca772c16ff::1",
+            "8f25ec73a5dcfeca772c16ff::28",
+            "8f25ec73a5dcfeca772c16ff::3"
+          ],
+          "relevant_ids": [
+            "89e40c0de3ce2081b9d726b9::0",
+            "89e40c0de3ce2081b9d726b9::1"
+          ],
+          "web_urls": [],
+          "expected_urls": [],
+          "expected_domains": [],
+          "first_relevant_rank": null,
+          "expected_route": "private",
+          "actual_route": "private",
+          "abstained": false,
+          "relevant_labels": [
+            "RAG.pdf#0",
+            "RAG.pdf#1"
+          ],
+          "retrieved_labels": [
+            "8f25ec73a5dcfeca772c16ff::4",
+            "8f25ec73a5dcfeca772c16ff::0",
+            "8f25ec73a5dcfeca772c16ff::1",
+            "8f25ec73a5dcfeca772c16ff::28",
+            "8f25ec73a5dcfeca772c16ff::3"
+          ],
+          "unknown_retrieved_ids": [
+            "8f25ec73a5dcfeca772c16ff::4",
+            "8f25ec73a5dcfeca772c16ff::0",
+            "8f25ec73a5dcfeca772c16ff::1",
+            "8f25ec73a5dcfeca772c16ff::28",
+            "8f25ec73a5dcfeca772c16ff::3"
+          ]
+        },
+        "citations": {
+          "cited_ids": [
+            "chunk_1"
+          ],
+          "supported_ids": [
+            "chunk_1"
+          ],
+          "required_ids": []
+        },
+        "self_rag": {
+          "revision_count": 1,
+          "total_claims": 1,
+          "unsupported_claims": 0,
+          "final_gate_passed": true
+        },
+        "latency_ms": 58559.18609999935,
+        "error": null
+      },
+      {
+        "case_id": "gp002",
+        "category": "golden",
+        "question": "What are the main components of an LLM-based agent according to the survey?",
+        "answer": "- **Brain** – the core of the agent, built around a large language model that stores memory, performs reasoning, and plans actions. [chunk_2]\n- **Perception** – expands the agent’s sensory input from text to multimodal modalities (text, sound, vision, touch, etc.). [chunk_2]\n- **Action** – enables the agent to produce textual output, use tools, and perform embodied actions to interact with and shape its environment. [chunk_2]\n- **Memory** – a subsystem within the brain that records past observations, thoughts, and actions to support strategy formulation and decision‑making. [chunk_5]\n- **Reasoning & Planning** – capabilities of the brain that allow the agent to analyze information and generate high‑level action plans, often enhanced by external feedback or hierarchical reinforcement learning. [chunk_4]",
+        "metrics": {
+          "retrieval_recall_at_5": 0.0,
+          "retrieval_precision_at_5": 0.0,
+          "retrieval_hit_at_5": 0.0,
+          "retrieval_document_hit_at_5": 0.0,
+          "retrieval_neighbor_hit_at_5": 0.0,
+          "ndcg_at_5": 0.0,
+          "reciprocal_rank": 0.0,
+          "web_hit_at_5": null,
+          "web_reciprocal_rank": null,
+          "web_domain_precision_at_5": null,
+          "routing_accuracy": 1.0,
+          "web_decision_accuracy": 1.0,
+          "web_use_recall": null,
+          "unnecessary_web_rate": 0.0,
+          "correct_abstention_rate": null,
+          "false_abstention_rate": 0.0,
+          "answer_relevancy": 0.3076923076923077,
+          "answer_point_coverage": 1.0,
+          "citation_precision": 1.0,
+          "citation_recall": 1.0,
+          "grounding_score": 1.0,
+          "unsupported_claim_rate": 0.0,
+          "retrieved_unknown_id_rate": 1.0
+        },
+        "retrieval": {
+          "retrieved_ids": [
+            "e65504ab611fa43ac5013829::11",
+            "e65504ab611fa43ac5013829::1",
+            "e65504ab611fa43ac5013829::43",
+            "e65504ab611fa43ac5013829::64",
+            "e65504ab611fa43ac5013829::75"
+          ],
+          "reranked_ids": [
+            "e65504ab611fa43ac5013829::11",
+            "e65504ab611fa43ac5013829::1",
+            "e65504ab611fa43ac5013829::43",
+            "e65504ab611fa43ac5013829::64",
+            "e65504ab611fa43ac5013829::75"
+          ],
+          "relevant_ids": [
+            "7ed18d7a17efb3ce8ec56478::9"
+          ],
+          "web_urls": [],
+          "expected_urls": [],
+          "expected_domains": [],
+          "first_relevant_rank": null,
+          "expected_route": "private",
+          "actual_route": "private",
+          "abstained": false,
+          "relevant_labels": [
+            "LLM Based-learning.pdf#9"
+          ],
+          "retrieved_labels": [
+            "e65504ab611fa43ac5013829::11",
+            "e65504ab611fa43ac5013829::1",
+            "e65504ab611fa43ac5013829::43",
+            "e65504ab611fa43ac5013829::64",
+            "e65504ab611fa43ac5013829::75"
+          ],
+          "unknown_retrieved_ids": [
+            "e65504ab611fa43ac5013829::11",
+            "e65504ab611fa43ac5013829::1",
+            "e65504ab611fa43ac5013829::43",
+            "e65504ab611fa43ac5013829::64",
+            "e65504ab611fa43ac5013829::75"
+          ]
+        },
+        "citations": {
+          "cited_ids": [
+            "chunk_2",
+            "chunk_5",
+            "chunk_4"
+          ],
+          "supported_ids": [
+            "chunk_2",
+            "chunk_5",
+            "chunk_4"
+          ],
+          "required_ids": []
+        },
+        "self_rag": {
+          "revision_count": 0,
+          "total_claims": 5,
+          "unsupported_claims": 0,
+          "final_gate_passed": true
+        },
+        "latency_ms": 20135.922900000878,
+        "error": null
+      },
+      {
+        "case_id": "gp003",
+        "category": "golden",
+        "question": "What memory capabilities does AutoGPT provide?",
+        "answer": "The supplied evidence does not contain information about AutoGPT’s memory architecture. [chunk_4]",
+        "metrics": {
+          "retrieval_recall_at_5": 0.0,
+          "retrieval_precision_at_5": 0.0,
+          "retrieval_hit_at_5": 0.0,
+          "retrieval_document_hit_at_5": 0.0,
+          "retrieval_neighbor_hit_at_5": 0.0,
+          "ndcg_at_5": 0.0,
+          "reciprocal_rank": 0.0,
+          "web_hit_at_5": null,
+          "web_reciprocal_rank": null,
+          "web_domain_precision_at_5": null,
+          "routing_accuracy": 1.0,
+          "web_decision_accuracy": 1.0,
+          "web_use_recall": null,
+          "unnecessary_web_rate": 0.0,
+          "correct_abstention_rate": null,
+          "false_abstention_rate": 0.0,
+          "answer_relevancy": 0.5,
+          "answer_point_coverage": 1.0,
+          "citation_precision": 0.0,
+          "citation_recall": 1.0,
+          "grounding_score": 0.0,
+          "unsupported_claim_rate": 1.0,
+          "retrieved_unknown_id_rate": 1.0
+        },
+        "retrieval": {
+          "retrieved_ids": [
+            "8f25ec73a5dcfeca772c16ff::27",
+            "e65504ab611fa43ac5013829::45",
+            "23b038dd8383e3d47638322b::18",
+            "8f25ec73a5dcfeca772c16ff::0",
+            "e65504ab611fa43ac5013829::201"
+          ],
+          "reranked_ids": [
+            "8f25ec73a5dcfeca772c16ff::27",
+            "e65504ab611fa43ac5013829::45",
+            "23b038dd8383e3d47638322b::18",
+            "8f25ec73a5dcfeca772c16ff::0",
+            "e65504ab611fa43ac5013829::201"
+          ],
+          "relevant_ids": [
+            "7ed18d7a17efb3ce8ec56478::74"
+          ],
+          "web_urls": [],
+          "expected_urls": [],
+          "expected_domains": [],
+          "first_relevant_rank": null,
+          "expected_route": "private",
+          "actual_route": "private",
+          "abstained": false,
+          "relevant_labels": [
+            "LLM Based-learning.pdf#74"
+          ],
+          "retrieved_labels": [
+            "8f25ec73a5dcfeca772c16ff::27",
+            "e65504ab611fa43ac5013829::45",
+            "23b038dd8383e3d47638322b::18",
+            "8f25ec73a5dcfeca772c16ff::0",
+            "e65504ab611fa43ac5013829::201"
+          ],
+          "unknown_retrieved_ids": [
+            "8f25ec73a5dcfeca772c16ff::27",
+            "e65504ab611fa43ac5013829::45",
+            "23b038dd8383e3d47638322b::18",
+            "8f25ec73a5dcfeca772c16ff::0",
+            "e65504ab611fa43ac5013829::201"
+          ]
+        },
+        "citations": {
+          "cited_ids": [
+            "chunk_4"
+          ],
+          "supported_ids": [],
+          "required_ids": []
+        },
+        "self_rag": {
+          "revision_count": 2,
+          "total_claims": 1,
+          "unsupported_claims": 1,
+          "final_gate_passed": false
+        },
+        "latency_ms": 40118.912300000375,
+        "error": null
+      },
+      {
+        "case_id": "gp004",
+        "category": "golden",
+        "question": "What is the role of the brain in an LLM-based agent?",
+        "answer": "- The brain is the core component of an LLM‑based agent, built around a large language model and serving as the central “control center.” [chunk_1][chunk_2]\n- It stores the agent’s crucial memories, information, and knowledge. [chunk_1]\n- It carries out information‑processing functions such as thinking, decision‑making, reasoning, and planning. [chunk_4]\n- By retrieving and recalling stored knowledge and memories, the brain helps the agent devise plans, reason about situations, and make informed decisions. [chunk_2]\n- It can also update knowledge and summarize past observations, thoughts, and actions for future use. [chunk_2]",
+        "metrics": {
+          "retrieval_recall_at_5": 0.0,
+          "retrieval_precision_at_5": 0.0,
+          "retrieval_hit_at_5": 0.0,
+          "retrieval_document_hit_at_5": 0.0,
+          "retrieval_neighbor_hit_at_5": 0.0,
+          "ndcg_at_5": 0.0,
+          "reciprocal_rank": 0.0,
+          "web_hit_at_5": null,
+          "web_reciprocal_rank": null,
+          "web_domain_precision_at_5": null,
+          "routing_accuracy": 1.0,
+          "web_decision_accuracy": 1.0,
+          "web_use_recall": null,
+          "unnecessary_web_rate": 0.0,
+          "correct_abstention_rate": null,
+          "false_abstention_rate": 0.0,
+          "answer_relevancy": 0.7272727272727273,
+          "answer_point_coverage": 1.0,
+          "citation_precision": 1.0,
+          "citation_recall": 1.0,
+          "grounding_score": 1.0,
+          "unsupported_claim_rate": 0.0,
+          "retrieved_unknown_id_rate": 1.0
+        },
+        "retrieval": {
+          "retrieved_ids": [
+            "e65504ab611fa43ac5013829::11",
+            "e65504ab611fa43ac5013829::43",
+            "e65504ab611fa43ac5013829::64",
+            "e65504ab611fa43ac5013829::35",
+            "e65504ab611fa43ac5013829::32"
+          ],
+          "reranked_ids": [
+            "e65504ab611fa43ac5013829::11",
+            "e65504ab611fa43ac5013829::43",
+            "e65504ab611fa43ac5013829::64",
+            "e65504ab611fa43ac5013829::35",
+            "e65504ab611fa43ac5013829::32"
+          ],
+          "relevant_ids": [
+            "7ed18d7a17efb3ce8ec56478::9"
+          ],
+          "web_urls": [],
+          "expected_urls": [],
+          "expected_domains": [],
+          "first_relevant_rank": null,
+          "expected_route": "private",
+          "actual_route": "private",
+          "abstained": false,
+          "relevant_labels": [
+            "LLM Based-learning.pdf#9"
+          ],
+          "retrieved_labels": [
+            "e65504ab611fa43ac5013829::11",
+            "e65504ab611fa43ac5013829::43",
+            "e65504ab611fa43ac5013829::64",
+            "e65504ab611fa43ac5013829::35",
+            "e65504ab611fa43ac5013829::32"
+          ],
+          "unknown_retrieved_ids": [
+            "e65504ab611fa43ac5013829::11",
+            "e65504ab611fa43ac5013829::43",
+            "e65504ab611fa43ac5013829::64",
+            "e65504ab611fa43ac5013829::35",
+            "e65504ab611fa43ac5013829::32"
+          ]
+        },
+        "citations": {
+          "cited_ids": [
+            "chunk_1",
+            "chunk_2",
+            "chunk_4"
+          ],
+          "supported_ids": [
+            "chunk_1",
+            "chunk_2",
+            "chunk_4"
+          ],
+          "required_ids": []
+        },
+        "self_rag": {
+          "revision_count": 0,
+          "total_claims": 5,
+          "unsupported_claims": 0,
+          "final_gate_passed": true
+        },
+        "latency_ms": 29816.31019999986,
+        "error": null
+      },
+      {
+        "case_id": "gp005",
+        "category": "golden",
+        "question": "How does the RAG retriever obtain documents for a query?",
+        "answer": "- The RAG retriever uses the DPR bi‑encoder architecture, defining a query encoder q(x) and a document encoder d(z) with pη(z|x) ∝ exp(d(z)ᵀ q(x)) . [chunk_1][chunk_2]\n- Retrieving the top‑k documents is posed as a Maximum Inner Product Search (MIPS) problem, which can be approximated in sub‑linear time . [chunk_1]\n- A pre‑trained DPR bi‑encoder initializes the retriever and builds a document index, referred to as the non‑parametric memory . [chunk_1]\n- During inference the retriever returns the top‑K documents z_i for a query x . [chunk_1]",
+        "metrics": {
+          "retrieval_recall_at_5": 0.0,
+          "retrieval_precision_at_5": 0.0,
+          "retrieval_hit_at_5": 0.0,
+          "retrieval_document_hit_at_5": 0.0,
+          "retrieval_neighbor_hit_at_5": 0.0,
+          "ndcg_at_5": 0.0,
+          "reciprocal_rank": 0.0,
+          "web_hit_at_5": null,
+          "web_reciprocal_rank": null,
+          "web_domain_precision_at_5": null,
+          "routing_accuracy": 1.0,
+          "web_decision_accuracy": 1.0,
+          "web_use_recall": null,
+          "unnecessary_web_rate": 0.0,
+          "correct_abstention_rate": null,
+          "false_abstention_rate": 0.0,
+          "answer_relevancy": 0.7,
+          "answer_point_coverage": 1.0,
+          "citation_precision": 1.0,
+          "citation_recall": 1.0,
+          "grounding_score": 1.0,
+          "unsupported_claim_rate": 0.0,
+          "retrieved_unknown_id_rate": 1.0
+        },
+        "retrieval": {
+          "retrieved_ids": [
+            "8f25ec73a5dcfeca772c16ff::8",
+            "8f25ec73a5dcfeca772c16ff::6",
+            "8f25ec73a5dcfeca772c16ff::3",
+            "8f25ec73a5dcfeca772c16ff::52",
+            "8f25ec73a5dcfeca772c16ff::10"
+          ],
+          "reranked_ids": [
+            "8f25ec73a5dcfeca772c16ff::8",
+            "8f25ec73a5dcfeca772c16ff::6",
+            "8f25ec73a5dcfeca772c16ff::3",
+            "8f25ec73a5dcfeca772c16ff::52",
+            "8f25ec73a5dcfeca772c16ff::10"
+          ],
+          "relevant_ids": [
+            "89e40c0de3ce2081b9d726b9::2",
+            "89e40c0de3ce2081b9d726b9::3"
+          ],
+          "web_urls": [],
+          "expected_urls": [],
+          "expected_domains": [],
+          "first_relevant_rank": null,
+          "expected_route": "private",
+          "actual_route": "private",
+          "abstained": false,
+          "relevant_labels": [
+            "RAG.pdf#2",
+            "RAG.pdf#3"
+          ],
+          "retrieved_labels": [
+            "8f25ec73a5dcfeca772c16ff::8",
+            "8f25ec73a5dcfeca772c16ff::6",
+            "8f25ec73a5dcfeca772c16ff::3",
+            "8f25ec73a5dcfeca772c16ff::52",
+            "8f25ec73a5dcfeca772c16ff::10"
+          ],
+          "unknown_retrieved_ids": [
+            "8f25ec73a5dcfeca772c16ff::8",
+            "8f25ec73a5dcfeca772c16ff::6",
+            "8f25ec73a5dcfeca772c16ff::3",
+            "8f25ec73a5dcfeca772c16ff::52",
+            "8f25ec73a5dcfeca772c16ff::10"
+          ]
+        },
+        "citations": {
+          "cited_ids": [
+            "chunk_1",
+            "chunk_3"
+          ],
+          "supported_ids": [
+            "chunk_1",
+            "chunk_3"
+          ],
+          "required_ids": []
+        },
+        "self_rag": {
+          "revision_count": 1,
+          "total_claims": 4,
+          "unsupported_claims": 0,
+          "final_gate_passed": true
+        },
+        "latency_ms": 73983.39909999777,
+        "error": null
+      },
+      {
+        "case_id": "gp006",
+        "category": "golden",
+        "question": "What BLEU score did the Transformer achieve on the WMT 2014 English-to-French translation task, and how long did it take to train?",
+        "answer": "The Transformer achieved a BLEU score of 41.8 on the WMT 2014 English‑to‑French translation task after training for 3.5 days on eight GPUs . [chunk_1]",
+        "metrics": {
+          "retrieval_recall_at_5": 0.0,
+          "retrieval_precision_at_5": 0.0,
+          "retrieval_hit_at_5": 0.0,
+          "retrieval_document_hit_at_5": 0.0,
+          "retrieval_neighbor_hit_at_5": 0.0,
+          "ndcg_at_5": 0.0,
+          "reciprocal_rank": 0.0,
+          "web_hit_at_5": null,
+          "web_reciprocal_rank": null,
+          "web_domain_precision_at_5": null,
+          "routing_accuracy": 1.0,
+          "web_decision_accuracy": 1.0,
+          "web_use_recall": null,
+          "unnecessary_web_rate": 0.0,
+          "correct_abstention_rate": null,
+          "false_abstention_rate": 0.0,
+          "answer_relevancy": 0.5714285714285714,
+          "answer_point_coverage": 1.0,
+          "citation_precision": 1.0,
+          "citation_recall": 1.0,
+          "grounding_score": 1.0,
+          "unsupported_claim_rate": 0.0,
+          "retrieved_unknown_id_rate": 1.0
+        },
+        "retrieval": {
+          "retrieved_ids": [
+            "9ff74efe2d339c2bb9a53c06::1",
+            "9ff74efe2d339c2bb9a53c06::20",
+            "9ff74efe2d339c2bb9a53c06::19",
+            "9ff74efe2d339c2bb9a53c06::17",
+            "9ff74efe2d339c2bb9a53c06::26"
+          ],
+          "reranked_ids": [
+            "9ff74efe2d339c2bb9a53c06::1",
+            "9ff74efe2d339c2bb9a53c06::20",
+            "9ff74efe2d339c2bb9a53c06::19",
+            "9ff74efe2d339c2bb9a53c06::17",
+            "9ff74efe2d339c2bb9a53c06::26"
+          ],
+          "relevant_ids": [
+            "c5403b511fa73a2221411a42::1"
+          ],
+          "web_urls": [],
+          "expected_urls": [],
+          "expected_domains": [],
+          "first_relevant_rank": null,
+          "expected_route": "private",
+          "actual_route": "private",
+          "abstained": false,
+          "relevant_labels": [
+            "Attention.pdf#1"
+          ],
+          "retrieved_labels": [
+            "9ff74efe2d339c2bb9a53c06::1",
+            "9ff74efe2d339c2bb9a53c06::20",
+            "9ff74efe2d339c2bb9a53c06::19",
+            "9ff74efe2d339c2bb9a53c06::17",
+            "9ff74efe2d339c2bb9a53c06::26"
+          ],
+          "unknown_retrieved_ids": [
+            "9ff74efe2d339c2bb9a53c06::1",
+            "9ff74efe2d339c2bb9a53c06::20",
+            "9ff74efe2d339c2bb9a53c06::19",
+            "9ff74efe2d339c2bb9a53c06::17",
+            "9ff74efe2d339c2bb9a53c06::26"
+          ]
+        },
+        "citations": {
+          "cited_ids": [
+            "chunk_1"
+          ],
+          "supported_ids": [
+            "chunk_1"
+          ],
+          "required_ids": []
+        },
+        "self_rag": {
+          "revision_count": 0,
+          "total_claims": 1,
+          "unsupported_claims": 0,
+          "final_gate_passed": true
+        },
+        "latency_ms": 20935.220700001082,
+        "error": null
+      },
+      {
+        "case_id": "gp007",
+        "category": "golden",
+        "question": "What is the formula for scaled dot-product attention, and how does it compare to additive attention?",
+        "answer": "- Scaled dot‑product attention computes the dot products of queries and keys, divides each by √dₖ, applies a softmax to obtain weights, and then multiplies by the values. In matrix form: Attention(Q, K, V) = softmax(Q Kᵀ / √dₖ) V. [chunk_1]\n- The compatibility function in additive attention is computed by a feed‑forward network with a single hidden layer. [chunk_1]\n- Dot‑product attention is identical to the scaled version except for the scaling factor 1/√dₖ. [chunk_1]\n- Dot‑product attention is faster and more space‑efficient in practice because it can be implemented with highly optimized matrix‑multiplication code. [chunk_2][chunk_1]\n- For small values of dₖ the two mechanisms perform similarly. [chunk_2]\n- For larger dₖ, additive attention outperforms dot‑product attention without scaling. [chunk_2]\n- Scaling the dot products by 1/√dₖ counteracts large magnitudes that push the softmax into regions with very small gradients. [chunk_2]",
+        "metrics": {
+          "retrieval_recall_at_5": 0.0,
+          "retrieval_precision_at_5": 0.0,
+          "retrieval_hit_at_5": 0.0,
+          "retrieval_document_hit_at_5": 0.0,
+          "retrieval_neighbor_hit_at_5": 0.0,
+          "ndcg_at_5": 0.0,
+          "reciprocal_rank": 0.0,
+          "web_hit_at_5": null,
+          "web_reciprocal_rank": null,
+          "web_domain_precision_at_5": null,
+          "routing_accuracy": 1.0,
+          "web_decision_accuracy": 1.0,
+          "web_use_recall": null,
+          "unnecessary_web_rate": 0.0,
+          "correct_abstention_rate": null,
+          "false_abstention_rate": 0.0,
+          "answer_relevancy": 0.6875,
+          "answer_point_coverage": 1.0,
+          "citation_precision": 1.0,
+          "citation_recall": 1.0,
+          "grounding_score": 0.8571428571428571,
+          "unsupported_claim_rate": 0.14285714285714285,
+          "retrieved_unknown_id_rate": 1.0
+        },
+        "retrieval": {
+          "retrieved_ids": [
+            "9ff74efe2d339c2bb9a53c06::8",
+            "9ff74efe2d339c2bb9a53c06::9",
+            "9ff74efe2d339c2bb9a53c06::11",
+            "9ff74efe2d339c2bb9a53c06::22"
+          ],
+          "reranked_ids": [
+            "9ff74efe2d339c2bb9a53c06::8",
+            "9ff74efe2d339c2bb9a53c06::9",
+            "9ff74efe2d339c2bb9a53c06::11",
+            "9ff74efe2d339c2bb9a53c06::22"
+          ],
+          "relevant_ids": [
+            "c5403b511fa73a2221411a42::6",
+            "c5403b511fa73a2221411a42::7"
+          ],
+          "web_urls": [],
+          "expected_urls": [],
+          "expected_domains": [],
+          "first_relevant_rank": null,
+          "expected_route": "private",
+          "actual_route": "private",
+          "abstained": false,
+          "relevant_labels": [
+            "Attention.pdf#6",
+            "Attention.pdf#7"
+          ],
+          "retrieved_labels": [
+            "9ff74efe2d339c2bb9a53c06::8",
+            "9ff74efe2d339c2bb9a53c06::9",
+            "9ff74efe2d339c2bb9a53c06::11",
+            "9ff74efe2d339c2bb9a53c06::22"
+          ],
+          "unknown_retrieved_ids": [
+            "9ff74efe2d339c2bb9a53c06::8",
+            "9ff74efe2d339c2bb9a53c06::9",
+            "9ff74efe2d339c2bb9a53c06::11",
+            "9ff74efe2d339c2bb9a53c06::22"
+          ]
+        },
+        "citations": {
+          "cited_ids": [
+            "chunk_1",
+            "chunk_2"
+          ],
+          "supported_ids": [
+            "chunk_1",
+            "chunk_2"
+          ],
+          "required_ids": []
+        },
+        "self_rag": {
+          "revision_count": 2,
+          "total_claims": 7,
+          "unsupported_claims": 1,
+          "final_gate_passed": false
+        },
+        "latency_ms": 47512.50129999971,
+        "error": null
+      },
+      {
+        "case_id": "gp008",
+        "category": "golden",
+        "question": "In the GPT-3 paper's human-detection experiment, how accurately could people distinguish GPT-3 175B-generated news articles from human-written ones, compared to the easy-to-spot control articles?",
+        "answer": "People correctly identified GPT‑3 175B‑generated news articles only about 52 % of the time, compared to about 88 % for the easy‑to‑spot control model. [chunk_1]",
+        "metrics": {
+          "retrieval_recall_at_5": 0.0,
+          "retrieval_precision_at_5": 0.0,
+          "retrieval_hit_at_5": 0.0,
+          "retrieval_document_hit_at_5": 0.0,
+          "retrieval_neighbor_hit_at_5": 0.0,
+          "ndcg_at_5": 0.0,
+          "reciprocal_rank": 0.0,
+          "web_hit_at_5": null,
+          "web_reciprocal_rank": null,
+          "web_domain_precision_at_5": null,
+          "routing_accuracy": 0.0,
+          "web_decision_accuracy": 0.0,
+          "web_use_recall": null,
+          "unnecessary_web_rate": 1.0,
+          "correct_abstention_rate": null,
+          "false_abstention_rate": 0.0,
+          "answer_relevancy": 0.5,
+          "answer_point_coverage": 1.0,
+          "citation_precision": 1.0,
+          "citation_recall": 1.0,
+          "grounding_score": 1.0,
+          "unsupported_claim_rate": 0.0,
+          "retrieved_unknown_id_rate": 1.0
+        },
+        "retrieval": {
+          "retrieved_ids": [
+            "68424e3d1aa5e84e426da70c::70",
+            "68424e3d1aa5e84e426da70c::135",
+            "68424e3d1aa5e84e426da70c::69",
+            "68424e3d1aa5e84e426da70c::133",
+            "68424e3d1aa5e84e426da70c::68"
+          ],
+          "reranked_ids": [
+            "68424e3d1aa5e84e426da70c::70",
+            "68424e3d1aa5e84e426da70c::135",
+            "68424e3d1aa5e84e426da70c::69",
+            "68424e3d1aa5e84e426da70c::133",
+            "68424e3d1aa5e84e426da70c::68"
+          ],
+          "relevant_ids": [
+            "3caf265f6ce786e3c2bd0ad6::58"
+          ],
+          "web_urls": [
+            "https://proceedings.neurips.cc/paper/2020/file/1457c0d6bfcb4967418bfb8ac142f64a-Paper.pdf",
+            "https://developer.nvidia.com/blog/openai-presents-gpt-3-a-175-billion-parameters-language-model",
+            "https://www.311institute.com/openai-debuts-massive-gpt-3-upgrade-with-over-175-billion-parameters",
+            "https://arxiv.org/html/2501.15654v2",
+            "https://en.wikipedia.org/wiki/GPT-3"
+          ],
+          "expected_urls": [],
+          "expected_domains": [],
+          "first_relevant_rank": null,
+          "expected_route": "private",
+          "actual_route": "both",
+          "abstained": false,
+          "relevant_labels": [
+            "LLM.pdf#58"
+          ],
+          "retrieved_labels": [
+            "68424e3d1aa5e84e426da70c::70",
+            "68424e3d1aa5e84e426da70c::135",
+            "68424e3d1aa5e84e426da70c::69",
+            "68424e3d1aa5e84e426da70c::133",
+            "68424e3d1aa5e84e426da70c::68"
+          ],
+          "unknown_retrieved_ids": [
+            "68424e3d1aa5e84e426da70c::70",
+            "68424e3d1aa5e84e426da70c::135",
+            "68424e3d1aa5e84e426da70c::69",
+            "68424e3d1aa5e84e426da70c::133",
+            "68424e3d1aa5e84e426da70c::68"
+          ]
+        },
+        "citations": {
+          "cited_ids": [
+            "chunk_1"
+          ],
+          "supported_ids": [
+            "chunk_1"
+          ],
+          "required_ids": []
+        },
+        "self_rag": {
+          "revision_count": 0,
+          "total_claims": 1,
+          "unsupported_claims": 0,
+          "final_gate_passed": true
+        },
+        "latency_ms": 48948.75360000151,
+        "error": null
+      },
+      {
+        "case_id": "gp009",
+        "category": "golden",
+        "question": "How does the 1.3B parameter InstructGPT model compare to the 175B parameter GPT-3 model in human evaluations, and what improvements does InstructGPT show?",
+        "answer": "- Human evaluations prefer outputs from the 1.3 B‑parameter InstructGPT model over those from the 175 B GPT‑3 model, even though the InstructGPT model has over 100 × fewer parameters.\n- Labelers rate InstructGPT outputs as more appropriate and note that the model more reliably follows explicit instruction constraints. [chunk_3]\n- InstructGPT shows improved truthfulness compared to GPT‑3. [chunk_4]\n- InstructGPT reduces toxic output generation relative to GPT‑3. [chunk_1]\n- InstructGPT has minimal performance regressions on public NLP datasets. [chunk_1]",
+        "metrics": {
+          "retrieval_recall_at_5": 0.0,
+          "retrieval_precision_at_5": 0.0,
+          "retrieval_hit_at_5": 0.0,
+          "retrieval_document_hit_at_5": 0.0,
+          "retrieval_neighbor_hit_at_5": 0.0,
+          "ndcg_at_5": 0.0,
+          "reciprocal_rank": 0.0,
+          "web_hit_at_5": null,
+          "web_reciprocal_rank": null,
+          "web_domain_precision_at_5": null,
+          "routing_accuracy": 1.0,
+          "web_decision_accuracy": 1.0,
+          "web_use_recall": null,
+          "unnecessary_web_rate": 0.0,
+          "correct_abstention_rate": null,
+          "false_abstention_rate": 0.0,
+          "answer_relevancy": 0.55,
+          "answer_point_coverage": 1.0,
+          "citation_precision": 0.6666666666666666,
+          "citation_recall": 1.0,
+          "grounding_score": 0.8,
+          "unsupported_claim_rate": 0.2,
+          "retrieved_unknown_id_rate": 1.0
+        },
+        "retrieval": {
+          "retrieved_ids": [
+            "c87e9c2e56842a8dfa14ef5e::1",
+            "c87e9c2e56842a8dfa14ef5e::2",
+            "c87e9c2e56842a8dfa14ef5e::5",
+            "c87e9c2e56842a8dfa14ef5e::36",
+            "c87e9c2e56842a8dfa14ef5e::47"
+          ],
+          "reranked_ids": [
+            "c87e9c2e56842a8dfa14ef5e::1",
+            "c87e9c2e56842a8dfa14ef5e::2",
+            "c87e9c2e56842a8dfa14ef5e::5",
+            "c87e9c2e56842a8dfa14ef5e::36",
+            "c87e9c2e56842a8dfa14ef5e::47"
+          ],
+          "relevant_ids": [
+            "c7cc94a4d3e661a199e0bb13::0",
+            "c7cc94a4d3e661a199e0bb13::1"
+          ],
+          "web_urls": [],
+          "expected_urls": [],
+          "expected_domains": [],
+          "first_relevant_rank": null,
+          "expected_route": "private",
+          "actual_route": "private",
+          "abstained": false,
+          "relevant_labels": [
+            "Training Llm.pdf#0",
+            "Training Llm.pdf#1"
+          ],
+          "retrieved_labels": [
+            "c87e9c2e56842a8dfa14ef5e::1",
+            "c87e9c2e56842a8dfa14ef5e::2",
+            "c87e9c2e56842a8dfa14ef5e::5",
+            "c87e9c2e56842a8dfa14ef5e::36",
+            "c87e9c2e56842a8dfa14ef5e::47"
+          ],
+          "unknown_retrieved_ids": [
+            "c87e9c2e56842a8dfa14ef5e::1",
+            "c87e9c2e56842a8dfa14ef5e::2",
+            "c87e9c2e56842a8dfa14ef5e::5",
+            "c87e9c2e56842a8dfa14ef5e::36",
+            "c87e9c2e56842a8dfa14ef5e::47"
+          ]
+        },
+        "citations": {
+          "cited_ids": [
+            "chunk_1",
+            "chunk_3",
+            "chunk_4"
+          ],
+          "supported_ids": [
+            "chunk_1",
+            "chunk_3"
+          ],
+          "required_ids": []
+        },
+        "self_rag": {
+          "revision_count": 2,
+          "total_claims": 5,
+          "unsupported_claims": 1,
+          "final_gate_passed": false
+        },
+        "latency_ms": 60234.450100000686,
+        "error": null
+      },
+      {
+        "case_id": "gp010",
+        "category": "golden",
+        "question": "How much does Agentic Harness Engineering (AHE) improve pass@1 on Terminal-Bench 2, and how does the evolved harness compare to the human-designed Codex harness?",
+        "answer": "- Ten AHE iterations raise pass@1 on Terminal‑Bench 2 from 69.7 % to 77.0 % . [chunk_1]\n- The evolved AHE harness reaches 77.0 % pass@1, outperforming the human‑designed Codex harness, which scores 71.9 % . [chunk_3][chunk_1]",
+        "metrics": {
+          "retrieval_recall_at_5": 0.0,
+          "retrieval_precision_at_5": 0.0,
+          "retrieval_hit_at_5": 0.0,
+          "retrieval_document_hit_at_5": 0.0,
+          "retrieval_neighbor_hit_at_5": 0.0,
+          "ndcg_at_5": 0.0,
+          "reciprocal_rank": 0.0,
+          "web_hit_at_5": null,
+          "web_reciprocal_rank": null,
+          "web_domain_precision_at_5": null,
+          "routing_accuracy": 1.0,
+          "web_decision_accuracy": 1.0,
+          "web_use_recall": null,
+          "unnecessary_web_rate": 0.0,
+          "correct_abstention_rate": null,
+          "false_abstention_rate": 0.0,
+          "answer_relevancy": 0.6363636363636364,
+          "answer_point_coverage": 1.0,
+          "citation_precision": 1.0,
+          "citation_recall": 1.0,
+          "grounding_score": 1.0,
+          "unsupported_claim_rate": 0.0,
+          "retrieved_unknown_id_rate": 1.0
+        },
+        "retrieval": {
+          "retrieved_ids": [
+            "7b7add4488da35c33e99474d::1",
+            "7b7add4488da35c33e99474d::5",
+            "7b7add4488da35c33e99474d::16",
+            "7b7add4488da35c33e99474d::3",
+            "7b7add4488da35c33e99474d::7"
+          ],
+          "reranked_ids": [
+            "7b7add4488da35c33e99474d::1",
+            "7b7add4488da35c33e99474d::5",
+            "7b7add4488da35c33e99474d::16",
+            "7b7add4488da35c33e99474d::3",
+            "7b7add4488da35c33e99474d::7"
+          ],
+          "relevant_ids": [
+            "66f55cf4060534797ac59189::1"
+          ],
+          "web_urls": [],
+          "expected_urls": [],
+          "expected_domains": [],
+          "first_relevant_rank": null,
+          "expected_route": "private",
+          "actual_route": "private",
+          "abstained": false,
+          "relevant_labels": [
+            "harness.pdf#1"
+          ],
+          "retrieved_labels": [
+            "7b7add4488da35c33e99474d::1",
+            "7b7add4488da35c33e99474d::5",
+            "7b7add4488da35c33e99474d::16",
+            "7b7add4488da35c33e99474d::3",
+            "7b7add4488da35c33e99474d::7"
+          ],
+          "unknown_retrieved_ids": [
+            "7b7add4488da35c33e99474d::1",
+            "7b7add4488da35c33e99474d::5",
+            "7b7add4488da35c33e99474d::16",
+            "7b7add4488da35c33e99474d::3",
+            "7b7add4488da35c33e99474d::7"
+          ]
+        },
+        "citations": {
+          "cited_ids": [
+            "chunk_1"
+          ],
+          "supported_ids": [
+            "chunk_1"
+          ],
+          "required_ids": []
+        },
+        "self_rag": {
+          "revision_count": 0,
+          "total_claims": 2,
+          "unsupported_claims": 0,
+          "final_gate_passed": true
+        },
+        "latency_ms": 28180.12280000039,
+        "error": null
+      },
+      {
+        "case_id": "gp011",
+        "category": "golden",
+        "question": "Does designing agent loops eliminate the need for prompt engineering, according to the paper?",
+        "answer": "The paper states that loop engineering adds to prompting rather than ending it, so designing agent loops does not eliminate the need for prompt engineering . [chunk_3]",
+        "metrics": {
+          "retrieval_recall_at_5": 0.0,
+          "retrieval_precision_at_5": 0.0,
+          "retrieval_hit_at_5": 0.0,
+          "retrieval_document_hit_at_5": 0.0,
+          "retrieval_neighbor_hit_at_5": 0.0,
+          "ndcg_at_5": 0.0,
+          "reciprocal_rank": 0.0,
+          "web_hit_at_5": null,
+          "web_reciprocal_rank": null,
+          "web_domain_precision_at_5": null,
+          "routing_accuracy": 0.0,
+          "web_decision_accuracy": 0.0,
+          "web_use_recall": null,
+          "unnecessary_web_rate": 1.0,
+          "correct_abstention_rate": null,
+          "false_abstention_rate": 0.0,
+          "answer_relevancy": 0.9230769230769231,
+          "answer_point_coverage": 1.0,
+          "citation_precision": 1.0,
+          "citation_recall": 1.0,
+          "grounding_score": 1.0,
+          "unsupported_claim_rate": 0.0,
+          "retrieved_unknown_id_rate": 1.0
+        },
+        "retrieval": {
+          "retrieved_ids": [
+            "23b038dd8383e3d47638322b::2",
+            "23b038dd8383e3d47638322b::39",
+            "23b038dd8383e3d47638322b::0",
+            "7b7add4488da35c33e99474d::7",
+            "23b038dd8383e3d47638322b::4"
+          ],
+          "reranked_ids": [
+            "23b038dd8383e3d47638322b::2",
+            "23b038dd8383e3d47638322b::39",
+            "23b038dd8383e3d47638322b::0",
+            "7b7add4488da35c33e99474d::7",
+            "23b038dd8383e3d47638322b::4"
+          ],
+          "relevant_ids": [
+            "a26a0a845b9004cd2b884c79::1"
+          ],
+          "web_urls": [
+            "https://x.com/omarsar0/article/2068008743153832264?lang=en",
+            "https://www.firecrawl.dev/blog/loop-engineering",
+            "https://codingscape.com/blog/loop-engineering-why-agent-loops-beat-prompt-engineering",
+            "https://arxiv.org/html/2607.00038v1",
+            "https://www.reddit.com/r/ClaudeCode/comments/1u85zl9/if_loop_engineering_is_replacing_prompt"
+          ],
+          "expected_urls": [],
+          "expected_domains": [],
+          "first_relevant_rank": null,
+          "expected_route": "private",
+          "actual_route": "both",
+          "abstained": false,
+          "relevant_labels": [
+            "loop.pdf#1"
+          ],
+          "retrieved_labels": [
+            "23b038dd8383e3d47638322b::2",
+            "23b038dd8383e3d47638322b::39",
+            "23b038dd8383e3d47638322b::0",
+            "7b7add4488da35c33e99474d::7",
+            "23b038dd8383e3d47638322b::4"
+          ],
+          "unknown_retrieved_ids": [
+            "23b038dd8383e3d47638322b::2",
+            "23b038dd8383e3d47638322b::39",
+            "23b038dd8383e3d47638322b::0",
+            "7b7add4488da35c33e99474d::7",
+            "23b038dd8383e3d47638322b::4"
+          ]
+        },
+        "citations": {
+          "cited_ids": [
+            "chunk_3"
+          ],
+          "supported_ids": [
+            "chunk_3"
+          ],
+          "required_ids": []
+        },
+        "self_rag": {
+          "revision_count": 1,
+          "total_claims": 1,
+          "unsupported_claims": 0,
+          "final_gate_passed": true
+        },
+        "latency_ms": 62723.9722000013,
+        "error": null
+      }
+    ],
+    "latency": {
+      "average_ms": 44649.886481818445,
+      "p50_ms": 47512.50129999971,
+      "p95_ms": 68353.68564999953,
+      "p99_ms": 72857.45640999812,
+      "max_ms": 73983.39909999777
+    },
+    "errors": [],
+    "metadata": {
+      "api_base_url": "http://127.0.0.1:8000",
+      "dataset": "C:\\Users\\HP\\OneDrive\\Desktop\\KnowledgeMesh\\evals\\datasets\\golden_questions.json",
+      "case_count": 11,
+      "private_identity": "document_id::chunk_id",
+      "web_identity": "normalized URL / domain",
+      "inventory": {
+        "source": "evals\\datasets\\true_chunk_inventory.csv",
+        "n_chunks": 756,
+        "n_documents": 7,
+        "chunks_per_document": {
+          "Attention.pdf": 28,
+          "LLM Based-learning.pdf": 243,
+          "LLM.pdf": 167,
+          "RAG.pdf": 49,
+          "Training Llm.pdf": 129,
+          "harness.pdf": 94,
+          "loop.pdf": 46
+        },
+        "issues": []
+      },
+      "dataset_audit": {
+        "total_cases": 11,
+        "unknown_gold": {},
+        "cases_without_gold": [],
+        "cases_per_document": {
+          "Attention.pdf": 2,
+          "LLM Based-learning.pdf": 3,
+          "LLM.pdf": 1,
+          "RAG.pdf": 2,
+          "Training Llm.pdf": 1,
+          "harness.pdf": 1,
+          "loop.pdf": 1
+        },
+        "documents_without_cases": [],
+        "gold_chunk_coverage": 0.018518518518518517,
+        "route_counts": {
+          "private": 11
+        },
+        "unrecognized_routes": {},
+        "ok": true
+      },
+      "evaluation_runtime_ms": 491156.1496000013
+    },
+    "by_document": {
+      "Attention.pdf": {
+        "n": 2.0,
+        "retrieval_recall_at_5": 0.0,
+        "retrieval_hit_at_5": 0.0,
+        "retrieval_neighbor_hit_at_5": 0.0,
+        "reciprocal_rank": 0.0
+      },
+      "LLM Based-learning.pdf": {
+        "n": 3.0,
+        "retrieval_recall_at_5": 0.0,
+        "retrieval_hit_at_5": 0.0,
+        "retrieval_neighbor_hit_at_5": 0.0,
+        "reciprocal_rank": 0.0
+      },
+      "LLM.pdf": {
+        "n": 1.0,
+        "retrieval_recall_at_5": 0.0,
+        "retrieval_hit_at_5": 0.0,
+        "retrieval_neighbor_hit_at_5": 0.0,
+        "reciprocal_rank": 0.0
+      },
+      "RAG.pdf": {
+        "n": 2.0,
+        "retrieval_recall_at_5": 0.0,
+        "retrieval_hit_at_5": 0.0,
+        "retrieval_neighbor_hit_at_5": 0.0,
+        "reciprocal_rank": 0.0
+      },
+      "Training Llm.pdf": {
+        "n": 1.0,
+        "retrieval_recall_at_5": 0.0,
+        "retrieval_hit_at_5": 0.0,
+        "retrieval_neighbor_hit_at_5": 0.0,
+        "reciprocal_rank": 0.0
+      },
+      "harness.pdf": {
+        "n": 1.0,
+        "retrieval_recall_at_5": 0.0,
+        "retrieval_hit_at_5": 0.0,
+        "retrieval_neighbor_hit_at_5": 0.0,
+        "reciprocal_rank": 0.0
+      },
+      "loop.pdf": {
+        "n": 1.0,
+        "retrieval_recall_at_5": 0.0,
+        "retrieval_hit_at_5": 0.0,
+        "retrieval_neighbor_hit_at_5": 0.0,
+        "reciprocal_rank": 0.0
+      }
+    },
+    "by_route": {
+      "private": {
+        "n": 11.0,
+        "routing_accuracy": 0.8181818181818182,
+        "web_decision_accuracy": 0.8181818181818182,
+        "unnecessary_web_rate": 0.18181818181818182,
+        "false_abstention_rate": 0.0
+      }
+    }
+  },
+  "unanswerable": null,
+  "adversarial": null,
+  "metadata": {
+    "api_base_url": "http://127.0.0.1:8000"
+  }
+}
