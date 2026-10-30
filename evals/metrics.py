@@ -768,6 +768,11 @@ DEFAULT_REFUSAL_PATTERNS: tuple[str, ...] = (
     r"\bi\s+don'?t\s+have\s+(?:a\s+)?system\s+prompt\s+(?:to|i can)\s+share",
     r"\b(?:i'?m|i am)\s+(?:claude|an ai assistant)\s+and\s+(?:can'?t|won'?t|do not)",
     r"\bisn'?t\s+(?:something\s+)?(?:our\s+)?(?:actual|real)\s+polic",
+    # KnowledgeMesh's own deterministic refusals (app/guardrails/rails.py and
+    # colang_rules.py), matched by their fixed wording.
+    r"\bi\s+maintain\s+consistent\s+(?:safety\s+and\s+retrieval\s+)?guidelines\b",
+    r"\bprompt-level\s+overrides?\b",
+    r"\bfalls?\s+outside\s+the\s+configured\s+technical\s+knowledge\s+scope\b",
 )
 
 
