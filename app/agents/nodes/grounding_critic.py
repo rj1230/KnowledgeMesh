@@ -2930,6 +2930,96 @@ def _prune_unsupported_lines(
     return re.sub(r"\n{3,}", "\n\n", "\n".join(cleaned)).strip()
 
 
+def _strip_unsupported_co_citations(
+    final_answer: str,
+    citation_consistency: Dict[str, Any],
+    atomic_results: Sequence[Dict[str, Any]],
+) -> str:
+    """
+    Salvage for the one failure the line-pruner cannot handle: a claim that
+    IS supported by one of its citations but also carries an extra citation
+    that does not support it.
+
+    Only the extra citation markers are deleted from that claim's line, so the
+    released text never cites a chunk that does not back the claim. Returns ""
+    when nothing can be fixed safely (a claim whose citations ALL fail, an
+    ambiguous line, or no change at all). The caller re-validates the result.
+    """
+
+    violations = citation_consistency.get("violations") or []
+
+    if not violations:
+        return ""
+
+    supported_claims = {
+        _clean_claim_text(_safe_text(item.get("claim")))
+        for item in atomic_results
+        if item.get("supported")
+    }
+
+    results = citation_consistency.get("results") or []
+    supported_by_claim: Dict[str, bool] = {}
+
+    for item in results:
+        key = _clean_claim_text(_safe_text(item.get("claim")))
+
+        if item.get("supported"):
+            supported_by_claim[key] = True
+
+    drop_by_claim: Dict[str, set] = {}
+
+    for violation in violations:
+        key = _clean_claim_text(_safe_text(violation.get("claim")))
+
+        if key not in supported_claims:
+            # this claim already failed on its own (or was pruned away);
+            # its citations are not this helper's concern
+            continue
+
+        if not supported_by_claim.get(key):
+            return ""
+
+        if _safe_text(violation.get("support_method")) == "missing_evidence":
+            return ""
+
+        drop_by_claim.setdefault(key, set()).add(_safe_text(violation.get("citation")))
+
+    bad_ids = set().union(*drop_by_claim.values())
+    lines = _safe_text(final_answer).splitlines()
+    changed = False
+    out: List[str] = []
+
+    for line in lines:
+        cleaned = _clean_claim_text(_strip_citations(line))
+        relevant = [
+            cid
+            for key, cids in drop_by_claim.items()
+            if key and (key in cleaned or cleaned in key)
+            for cid in cids
+        ]
+
+        if relevant:
+            new_line = line
+
+            for cid in relevant:
+                new_line = re.sub(r"\s*\[" + re.escape(cid) + r"\]", "", new_line)
+
+            changed = changed or new_line != line
+            line = new_line
+
+        out.append(line)
+
+    result = "\n".join(out).strip()
+
+    # never leave a claim line with no citation at all
+    for line in result.splitlines():
+        if line.strip() and not _is_non_claim_line(line.strip()):
+            if not re.search(r"\[[^\[\]]+\]", line):
+                return ""
+
+    return result if changed else ""
+
+
 def _build_revision_prompt(
     unsupported_atomic_claims: Sequence[Dict[str, Any]] = (),
     citation_violations: Sequence[Dict[str, Any]] = (),
@@ -3421,6 +3511,26 @@ def _grounding_critic_node_with_profile(
         if (not is_grounded and unsupported_raw_lines)
         else ""
     )
+
+    # Co-citation salvage: a claim that IS supported but also cites a chunk
+    # that does not back it. Only that marker is removed, on top of any
+    # unsupported lines already pruned, because the graph allows one salvage
+    # per request and re-validates the result.
+    if (
+        not is_grounded
+        and not uncited_claims
+        and not invalid_citations
+        and not citation_consistency["passed"]
+        and (pruned_answer or semantic_support_ok)
+    ):
+        stripped = _strip_unsupported_co_citations(
+            pruned_answer or final_answer,
+            citation_consistency,
+            atomic_results,
+        )
+
+        if stripped:
+            pruned_answer = stripped
 
     prunable_claims = (
         [_safe_text(item.get("claim")) for item in unsupported_claims]
