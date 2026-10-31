@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from typing import Any
 
 logger = logging.getLogger("knowledgemesh")
@@ -11,25 +12,35 @@ logger = logging.getLogger("knowledgemesh")
 CURRENT_INFORMATION_TERMS = {
     "latest",
     "current",
+    "currently",
     "today",
     "recent",
-    "news",
+    "recently",
     "updated",
     "new version",
     "release",
+    "releases",
     "pricing",
     "price",
     "2026",
+    # "news" alone also matches topics like "news articles" in a paper,
+    # so only phrases that ask for current events count.
+    "breaking news",
+    "today's news",
+    "news today",
+    "headlines",
 }
+
+_CURRENT_INFORMATION_RE = re.compile(
+    r"\b(?:"
+    + "|".join(re.escape(t) for t in sorted(CURRENT_INFORMATION_TERMS, key=len, reverse=True))
+    + r")\b",
+    re.I,
+)
 
 
 def requires_current_web_information(query: str) -> bool:
-    query_lower = query.lower()
-
-    return any(
-        term in query_lower
-        for term in CURRENT_INFORMATION_TERMS
-    )
+    return bool(_CURRENT_INFORMATION_RE.search(query or ""))
 
 
 def evaluate_context(
