@@ -95,6 +95,7 @@ from app.evaluation.store import record_trajectory
 from app.services.retrieval.qdrant_service import client
 from app.services.retrieval.embedding import get_embedding_dim
 
+from app.guardrails.rails import classify_guard_reason
 from app.guardrails import (
     guard,
     initialize_rails,
@@ -1217,6 +1218,8 @@ def _build_blocked_response(
         str(answer) if answer is not None else "This request cannot be processed."
     )
 
+    _reason = classify_guard_reason(safe_answer)
+
     return {
         "question": question,
         "answer": safe_answer,
@@ -1224,6 +1227,9 @@ def _build_blocked_response(
         "answer_available": bool(safe_answer.strip()),
         "answer_source": "guardrails",
         "validation_status": "blocked",
+        "refusal_reason": _reason,
+        "refused": _reason in {"jailbreak", "out_of_scope"},
+        "inconclusive": _reason == "scope_unverified",
         "thought_process": [
             "Intent: Guardrails Fired",
             "Retrieval: Skipped",

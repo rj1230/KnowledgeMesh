@@ -644,6 +644,34 @@ def _run_topic_classifier(
 
 
 # ============================================================
+# GUARD OUTCOME CLASSIFICATION
+# ============================================================
+
+
+def classify_guard_reason(response: str | None) -> str:
+    """
+    Name the reason behind a gate response, by equality with the module's own
+    constants so rewording a message can never break the classification.
+
+        jailbreak          policy refusal (prompt-override attempt)
+        out_of_scope       policy refusal (non-technical request)
+        scope_unverified   the gate could not decide; failed closed
+        small_talk         canned conversational reply (not a refusal)
+    """
+
+    if response == _JAILBREAK_RESPONSE:
+        return "jailbreak"
+
+    if response == _NON_TECHNICAL_RESPONSE:
+        return "out_of_scope"
+
+    if response == _AMBIGUOUS_RESPONSE:
+        return "scope_unverified"
+
+    return "small_talk"
+
+
+# ============================================================
 # GUARD ENTRY POINT
 # ============================================================
 
