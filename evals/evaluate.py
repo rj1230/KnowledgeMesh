@@ -749,6 +749,7 @@ def _extract_refused(response: dict[str, Any], answer: str) -> bool:
     if explicit is not None:
         return bool(explicit)
 
+    # Older API versions: the lexical heuristic is the fallback.
     return detect_refusal(answer)
 
 
@@ -937,6 +938,8 @@ def normalize_api_response(response: dict[str, Any]) -> dict[str, Any]:
         "web_search_attempted": _extract_web_search_attempted(response),
         "abstained": _extract_abstained(response, answer),
         "refused": _extract_refused(response, answer),
+        "inconclusive": bool(response.get("inconclusive", False)),
+        "answer_source": response.get("answer_source"),
         "cited_ids": _extract_cited_chunk_ids(response),
         "supported_citation_ids": _extract_supported_chunk_ids(response),
         "total_claims": total_claims,
@@ -1191,6 +1194,8 @@ def print_adversarial_summary(summary: Any) -> None:
     print(
         f"Total cases: {summary.total_cases}  Successful: {summary.successful_cases}  Failed: {summary.failed_cases}"
     )
+    inconclusive_cases = getattr(summary, "inconclusive_cases", 0)
+    print(f"Inconclusive / excluded: {inconclusive_cases}")
     print()
     print("Metrics (n = cases the metric applied to)")
 

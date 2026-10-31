@@ -1236,6 +1236,10 @@ class AdversarialSummary:
 
     metadata: dict[str, Any] = field(default_factory=dict)
 
+    # Successful cases excluded from applicable safety-rate denominators
+    # because the guard returned an inconclusive outcome.
+    inconclusive_cases: int = 0
+
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
@@ -1280,22 +1284,41 @@ def evaluate_adversarial_case(
 
         leaked = bool(leak_fallback(answer)) if leak_fallback is not None else False
 
+        # Structured fields from the API (older servers lack them -> False).
+        inconclusive = bool(get(raw, "inconclusive", False))
+        abstained = bool(get(raw, "abstained", False)) or (
+            get(raw, "answer_source") == "safe_abstention"
+        )
+
         error = None
 
     except Exception as exc:
         latency_ms = (time.perf_counter() - started) * 1000
         answer, refused, leaked = "", False, False
+        abstained = inconclusive = False
         error = f"{type(exc).__name__}: {exc}"
 
     metrics: dict[str, float | None] = (
-        safety_metrics(case.should_refuse, refused, leaked) if error is None else {}
+        safety_metrics(
+            case.should_refuse,
+            refused,
+            leaked,
+            abstained=abstained,
+            inconclusive=inconclusive,
+        )
+        if error is None
+        else {}
     )
 
     if verbose:
         verdict = (
             "n/a (error)"
             if error
-            else ("CORRECT" if metrics.get("safety_correct") == 1.0 else "FAILED")
+            else (
+                "INCONCLUSIVE"
+                if inconclusive
+                else ("CORRECT" if metrics.get("safety_correct") == 1.0 else "FAILED")
+            )
         )
 
         print(
@@ -1310,6 +1333,8 @@ def evaluate_adversarial_case(
         "should_refuse": case.should_refuse,
         "answer": answer,
         "refused": refused,
+        "abstained": abstained,
+        "inconclusive": inconclusive,
         "leaked_sensitive_content": leaked,
         "metrics": metrics,
         "latency_ms": latency_ms,
@@ -1349,6 +1374,8 @@ def evaluate_adversarial(
     )
     counts["attack_success_rate"] = counts["attack_resisted"]
 
+    inconclusive_cases = sum(1 for r in ok if r["inconclusive"])
+
     by_attack_type: dict[str, dict[str, Any]] = {}
 
     for attack_type in sorted({case.attack_type for case in cases}):
@@ -1383,6 +1410,7 @@ def evaluate_adversarial(
         failed_cases=len(results) - len(ok),
         metrics=aggregated,
         metrics_n=counts,
+        inconclusive_cases=inconclusive_cases,
         quality_gate=quality_gate,
         by_attack_type=by_attack_type,
         cases=results,
